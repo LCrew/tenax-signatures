@@ -3,7 +3,7 @@
 This takes about 30 minutes, plus up to 24 hours for Microsoft to push the add-in to Outlook. You need:
 
 - a Linux or Windows server with Docker Engine and the Compose plugin
-- DNS for `sig.tenaxgrupa.lv` pointing at that server, with ports 80 and 443 reachable (or your own reverse proxy / load balancer)
+- DNS for `sig.tenax.lv` pointing at that server, with ports 80 and 443 reachable (or your own reverse proxy / load balancer)
 - a Global Administrator account for the `TenaxMID.onmicrosoft.com` tenant
 - PowerShell 7 with the Microsoft Graph module on an admin workstation (only for the Entra step)
 
@@ -20,7 +20,7 @@ Pick one:
 
 | Setup | Command | `.env` |
 |---|---|---|
-| Built-in HTTPS (Caddy + Let's Encrypt) | `docker compose --profile tls up -d --build` | `TRUST_PROXY=true`, `TLS_HOST=sig.tenaxgrupa.lv` |
+| Built-in HTTPS (Caddy + Let's Encrypt) | `docker compose --profile tls up -d --build` | `TRUST_PROXY=true`, `TLS_HOST=sig.tenax.lv` |
 | Your own reverse proxy / load balancer | `docker compose up -d --build`, proxy to port 8085 | `TRUST_PROXY=true` |
 | Local trial on a laptop | `docker compose up -d --build` | defaults |
 
@@ -43,8 +43,8 @@ The service listens on **port 8085** (container and host). Change `HOST_PORT` in
 Plain `http://<server-ip>:8085` is fine for the setup wizard with the local admin account, but "Sign in with Microsoft"
 won't work there. Before employees use it, put TLS in front:
 
-- **Cloudflare Zero Trust tunnel** (recommended here): see [Cloudflare Tunnel](#cloudflare-tunnel) below.
-- **Existing reverse proxy** (nginx, Traefik, a load balancer): proxy `https://sig.tenaxgrupa.lv` → `http://<host>:8085`,
+- **Cloudflare Zero Trust tunnel** (our setup: the host's existing tunnel → `localhost:8085`): see [Cloudflare Tunnel](#cloudflare-tunnel) below.
+- **Existing reverse proxy** (nginx, Traefik, a load balancer): proxy `https://sig.tenax.lv` → `http://<host>:8085`,
   and set `TRUST_PROXY=true` in `.env`.
 - **Built-in Caddy** (`--profile tls`): needs ports 80 and 443 free on the host, plus public DNS for `TLS_HOST`.
 
@@ -58,28 +58,34 @@ Updating later: `git pull && docker compose up -d --build` (add `--profile tunne
 ### Cloudflare Tunnel
 
 The tunnel is outbound-only: no inbound ports, no certificates on the host. Cloudflare terminates HTTPS for
-`sig.tenaxgrupa.lv`.
+`sig.tenax.lv`.
 
-1. **Zero Trust › Networks › Tunnels › Create a tunnel** (type *Cloudflared*), name it e.g. `tenax-signatures`.
-   Copy the token from the install command (the long string after `--token`).
-2. **Public hostname** on that tunnel: subdomain `sig`, domain `tenaxgrupa.lv`, path empty,
-   service **HTTP** `signature:8085`. Use `localhost:8085` instead if you run cloudflared on the host
-   rather than with this compose file.
-3. In `.env` on the server:
+**Using the tunnel that already runs on the host (our setup).** `cloudflared` is installed on the machine itself, so
+there's nothing to add to this compose file:
+
+1. **Zero Trust › Networks › Tunnels ›** the host's existing tunnel **› Public hostname › Add a public hostname**:
+   subdomain `sig`, domain `tenax.lv`, path empty, service **HTTP** `localhost:8085`.
+2. In `.env` on the server:
    ```
-   TUNNEL_TOKEN=<token>
-   TRUST_PROXY=true
-   HOST_BIND=127.0.0.1     # optional: only the tunnel (and the host itself) can reach the app
-   PUBLIC_URL=https://sig.tenaxgrupa.lv
+   PUBLIC_URL=https://sig.tenax.lv
+   TRUST_PROXY=true        # app sees https (secure cookies) and the real client IP
+   HOST_BIND=127.0.0.1     # port 8085 reachable only from the host, so only through the tunnel
    ```
-4. `docker compose --profile tunnel up -d --build`, then open `https://sig.tenaxgrupa.lv`.
+3. `docker compose up -d --build` (no `--profile tunnel`), then open `https://sig.tenax.lv`.
+
+`HOST_BIND=127.0.0.1` works because the host's `cloudflared` connects to `localhost:8085`. To reach the app from
+another machine on the LAN, for example during setup, leave it at `0.0.0.0`.
+
+*Alternative:* on a host without `cloudflared`, run it from this compose file instead. Create a tunnel, set
+`TUNNEL_TOKEN=<token>` in `.env`, point the public hostname at `http://signature:8085`, and start with
+`docker compose --profile tunnel up -d --build`.
 
 **Cloudflare Access: don't put the whole hostname behind a login.** Outlook clients and **everyone who receives
 your emails** must reach some paths anonymously. Recipients' mail apps download the logos and banners. Outlook loads the
 add-in and calls the API with its own Microsoft token, and can't complete a Cloudflare login. The app already enforces
 its own sign-in (Microsoft / local admin) on everything else.
 
-If you do add an Access application for `sig.tenaxgrupa.lv`, add **Bypass** (Everyone) policies, or separate
+If you do add an Access application for `sig.tenax.lv`, add **Bypass** (Everyone) policies, or separate
 path-scoped Access applications with a Bypass action, for:
 
 | Path | Who calls it |
@@ -109,14 +115,14 @@ fresh install without access to the server's logs.
 
 ## 3. Run the wizard
 
-Open `https://sig.tenaxgrupa.lv` (or `http://localhost:8085` for a local trial). The wizard walks through eight steps
+Open `https://sig.tenax.lv` (or `http://localhost:8085` for a local trial). The wizard walks through eight steps
 and saves progress as you go. Reloading the page resumes on the same step.
 
 | Step | What you do | Notes |
 |---|---|---|
 | 1. Unlock setup | Paste the setup code | The code stops working once step 2 is done |
 | 2. Create your admin account | Username + password (12+ chars) | Local break-glass account. Store it in the password manager |
-| 3. Server address | Confirm `https://sig.tenaxgrupa.lv` | Outlook loads the add-in and logos from here |
+| 3. Server address | Confirm `https://sig.tenax.lv` | Outlook loads the add-in and logos from here |
 | 4. Connect Entra ID | See step 4 below, or choose **Demo data** to try the designs first | Changeable later in Settings |
 | 5. Companies and groups | Rename companies, map each one to its security group, set priority, default company, admin + pilot groups | "Find" looks the group up in Entra so you don't copy GUIDs |
 | 6. Signature options | Title language (LV / EN / both), self-service editing | |
@@ -138,7 +144,7 @@ openssl x509 -in tenax-signature-api.crt.pem -outform der -out tenax-signature-a
 ```powershell
 # 2. App registration (PowerShell 7, as Global Administrator)
 Install-Module Microsoft.Graph -Scope CurrentUser
-./scripts/entra-setup.ps1 -TenantId TenaxMID.onmicrosoft.com -PublicHost sig.tenaxgrupa.lv -CertPath ./tenax-signature-api.cer
+./scripts/entra-setup.ps1 -TenantId TenaxMID.onmicrosoft.com -PublicHost sig.tenax.lv -CertPath ./tenax-signature-api.cer
 ```
 
 3. Paste the JSON the script prints into the wizard's box. It fills in the tenant ID, client ID, Application ID URI and

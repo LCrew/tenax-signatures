@@ -87,7 +87,7 @@ describe('current designs', async () => {
     repo.addTemplateVersion({ company: 'tenapors', kind: 'meta', content: JSON.stringify(meta), note: null, createdBy: 'test' });
     const after = await sig('test.tenapors@tenaxgrupa.lv');
     expect(after).toContain('Ar cieņu,');
-    expect(after).toContain('src="https://sig.tenaxgrupa.lv/assets/tenapors/banner-600x300px-tenapors-banneris-parakstam.png"');
+    expect(after).toContain('src="https://sig.tenax.lv/assets/tenapors/banner-600x300px-tenapors-banneris-parakstam.png"');
     expect(after).toContain('<a href="https://www.tenapors.lv"');
     expect(after).toContain('Šis e-pasts ir konfidenciāls.');
     const reply = await sig('test.tenapors@tenaxgrupa.lv', 'reply');

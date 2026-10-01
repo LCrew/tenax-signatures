@@ -250,7 +250,7 @@ function AddressStep({ settings, next }: { settings: Settings; next: () => Promi
   const [url, setUrl] = useState(settings.publicUrl);
   const [busy, setBusy] = useState(false);
   const here = window.location.origin;
-  const invalid = !/^https:\/\/[^/]+$/.test(url.replace(/\/+$/, '')) ? 'Use https:// and a host name only, e.g. https://sig.tenaxgrupa.lv' : null;
+  const invalid = !/^https:\/\/[^/]+$/.test(url.replace(/\/+$/, '')) ? 'Use https:// and a host name only, e.g. https://sig.tenax.lv' : null;
 
   async function save() {
     setBusy(true);

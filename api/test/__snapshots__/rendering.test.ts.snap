@@ -5,7 +5,7 @@ exports[`rendered signatures > snapshots > test.install@tenaxgrupa.lv new + repl
 
 <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
   <tr>
-    <td style="padding:0 12px 0 0;vertical-align:top;"><img src="https://sig.tenaxgrupa.lv/assets/tenaxinstall/logo.png" width="191" height="142" alt="Tenax Install" style="display:block;border:0;width:191px;height:142px;"></td>
+    <td style="padding:0 12px 0 0;vertical-align:top;"><img src="https://sig.tenax.lv/assets/tenaxinstall/logo.png" width="191" height="142" alt="Tenax Install" style="display:block;border:0;width:191px;height:142px;"></td>
     <td style="padding:0;vertical-align:top;font-size:9pt;line-height:14pt;color:#002060;">
             <span style="font-size:12pt;line-height:16pt;font-weight:bold;color:#44546A;">Kārlis Vītols</span><br>
             <span style="font-size:11pt;line-height:15pt;color:#003366;">Montāžas brigadieris</span><br>
@@ -42,7 +42,7 @@ exports[`rendered signatures > snapshots > test.lv@tenaxgrupa.lv new + reply > n
 
 <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
   <tr>
-    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenaxgrupa.lv/assets/tenapors/logo.png" width="120" height="60" alt="Tenapors" style="display:block;border:0;width:120px;height:60px;"></td>
+    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenapors/logo.png" width="120" height="60" alt="Tenapors" style="display:block;border:0;width:120px;height:60px;"></td>
     <td style="padding:1px 1px 1px 10px;vertical-align:middle;border-left:1px solid #002060;font-size:10pt;line-height:13pt;color:#002060;">
             <span style="font-size:12pt;line-height:15pt;font-weight:bold;color:#002060;">Ņikita Āboliņš-Ēķīšūžļģč</span><br>
             <span style="font-size:11pt;color:#002060;">Kvalitātes speciālists</span><br>
@@ -79,7 +79,7 @@ exports[`rendered signatures > snapshots > test.multi@tenaxgrupa.lv new + reply 
 
 <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
   <tr>
-    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenaxgrupa.lv/assets/tenax/logo.png" width="183" height="86" alt="Tenax" style="display:block;border:0;width:183px;height:86px;"></td>
+    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenax/logo.png" width="183" height="86" alt="Tenax" style="display:block;border:0;width:183px;height:86px;"></td>
     <td style="padding:1px 1px 1px 10px;vertical-align:middle;border-left:1px solid #002060;font-size:10pt;line-height:13pt;color:#002060;">
             <span style="font-size:12pt;line-height:15pt;font-weight:bold;color:#002060;">Mārtiņš Liepa</span><br>
             <span style="font-size:11pt;color:#002060;">Projektu vadītājs</span><br>
@@ -116,7 +116,7 @@ exports[`rendered signatures > snapshots > test.nogroup@tenaxgrupa.lv new + repl
 
 <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
   <tr>
-    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenaxgrupa.lv/assets/tenax/logo.png" width="183" height="86" alt="Tenax" style="display:block;border:0;width:183px;height:86px;"></td>
+    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenax/logo.png" width="183" height="86" alt="Tenax" style="display:block;border:0;width:183px;height:86px;"></td>
     <td style="padding:1px 1px 1px 10px;vertical-align:middle;border-left:1px solid #002060;font-size:10pt;line-height:13pt;color:#002060;">
             <span style="font-size:12pt;line-height:15pt;font-weight:bold;color:#002060;">Ilze Priede</span><br>
             <span style="font-size:11pt;color:#002060;">Asistente</span><br>
@@ -153,7 +153,7 @@ exports[`rendered signatures > snapshots > test.panel@tenaxgrupa.lv new + reply 
 
 <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
   <tr>
-    <td style="padding:0 12px 0 0;vertical-align:top;"><img src="https://sig.tenaxgrupa.lv/assets/tenaxpanel/logo.png" width="210" height="142" alt="Tenax Panel" style="display:block;border:0;width:210px;height:142px;"></td>
+    <td style="padding:0 12px 0 0;vertical-align:top;"><img src="https://sig.tenax.lv/assets/tenaxpanel/logo.png" width="210" height="142" alt="Tenax Panel" style="display:block;border:0;width:210px;height:142px;"></td>
     <td style="padding:0;vertical-align:top;font-size:9pt;line-height:14pt;color:#002060;">
             <span style="font-size:12pt;line-height:16pt;font-weight:bold;color:#002060;">Pēteris Kalniņš</span><br>
             <span style="font-size:11pt;line-height:15pt;color:#003366;">Tehniskais direktors</span><br>
@@ -190,7 +190,7 @@ exports[`rendered signatures > snapshots > test.tenapors@tenaxgrupa.lv new + rep
 
 <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
   <tr>
-    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenaxgrupa.lv/assets/tenapors/logo.png" width="120" height="60" alt="Tenapors" style="display:block;border:0;width:120px;height:60px;"></td>
+    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenapors/logo.png" width="120" height="60" alt="Tenapors" style="display:block;border:0;width:120px;height:60px;"></td>
     <td style="padding:1px 1px 1px 10px;vertical-align:middle;border-left:1px solid #002060;font-size:10pt;line-height:13pt;color:#002060;">
             <span style="font-size:12pt;line-height:15pt;font-weight:bold;color:#002060;">Anna Bērziņa</span><br>
             
@@ -227,7 +227,7 @@ exports[`rendered signatures > snapshots > test.tenax@tenaxgrupa.lv new + reply 
 
 <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
   <tr>
-    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenaxgrupa.lv/assets/tenax/logo.png" width="183" height="86" alt="Tenax" style="display:block;border:0;width:183px;height:86px;"></td>
+    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenax/logo.png" width="183" height="86" alt="Tenax" style="display:block;border:0;width:183px;height:86px;"></td>
     <td style="padding:1px 1px 1px 10px;vertical-align:middle;border-left:1px solid #002060;font-size:10pt;line-height:13pt;color:#002060;">
             <span style="font-size:12pt;line-height:15pt;font-weight:bold;color:#002060;">Jānis Testeris</span><br>
             <span style="font-size:11pt;color:#002060;">Pārdošanas vadītājs</span><br>
@@ -264,7 +264,7 @@ exports[`rendered signatures > snapshots > test.vareno@tenaxgrupa.lv new + reply
 
 <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
   <tr>
-    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenaxgrupa.lv/assets/vareno/logo.png" width="120" height="40" alt="Vareno Group" style="display:block;border:0;width:120px;height:40px;"></td>
+    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/vareno/logo.png" width="120" height="40" alt="Vareno Group" style="display:block;border:0;width:120px;height:40px;"></td>
     <td style="padding:1px 1px 1px 10px;vertical-align:middle;border-left:1px solid #002060;font-size:10pt;line-height:13pt;color:#002060;">
             <span style="font-size:12pt;line-height:15pt;font-weight:bold;color:#002060;">Laura Ozola</span><br>
             <span style="font-size:11pt;color:#002060;">Grāmatvede</span><br>
@@ -301,7 +301,7 @@ exports[`rendered signatures > snapshots > test.xss@tenaxgrupa.lv new + reply > 
 
 <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
   <tr>
-    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenaxgrupa.lv/assets/tenax/logo.png" width="183" height="86" alt="Tenax" style="display:block;border:0;width:183px;height:86px;"></td>
+    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenax/logo.png" width="183" height="86" alt="Tenax" style="display:block;border:0;width:183px;height:86px;"></td>
     <td style="padding:1px 1px 1px 10px;vertical-align:middle;border-left:1px solid #002060;font-size:10pt;line-height:13pt;color:#002060;">
             <span style="font-size:12pt;line-height:15pt;font-weight:bold;color:#002060;">&lt;img src&#x3D;x onerror&#x3D;alert(1)&gt;</span><br>
             <span style="font-size:11pt;color:#002060;">&quot;&gt;&lt;script&gt;alert(2)&lt;/script&gt;</span><br>

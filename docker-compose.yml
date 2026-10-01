@@ -34,7 +34,7 @@ services:
     restart: unless-stopped
     depends_on: [signature]
     environment:
-      TLS_HOST: ${TLS_HOST:-sig.tenaxgrupa.lv}
+      TLS_HOST: ${TLS_HOST:-sig.tenax.lv}
     ports:
       - "80:80"
       - "443:443"

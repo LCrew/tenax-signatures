@@ -5,7 +5,7 @@ One app registration covers all three roles:
 | Role | How it uses the registration |
 |---|---|
 | **Signature API** (server, app-only) | Reads users and group memberships from Microsoft Graph with a **certificate** credential (`User.Read.All`, `GroupMember.Read.All`). |
-| **Outlook add-in** (delegated) | Gets a user token for `api://sig.tenaxgrupa.lv/<appId>/Signature.Read` through Nested App Authentication (NAA), falling back to legacy Office SSO (`access_as_user`). |
+| **Outlook add-in** (delegated) | Gets a user token for `api://sig.tenax.lv/<appId>/Signature.Read` through Nested App Authentication (NAA), falling back to legacy Office SSO (`access_as_user`). |
 | **Admin SPA** (delegated) | Signs admins in with MSAL.js and calls the API with the same scope. |
 
 Automated version: [`scripts/entra-setup.ps1`](../scripts/entra-setup.ps1) (step 11). The manual steps below are the reference.
@@ -19,15 +19,15 @@ Placeholders used below: `<appId>` = Application (client) ID, `<tenantId>` = Dir
 ## 0. Prerequisites
 
 1. Sign in to the [Microsoft Entra admin center](https://entra.microsoft.com) as **Global Administrator** (or Application Administrator plus Privileged Role Administrator for the consent steps).
-2. Confirm that `tenaxgrupa.lv` is a **verified custom domain** (Entra ID → Domain names). Entra only accepts an Application ID URI of the form `api://sig.tenaxgrupa.lv/…` if `tenaxgrupa.lv` (or the subdomain) is verified in the tenant.
-3. `https://sig.tenaxgrupa.lv` must be reachable over TLS before the pilot, but not for these steps.
+2. Confirm that `tenax.lv` is a **verified custom domain** (Entra ID → Domain names). Entra only accepts an Application ID URI of the form `api://sig.tenax.lv/…` if `tenax.lv` (or the subdomain) is verified in the tenant. The mail domain `tenaxgrupa.lv` being verified is not enough.
+3. `https://sig.tenax.lv` must be reachable over TLS before the pilot, but not for these steps.
 
 ## 1. Register the application
 
 1. Go to **Entra ID → App registrations → New registration**.
 2. **Name:** `Tenax Signature API`
 3. **Supported account types:** *Accounts in this organizational directory only (TenaxMID only – Single tenant)*.
-4. **Redirect URI:** platform **Single-page application (SPA)**, value `brk-multihub://sig.tenaxgrupa.lv`
+4. **Redirect URI:** platform **Single-page application (SPA)**, value `brk-multihub://sig.tenax.lv`
    (NAA trusted-broker redirect. Origin only, no path.)
 5. Select **Register**.
 6. On **Overview**, copy the **Application (client) ID** (`<appId>`) and the **Directory (tenant) ID** (`<tenantId>`).
@@ -35,9 +35,9 @@ Placeholders used below: `<appId>` = Application (client) ID, `<tenantId>` = Dir
 ## 2. Add the SPA redirect URIs
 
 1. **Authentication → Single-page application → Add URI**, and add:
-   - `https://sig.tenaxgrupa.lv/` (web console: employee self-service and admins, production)
+   - `https://sig.tenax.lv/` (web console: employee self-service and admins, production)
    - `http://localhost:8085/` (web console, local testing; match `HOST_PORT` if you changed it)
-2. Check that the SPA list now has exactly three URIs: `brk-multihub://sig.tenaxgrupa.lv`, `https://sig.tenaxgrupa.lv/`, `http://localhost:8085/`.
+2. Check that the SPA list now has exactly three URIs: `brk-multihub://sig.tenax.lv`, `https://sig.tenax.lv/`, `http://localhost:8085/`.
 3. Leave **Implicit grant** (access tokens / ID tokens) **unchecked**. MSAL uses auth code + PKCE.
 4. Leave **Allow public client flows** at **No**. **Save**.
 
@@ -57,7 +57,7 @@ Placeholders used below: `<appId>` = Application (client) ID, `<tenantId>` = Dir
 ## 4. Expose the API
 
 1. **Expose an API → Application ID URI → Add** and replace the default with
-   `api://sig.tenaxgrupa.lv/<appId>`. **Save**.
+   `api://sig.tenax.lv/<appId>`. **Save**.
 2. **Add a scope**:
 
    | Field | Value |
@@ -109,13 +109,13 @@ NAA doesn't use pre-authorisation. With NAA the add-in acts as **this same app**
 
 ## 6a. Web console sign-in (employee self-service)
 
-Employees sign in at `https://sig.tenaxgrupa.lv` with **Sign in with Microsoft**, which uses OAuth 2.0 authorization code
+Employees sign in at `https://sig.tenax.lv` with **Sign in with Microsoft**, which uses OAuth 2.0 authorization code
 with PKCE through MSAL.js. The console uses **this same app registration**. The steps above already cover it:
 
 | Setting | Where | Value |
 |---|---|---|
-| SPA redirect URI | Authentication (step 2) | `https://sig.tenaxgrupa.lv/` (trailing slash) |
-| Scope requested at sign-in | Expose an API (step 4) | `api://sig.tenaxgrupa.lv/<appId>/Signature.Read` |
+| SPA redirect URI | Authentication (step 2) | `https://sig.tenax.lv/` (trailing slash) |
+| Scope requested at sign-in | Expose an API (step 4) | `api://sig.tenax.lv/<appId>/Signature.Read` |
 | Consent | API permissions (step 6) | Admin consent granted, so employees are never asked to consent |
 | Who can sign in | Enterprise applications › Tenax Signature API › Properties | **Assignment required: No** (or assign the users/groups who should have access) |
 
@@ -219,7 +219,7 @@ The first time the server starts, the web setup wizard asks for these (nothing g
 | Company group object IDs (Tenax, Tenapors, TenaxPanel, Vareno) | Step 8 |
 | Pilot and Admins group object IDs | Step 8 |
 
-The server derives `api://sig.tenaxgrupa.lv/<appId>` and the add-in scope `api://sig.tenaxgrupa.lv/<appId>/Signature.Read`, injects them into `/addin/launchevent.js` at request time, and renders the add-in manifest with the same values.
+The server derives `api://sig.tenax.lv/<appId>` and the add-in scope `api://sig.tenax.lv/<appId>/Signature.Read`, injects them into `/addin/launchevent.js` at request time, and renders the add-in manifest with the same values.
 
 ## 11. Automating steps 1–8 with PowerShell
 
@@ -229,7 +229,7 @@ The server derives `api://sig.tenaxgrupa.lv/<appId>` and the add-in scope `api:/
 # PowerShell 7+, Microsoft Graph SDK: Install-Module Microsoft.Graph -Scope CurrentUser
 ./scripts/entra-setup.ps1 -TenantId TenaxMID.onmicrosoft.com -CertPath ./tenax-signature-api.cer
 # Add -CreateGroups only if you want the script to create missing SG-Signature-* groups (no members).
-# -PublicHost defaults to sig.tenaxgrupa.lv
+# -PublicHost defaults to sig.tenax.lv
 ```
 
 It prints `tenantId`, `clientId`, the scope URIs and every group's object ID. It never writes user attributes or group memberships.
@@ -240,7 +240,7 @@ Checked against Microsoft Learn in September 2026:
 
 - **NAA is the primary path and works in event handlers, including classic Outlook on Windows.** Outlook has `NestedAppAuth 1.1` as GA on every platform: classic Outlook M365 Version 2409 (Build 18025.20000)+, retail perpetual 2501+, LTSC 2408+, Mac 16.89+, iOS/Android 4.2433+, and the web. Microsoft's sample *Outlook-Event-SSO-NAA* ("applies to Outlook on Windows (new and classic), Mac, mobile, and on the web") calls `createNestablePublicClientApplication` + `acquireTokenSilent` inside `OnNewMessageCompose`. Event code can't show UI, so it never calls `acquireTokenPopup`. Our add-in follows the same pattern, adds `ssoSilent` as a second silent attempt, and checks `Office.context.requirements.isSetSupported("NestedAppAuth", "1.1")` at runtime (Outlook manifests can't declare this set).
 - **Fallback: legacy Office SSO.** For older builds, the add-in calls `OfficeRuntime.auth.getAccessToken` (or `Office.auth.getAccessToken`) with `allowSignInPrompt: false` and `allowConsentPrompt: false`. Microsoft notes that `Office.auth.getAccessToken` only works in classic Outlook from Version 2111 and that `OfficeRuntime.auth.getAccessToken` works in every version that supports event-based activation plus SSO, so the add-in tries `OfficeRuntime.auth` first. This path needs `<WebApplicationInfo>` in the manifest, the `access_as_user` scope and the Office pre-authorisation from step 5.
-- **Both paths in classic Outlook** need the well-known URI `https://sig.tenaxgrupa.lv/.well-known/microsoft-officeaddins-allowed.json` to list `https://sig.tenaxgrupa.lv/addin/launchevent.js`. The API serves it.
+- **Both paths in classic Outlook** need the well-known URI `https://sig.tenax.lv/.well-known/microsoft-officeaddins-allowed.json` to list `https://sig.tenax.lv/addin/launchevent.js`. The API serves it.
 - NAA isn't available when the mailbox is an Outlook.com or Gmail account. That doesn't matter for Tenax (Exchange Online only).
 
 Sources: [Enable SSO with NAA](https://learn.microsoft.com/office/dev/add-ins/develop/enable-nested-app-authentication-in-your-add-in) · [NestedAppAuth requirement set](https://learn.microsoft.com/javascript/api/requirement-sets/common/nested-app-auth-requirement-sets) · [SSO in event-based add-ins](https://learn.microsoft.com/office/dev/add-ins/develop/use-sso-in-event-based-activation) · [Outlook-Event-SSO-NAA sample](https://github.com/OfficeDev/Office-Add-in-samples/tree/main/Samples/auth/Outlook-Event-SSO-NAA)
@@ -251,7 +251,7 @@ Sources: [Enable SSO with NAA](https://learn.microsoft.com/office/dev/add-ins/de
 |---|---|
 | `AADSTS500011` / invalid resource | The Application ID URI in step 4 doesn't match `API_SCOPE_URI` in the manifest or config. |
 | `AADSTS65001` / consent required | Step 6.4 was skipped, or a new permission was added after consent. Grant admin consent again. |
-| `AADSTS50011` / redirect mismatch in NAA | `brk-multihub://sig.tenaxgrupa.lv` is missing or has a path or trailing slash. |
+| `AADSTS50011` / redirect mismatch in NAA | `brk-multihub://sig.tenax.lv` is missing or has a path or trailing slash. |
 | Setting the identifier URI fails with "must use a verified domain" | See step 0.2. |
 | Telemetry stage `token` with `sso: … 13xxx` | Legacy Office SSO error codes (see Microsoft's *Troubleshoot error messages for single sign-on*). Usually missing pre-authorisation (step 5) or admin consent (step 6). |
 | API returns 401 but the token looks right | The API must accept `aud = <appId>` with the v2 issuer, and `scp` containing `Signature.Read` **or** `access_as_user`. |

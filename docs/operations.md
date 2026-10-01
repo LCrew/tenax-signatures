@@ -1,6 +1,6 @@
 # Operations
 
-Everything below is done in the admin console (`https://sig.tenaxgrupa.lv`) unless stated otherwise. Every change is
+Everything below is done in the admin console (`https://sig.tenax.lv`) unless stated otherwise. Every change is
 recorded under **Activity**.
 
 ## Change a signature design

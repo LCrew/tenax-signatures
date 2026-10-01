@@ -3,10 +3,10 @@
   Tenax Signature: event-based Outlook add-in (add-in only / XML manifest).
 
   TEMPLATE. The API renders this at request time by replacing:
-    {{PUBLIC_URL}}     https://sig.tenaxgrupa.lv (no trailing slash)
+    {{PUBLIC_URL}}     https://sig.tenax.lv (no trailing slash)
     {{ADDIN_ID}}       stable GUID of this add-in. Never change it after the first deployment.
     {{CLIENT_ID}}      Entra app (client) ID of "Tenax Signature API"
-    {{API_SCOPE_URI}}  Application ID URI, e.g. api://sig.tenaxgrupa.lv/<clientId>
+    {{API_SCOPE_URI}}  Application ID URI, e.g. api://sig.tenax.lv/<clientId>
     {{VERSION}}        manifest version, n.n.n.n. Bump it on every change; admins must re-accept updates.
 
   No ribbon buttons: the add-in only reacts to launch events.

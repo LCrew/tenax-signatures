@@ -7,7 +7,7 @@ import type { Company, Settings, TemplateKind } from '../types.js';
 import type { SecretBox } from './secrets.js';
 
 const DEFAULTS: Settings = {
-  publicUrl: 'https://sig.tenaxgrupa.lv',
+  publicUrl: 'https://sig.tenax.lv',
   directoryMode: 'mock',
   tenantId: '',
   clientId: '',

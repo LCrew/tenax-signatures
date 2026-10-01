@@ -63,7 +63,7 @@ describe('rendered signatures', async () => {
   });
 
   it('uses absolute HTTPS asset URLs', async () => {
-    expect(await sig('test.tenax@tenaxgrupa.lv')).toContain('src="https://sig.tenaxgrupa.lv/assets/tenax/logo.png"');
+    expect(await sig('test.tenax@tenaxgrupa.lv')).toContain('src="https://sig.tenax.lv/assets/tenax/logo.png"');
   });
 
   it('switches to a shared mailbox signature only for configured mailboxes', async () => {

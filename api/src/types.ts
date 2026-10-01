@@ -96,7 +96,7 @@ export interface Settings {
   directoryMode: DirectoryMode;
   tenantId: string;
   clientId: string;
-  /** Application ID URI, e.g. api://sig.tenaxgrupa.lv/<clientId> */
+  /** Application ID URI, e.g. api://sig.tenax.lv/<clientId> */
   appIdUri: string;
   credentialType: 'certificate' | 'secret' | 'none';
   certificateThumbprint: string;

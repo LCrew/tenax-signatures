@@ -12,9 +12,9 @@ Tick each cell with `[x]`, or write `FAIL` plus a note number. `n/a` means the p
 - [ ] Test mailbox is a member of `SG-Signature-Pilot` **and exactly one** company group (start with `SG-Signature-Tenax`).
 - [ ] A shared mailbox with an entry in `config/shared_mailboxes.json` (or the admin UI) mapped to a **different** company. The test user has *Full Access* + *Send As* on it.
 - [ ] Entra setup done ([entra-setup.md](entra-setup.md)): admin consent granted, certificate uploaded, setup wizard completed.
-- [ ] `https://sig.tenaxgrupa.lv/healthz` returns OK.
-- [ ] `https://sig.tenaxgrupa.lv/.well-known/microsoft-officeaddins-allowed.json` lists `https://sig.tenaxgrupa.lv/addin/launchevent.js`.
-- [ ] `https://sig.tenaxgrupa.lv/addin/launchevent.js` starts with `globalThis.__SIG_CONFIG__ = {…}` containing the right `apiBase`, `clientId`, `apiScope` and `tenantId`.
+- [ ] `https://sig.tenax.lv/healthz` returns OK.
+- [ ] `https://sig.tenax.lv/.well-known/microsoft-officeaddins-allowed.json` lists `https://sig.tenax.lv/addin/launchevent.js`.
+- [ ] `https://sig.tenax.lv/addin/launchevent.js` starts with `globalThis.__SIG_CONFIG__ = {…}` containing the right `apiBase`, `clientId`, `apiScope` and `tenantId`.
 - [ ] Add-in uploaded in the M365 admin center (Integrated apps) and assigned **only** to `SG-Signature-Pilot`. Record the date and time: ____________ (propagation can take **up to 24 h**).
 - [ ] Admin UI preview for the test user shows the expected company template (new + reply).
 - [ ] Client versions noted:

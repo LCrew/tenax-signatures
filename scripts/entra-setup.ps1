@@ -30,7 +30,7 @@
     Directory (tenant) ID or verified domain, e.g. TenaxMID.onmicrosoft.com.
 
 .PARAMETER PublicHost
-    Public host name of the signature service. Default: sig.tenaxgrupa.lv. Its parent domain must be a
+    Public host name of the signature service. Default: sig.tenax.lv. Its parent domain must be a
     verified domain in the tenant, otherwise Entra rejects the api://<host>/<appId> identifier URI.
 
 .PARAMETER CreateGroups
@@ -50,7 +50,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)] [string] $TenantId,
-    [string] $PublicHost = 'sig.tenaxgrupa.lv',
+    [string] $PublicHost = 'sig.tenax.lv',
     [switch] $CreateGroups,
     [string] $CertPath
 )

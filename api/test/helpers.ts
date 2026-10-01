@@ -11,7 +11,7 @@ import { seedIfEmpty } from '../src/services/settings.js';
 
 export const TENANT = '11111111-2222-3333-4444-555555555555';
 export const CLIENT = '66666666-7777-8888-9999-000000000000';
-export const APP_ID_URI = `api://sig.tenaxgrupa.lv/${CLIENT}`;
+export const APP_ID_URI = `api://sig.tenax.lv/${CLIENT}`;
 
 const root = path.resolve(import.meta.dirname, '..', '..');
 
@@ -59,7 +59,7 @@ export async function makeApp(envOverrides: Partial<Env> = {}, opts: { withKeys?
   const ctx = new AppContext(env, repo, keys?.jwks, directory);
   seedIfEmpty(repo, env, ctx.settings, () => {});
   for (const o of directory.fixtureOverrides) repo.saveOverrides({ ...o, updatedBy: 'fixtures' });
-  ctx.settings.update({ tenantId: TENANT, clientId: CLIENT, appIdUri: APP_ID_URI, publicUrl: 'https://sig.tenaxgrupa.lv' });
+  ctx.settings.update({ tenantId: TENANT, clientId: CLIENT, appIdUri: APP_ID_URI, publicUrl: 'https://sig.tenax.lv' });
   const app = await buildApp(ctx, { logger: false });
   return { app, ctx, repo, keys, env };
 }

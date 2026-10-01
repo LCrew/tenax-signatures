@@ -35,7 +35,7 @@ export function DirectoryForm({ settings, onSaved, compact = false }: { settings
     try {
       return new URL(settings.publicUrl).host;
     } catch {
-      return 'sig.tenaxgrupa.lv';
+      return 'sig.tenax.lv';
     }
   })();
   const [mode, setMode] = useState<Settings['directoryMode']>(settings.directoryMode);
