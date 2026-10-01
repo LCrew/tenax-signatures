@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { Search, Wand2 } from 'lucide-react';
+import { BatchFix, fixableMissing } from '../components/people/BatchFix';
 import { api } from '../lib/api';
 import { useApp, useAsync, useCompanies } from '../lib/hooks';
 import { FIELD_LABELS, type UserSummary } from '../lib/types';
@@ -17,6 +18,7 @@ export function People() {
   const users = useAsync(() => api.get<UserSummary[]>(`/api/admin/users${view === 'excluded' ? '?view=excluded' : ''}`), [view]);
   const [filter, setFilter] = useState<Filter>('all');
   const colorOf = (k: string) => companies.find((c) => c.key === k)?.color;
+  const [batch, setBatch] = useState<UserSummary[] | null>(null);
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -64,6 +66,11 @@ export function People() {
         </select>
         <span className="spacer" />
         {users.data && <span className="small muted">{rows.length} of {users.data.length}</span>}
+        {view === 'active' && rows.some((u) => fixableMissing(u).length > 0) && (
+          <button className="btn primary" onClick={() => setBatch(rows.filter((u) => fixableMissing(u).length > 0))}>
+            <Wand2 size={15} /> Fill in missing ({rows.filter((u) => fixableMissing(u).length > 0).length})
+          </button>
+        )}
       </div>
       {users.error && <ErrorNote error={users.error} retry={users.reload} />}
       {users.loading && !users.data ? (
@@ -120,6 +127,15 @@ export function People() {
             </table>
           )}
         </div>
+      )}
+      {batch && (
+        <BatchFix
+          queue={batch}
+          onClose={(changed) => {
+            setBatch(null);
+            if (changed > 0) void users.reload();
+          }}
+        />
       )}
     </>
   );

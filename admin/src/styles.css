@@ -455,3 +455,7 @@ input[type='range'] { accent-color: var(--action); width: 100%; min-height: 36px
 .design-card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .design-card strong { font-size: var(--t-sm); }
 .design-card span { font-size: var(--t-xs); color: var(--graphite); }
+
+/* Batch fix progress */
+.batch-progress { flex: 0 0 140px; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.batch-progress > span { display: block; height: 100%; background: var(--action); transition: width 0.2s ease; }

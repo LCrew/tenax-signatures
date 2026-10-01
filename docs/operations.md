@@ -152,6 +152,15 @@ groups but should sign as one company. Their signature then uses that company's 
 they choose or are assigned another). **From group membership** undoes it. People with an override aren't reported
 as multi-group conflicts.
 
+## Fill in missing details quickly
+
+**People › Fill in missing (N)** walks through everyone in the current list who is missing a name, job title (LV)
+or mobile, one person at a time, showing only their missing fields. Type, **Tab** to the next field, **Enter** to
+save and open the next person (Enter does nothing until every shown field is filled). Tick **No mobile phone** for
+people without one; their mobile line is left out and they stop counting as missing. **Skip** moves on without
+saving. Values are saved as corrections, never written to Entra. Filter the list first (e.g. one company) to work
+through a smaller batch. Office phone and department aren't checked: signatures don't need them.
+
 ## After moving someone between groups
 
 User data is cached for 10 minutes, group memberships for 30. For an immediate change use **Settings › Server › Clear

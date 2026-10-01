@@ -17,7 +17,8 @@ const USER_TTL = 10 * 60_000;
 const GROUP_TTL = 30 * 60_000;
 
 /** Fields reported as "missing" when neither an override nor Entra supplies them. */
-const REPORTED_FIELDS = ['displayName', 'jobTitleLv', 'mobilePhone', 'officePhone', 'email', 'department'] as const;
+/** Fields a signature needs. Office phone and department aren't checked: the signatures don't rely on them. */
+const REPORTED_FIELDS = ['displayName', 'jobTitleLv', 'mobilePhone', 'email'] as const;
 
 export interface CompanyResolution {
   company: string;
@@ -78,7 +79,8 @@ export function resolveFields(entra: DirectoryUser, o: Overrides | null) {
   };
   sources.hideMobile = o?.hideMobile != null ? 'override' : 'none';
   sources.greeting = o?.greeting != null ? 'override' : 'none';
-  const missing = REPORTED_FIELDS.filter((k) => fields[k] == null);
+  // A mobile hidden on purpose ("No mobile") isn't missing.
+  const missing = REPORTED_FIELDS.filter((k) => fields[k] == null && !(k === 'mobilePhone' && fields.hideMobile));
   return { fields, sources, missing: [...missing] };
 }
 

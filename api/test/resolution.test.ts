@@ -45,7 +45,13 @@ describe('field precedence (pure)', () => {
     expect(r.fields.jobTitleEn).toBeNull(); // empty override doesn't count
     expect(r.fields.department).toBeNull(); // whitespace-only is missing
     expect(r.fields.officePhone).toBeNull();
-    expect(r.missing).toEqual(expect.arrayContaining(['officePhone', 'department']));
+    expect(r.missing).not.toContain('officePhone'); // not needed in signatures
+    expect(r.missing).not.toContain('department');
+  });
+  it('a mobile hidden on purpose is not missing', () => {
+    const entra = { id: '1', userPrincipalName: 'a@x.lv', displayName: 'A', jobTitle: 'B', mobilePhone: null } as any;
+    expect(resolveFields(entra, null).missing).toContain('mobilePhone');
+    expect(resolveFields(entra, { upn: 'a@x.lv', hideMobile: true }).missing).not.toContain('mobilePhone');
   });
   it('email always comes from Entra', () => {
     const r = resolveFields(entra, { upn: 'a@x.lv', displayName: 'X' });
