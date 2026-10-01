@@ -84,6 +84,8 @@
           </Runtimes>
 
           <DesktopFormFactor>
+            <!-- Also run in shared mailboxes (Mac; web "Open another mailbox"; new Outlook promoted accounts). -->
+            <SupportsSharedFolders>true</SupportsSharedFolders>
             <!-- "Signatures" button in the compose window: switch design for one email (task pane). -->
             <ExtensionPoint xsi:type="MessageComposeCommandSurface">
               <OfficeTab id="TabDefault">

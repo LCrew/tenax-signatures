@@ -169,6 +169,14 @@ mailbox), the add-in inserts, per mailbox:
 
 Addresses not listed keep the sender's own signature unchanged.
 
+How it works: the add-in runs for the **person** writing (it's deployed to people, never to shared mailboxes), and
+the signature is chosen from who they are plus the From address. A shared mailbox never signs in, so it needs no
+licence and no add-in deployment; only people need **Send as** (or **Send on behalf**) on it in Exchange. **Full
+access** alone lets people read the mailbox but Exchange refuses sending as it. The add-in works whether the
+mailbox appears in the folder list (automapped), in its own tab in Outlook on the web, or as a separate account in
+new Outlook / Outlook for Mac (manifest 1.1.2+). Don't sign in to a shared mailbox with a password: add-ins don't
+run there.
+
 ## Rotate the Entra certificate
 
 1. Create a new certificate (see [setup-guide.md](setup-guide.md#step-4-in-detail-entra-id)) and upload the `.cer` to the
