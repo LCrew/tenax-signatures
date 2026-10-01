@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
@@ -6,20 +7,31 @@ import { API_SCOPE } from '../auth/plugin.js';
 
 const xmlEscape = (s: string) => s.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
+/**
+ * Stable second add-in ID for the personal test copy, derived from the real one so it never changes and never
+ * collides with the admin-deployed add-in.
+ */
+export function testAddinId(addinId: string): string {
+  const h = crypto.createHash('sha256').update(`test:${addinId}`).digest('hex');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
+}
+
 /** Manifest with this deployment's host, app ID and add-in ID filled in. */
-export function renderManifest(ctx: AppContext): string {
+export function renderManifest(ctx: AppContext, opts: { test?: boolean } = {}): string {
   const s = ctx.settings.get();
   const file = path.join(ctx.env.addinDistDir, 'manifest.template.xml');
   const fallback = path.resolve(ctx.env.addinDistDir, '..', 'manifest.template.xml');
   const tpl = fs.readFileSync(fs.existsSync(file) ? file : fallback, 'utf8');
   const values: Record<string, string> = {
     PUBLIC_URL: s.publicUrl.replace(/\/+$/, ''),
-    ADDIN_ID: s.addinId,
+    ADDIN_ID: opts.test ? testAddinId(s.addinId) : s.addinId,
     CLIENT_ID: s.clientId || '00000000-0000-0000-0000-000000000000',
     API_SCOPE_URI: s.appIdUri || `api://${new URL(s.publicUrl).host}/${s.clientId}`,
     VERSION: '1.0.0.0',
   };
-  return tpl.replace(/\{\{(\w+)\}\}/g, (m, k) => (k in values ? xmlEscape(values[k]) : m));
+  let xml = tpl.replace(/\{\{(\w+)\}\}/g, (m, k) => (k in values ? xmlEscape(values[k]) : m));
+  if (opts.test) xml = xml.replace('<DisplayName DefaultValue="Tenax Signature"/>', '<DisplayName DefaultValue="Tenax Signature (test)"/>');
+  return xml;
 }
 
 export function addinRoutes(app: FastifyInstance, ctx: AppContext) {
@@ -43,9 +55,15 @@ export function addinRoutes(app: FastifyInstance, ctx: AppContext) {
     return reply.type('application/javascript; charset=utf-8').header('Cache-Control', 'no-cache').send(body);
   });
 
-  app.get('/addin/manifest.xml', async (_req, reply) =>
-    reply.type('application/xml; charset=utf-8').send(renderManifest(ctx)),
-  );
+  // ?variant=test: same add-in under a different ID, for installing on your own mailbox (Outlook on the web ›
+  // My add-ins › Add from file) while the admin-deployed one is still propagating. Remove it afterwards.
+  app.get('/addin/manifest.xml', async (req, reply) => {
+    const test = (req.query as { variant?: string }).variant === 'test';
+    return reply
+      .type('application/xml; charset=utf-8')
+      .header('Content-Disposition', `attachment; filename="${test ? 'tenax-signature-test-manifest.xml' : 'tenax-signature-manifest.xml'}"`)
+      .send(renderManifest(ctx, { test }));
+  });
 
   // Logos: uploaded (DATA_DIR/assets) wins over bundled (assets/).
   app.get('/assets/:company/:file', async (req, reply) => {

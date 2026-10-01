@@ -100,3 +100,19 @@ describe('current designs', async () => {
     expect(() => validateMeta(JSON.stringify({ banner: { file: 'a.png', width: 1, height: 1, link: 'javascript:x' } }))).toThrow(/https/);
   });
 });
+
+describe('add-in manifest', async () => {
+  const { app, ctx } = await makeApp();
+  it('serves a test variant with a different, stable add-in ID', async () => {
+    const real = (await app.inject({ url: '/addin/manifest.xml' })).body;
+    const test1 = (await app.inject({ url: '/addin/manifest.xml?variant=test' })).body;
+    const test2 = (await app.inject({ url: '/addin/manifest.xml?variant=test' })).body;
+    const id = (x: string) => /<Id>([^<]+)<\/Id>/.exec(x)![1];
+    expect(id(real)).toBe(ctx.settings.get().addinId);
+    expect(id(test1)).not.toBe(id(real));
+    expect(id(test1)).toBe(id(test2));
+    expect(id(test1)).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-a[0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(test1).toContain('Tenax Signature (test)');
+    expect(test1).toContain('https://sig.tenax.lv/addin/launchevent.js');
+  });
+});
