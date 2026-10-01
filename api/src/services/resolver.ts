@@ -27,8 +27,8 @@ export interface CompanyResolution {
 }
 
 /**
- * Pure company resolution (brief §3.1): match by group object ID, priority on conflict,
- * then admin override, then defaultCompany.
+ * Pure company resolution: an IT administrator's company choice for this person wins (people in two company groups
+ * who should only use one); otherwise match by group object ID with priority on conflict; otherwise defaultCompany.
  */
 export function resolveCompany(
   groupIds: string[],
@@ -43,10 +43,11 @@ export function resolveCompany(
   const candidates = matched.map((c) => c.key);
   const knownOverride = override && companies.some((c) => c.key === override) ? override : null;
 
+  // An explicit choice settles any multi-group overlap, so it's not reported as a conflict.
+  if (knownOverride) return { company: knownOverride, source: 'override', candidates, conflict: false };
   if (matched.length >= 1) {
     return { company: matched[0].key, source: 'group', candidates, conflict: matched.length > 1 };
   }
-  if (knownOverride) return { company: knownOverride, source: 'override', candidates, conflict: false };
   return { company: defaultCompany, source: 'default', candidates, conflict: false };
 }
 
@@ -141,6 +142,7 @@ export class UserResolver {
       company: c.company,
       companySource: c.source,
       companyCandidates: c.candidates,
+      groupIds,
       conflict: c.conflict,
       fields,
       sources,

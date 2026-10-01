@@ -80,8 +80,10 @@ Best fix: correct the attribute in on-premises AD (title, phone, department) and
 Stopgap: **People** › person › type a correction (empty = use Entra), tick **Leave the mobile number out** if needed,
 **Save corrections**. The preview shows the result before saving.
 
-A company picked on the person page only applies when they're in *no* company group. Group membership always wins, so
-fix memberships in AD.
+**Company** on the person page (IT only) overrides group membership. Use it for colleagues who are in two company
+groups but should sign as one company. Their signature then uses that company's designs (its default, unless
+they choose or are assigned another). **From group membership** undoes it. People with an override aren't reported
+as multi-group conflicts.
 
 ## After moving someone between groups
 

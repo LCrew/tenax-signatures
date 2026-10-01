@@ -18,6 +18,7 @@ import {
 import { importTemplatesFromDisk } from '../services/settings.js';
 import { blockDocSchema, compileBlocks, extractBlocks, presetDoc, stripBlocksHeader } from '../services/blocks.js';
 import { applyOverrides, ensureDefaultDesign, metaOverridesSchema, newDesignId } from '../services/designs.js';
+import { resolveCompany } from '../services/resolver.js';
 import type { Company, ComposeType, Design, Overrides, ResolvedUser, TemplateKind } from '../types.js';
 import { overridePatchSchema } from './signature.js';
 import { renderManifest } from './addin.js';
@@ -100,10 +101,11 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     design: z.union([z.string().max(80), z.null()]).optional(),
     designLocked: z.boolean().optional(),
   });
-  function checkDesignFor(user: ResolvedUser, design: string | null | undefined): string | null {
+  function checkDesignFor(user: ResolvedUser, design: string | null | undefined, company?: string | null): string | null {
     if (!design) return null;
+    const target = company === undefined ? user.company : company ?? resolveCompany(user.groupIds ?? [], ctx.repo.listCompanies(), null, ctx.settings.get().defaultCompany).company;
     const d = ctx.repo.getDesign(design);
-    return d && d.company === user.company ? null : 'That design doesn’t belong to this person’s company';
+    return d && d.company === target ? null : 'That design doesn’t belong to this person’s company';
   }
 
   // ───────────────────────────── Users ─────────────────────────────
@@ -159,7 +161,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     const user = await scopedUser(access, upn);
     if (!user) return reply.code(404).send({ error: 'User not found in directory' });
     if (!access.global && body.overrides.company !== undefined) return reply.code(403).send({ error: 'Only IT administrators can change which company a person belongs to' });
-    const designProblem = checkDesignFor(user, body.overrides.design);
+    const designProblem = checkDesignFor(user, body.overrides.design, body.overrides.company);
     if (designProblem) return reply.code(400).send({ error: designProblem });
     if (body.overrides.design !== undefined && (body.overrides.design ?? null) !== (user.overrides?.design ?? null)) (body.overrides as Overrides).chosenDesign = null;
     const merged = { ...(user.overrides ?? { upn: user.upn }), ...body.overrides, upn: user.upn };
@@ -176,9 +178,16 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     if (patch.company && !findCompany(patch.company)) return reply.code(400).send({ error: `Unknown company ${patch.company}` });
     const user = await scopedUser(access, upn);
     if (!user) return reply.code(404).send({ error: 'User not found in directory' });
-    const designProblem = checkDesignFor(user, patch.design);
+    const designProblem = checkDesignFor(user, patch.design, patch.company);
     if (designProblem) return reply.code(400).send({ error: designProblem });
     const before = ctx.repo.getOverrides(user.upn);
+    // Changing the company changes which designs exist for them: drop design choices from the old company
+    // (unless a design of the new company is set in the same request).
+    if (patch.company !== undefined && (patch.company ?? null) !== (before?.company ?? null) && patch.design === undefined) {
+      patch.design = null;
+      patch.designLocked = false;
+      patch.chosenDesign = null;
+    }
     // An admin CHANGING the assigned design replaces the person's own earlier choice (they may choose again unless
     // locked). Saving other corrections leaves their choice alone.
     if (patch.design !== undefined && (patch.design ?? null) !== (before?.design ?? null)) patch.chosenDesign = null;

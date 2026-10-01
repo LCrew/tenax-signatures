@@ -82,7 +82,7 @@ export function Person() {
       {u.conflict && (
         <div className="callout warn" style={{ marginBottom: 20 }}>
           In {u.candidates.length} company groups ({u.candidates.join(', ')}). Using {u.companyName} because it's higher in
-          the priority list. Remove them from the other group in AD to clear this.
+          the priority list. {session?.isAdmin ? 'Pick their company below to settle it for this person, or remove them from the other group in AD.' : 'IT can settle this by choosing their company.'}
         </div>
       )}
       <div className="split">
@@ -137,10 +137,10 @@ export function Person() {
                 </select>
                 <div className="entra">
                   {u.companySource === 'group'
-                    ? "Group membership decides. A company picked here only applies if they're in no company group."
+                    ? `From group membership${u.candidates.length > 1 ? ` (in ${u.candidates.length} company groups)` : ''}. Pick a company to override it; their signature then uses that company’s designs.`
                     : u.companySource === 'default'
-                      ? 'In no company group, so the default company is used.'
-                      : 'Set by an admin because they are in no company group.'}
+                      ? 'In no company group, so the default company is used. Pick a company to set it.'
+                      : `Set by an admin, overriding group membership${u.candidates.length ? ` (groups: ${u.candidates.join(', ')})` : ''}. Choose “From group membership” to undo.`}
                 </div>
               </div>
             </div>}

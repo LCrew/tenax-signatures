@@ -182,3 +182,26 @@ describe('Outlook add-in: Signatures button', async () => {
     }
   });
 });
+
+describe('company chosen by IT overrides group membership', async () => {
+  const { app } = await makeApp();
+  const MULTI = mock('test.multi@tenaxgrupa.lv'); // in Tenax + Vareno groups → Tenax by priority
+  it('switches company (and default signature) despite the groups, and back', async () => {
+    const before = (await app.inject({ url: '/api/admin/users/test.multi@tenaxgrupa.lv', headers: IT })).json();
+    expect(before).toMatchObject({ company: 'tenax', companySource: 'group', conflict: true });
+    await app.inject({ method: 'PUT', url: '/api/admin/users/test.multi@tenaxgrupa.lv/overrides', headers: IT, payload: { company: 'vareno' } });
+    const after = (await app.inject({ url: '/api/admin/users/test.multi@tenaxgrupa.lv', headers: IT })).json();
+    expect(after).toMatchObject({ company: 'vareno', companySource: 'override', conflict: false });
+    expect((await app.inject({ url: '/api/signature?type=newMail', headers: MULTI })).body).toContain('signature:vareno:new');
+    expect((await app.inject({ url: '/api/me', headers: MULTI })).json().design.id).toBe('vareno-standard');
+    await app.inject({ method: 'PUT', url: '/api/admin/users/test.multi@tenaxgrupa.lv/overrides', headers: IT, payload: { company: null } });
+    expect((await app.inject({ url: '/api/signature?type=newMail', headers: MULTI })).body).toContain('signature:tenax:new');
+  });
+  it('drops a design of the old company when the company changes', async () => {
+    const en = (await app.inject({ method: 'POST', url: '/api/admin/designs', headers: IT, payload: { company: 'tenax', name: 'English' } })).json();
+    await app.inject({ method: 'PUT', url: '/api/admin/users/test.multi@tenaxgrupa.lv/overrides', headers: IT, payload: { design: en.id, designLocked: true } });
+    await app.inject({ method: 'PUT', url: '/api/admin/users/test.multi@tenaxgrupa.lv/overrides', headers: IT, payload: { company: 'vareno' } });
+    const me = (await app.inject({ url: '/api/me', headers: MULTI })).json();
+    expect(me).toMatchObject({ designLocked: false, design: { id: 'vareno-standard', source: 'default' } });
+  });
+});

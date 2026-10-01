@@ -19,9 +19,12 @@ describe('company resolution (pure)', () => {
   it('uses priority on multi-group and flags a conflict', () => {
     expect(resolveCompany(['ddd', 'aaa'], companies, null, 'vareno')).toMatchObject({ company: 'tenax', conflict: true, candidates: ['tenax', 'vareno'] });
   });
-  it('uses an admin override only when no group matches', () => {
+  it('an admin-chosen company wins over group membership and settles conflicts', () => {
     expect(resolveCompany([], companies, 'vareno', 'tenax')).toMatchObject({ company: 'vareno', source: 'override' });
-    expect(resolveCompany(['aaa'], companies, 'vareno', 'tenax')).toMatchObject({ company: 'tenax', source: 'group' });
+    expect(resolveCompany(['aaa'], companies, 'vareno', 'tenax')).toMatchObject({ company: 'vareno', source: 'override' });
+    expect(resolveCompany(['ddd', 'aaa'], companies, 'vareno', 'tenax')).toMatchObject({ company: 'vareno', source: 'override', conflict: false, candidates: ['tenax', 'vareno'] });
+    // "From group membership" (no override) goes back to groups.
+    expect(resolveCompany(['ddd', 'aaa'], companies, null, 'tenax')).toMatchObject({ company: 'tenax', source: 'group', conflict: true });
   });
   it('ignores an override pointing at an unknown company and falls back to default', () => {
     expect(resolveCompany([], companies, 'ghost', 'vareno')).toMatchObject({ company: 'vareno', source: 'default' });

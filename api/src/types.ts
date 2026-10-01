@@ -107,6 +107,8 @@ export interface ResolvedUser {
   company: string;
   companySource: CompanySource;
   companyCandidates: string[];
+  /** Transitive group object IDs (as resolved). */
+  groupIds?: string[];
   conflict: boolean;
   fields: {
     displayName: string | null;
