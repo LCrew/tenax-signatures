@@ -1,0 +1,70 @@
+# Tenax Grupa – Outlook signature service
+
+Automatically inserts the right company-branded signature in Outlook (new Outlook, classic, web, Mac, mobile) for every
+Tenax Grupa employee, based on the Entra security group they're in. See
+[SIGNATURE_SERVICE_BRIEF.md](SIGNATURE_SERVICE_BRIEF.md) for the full brief.
+
+- **API** (`/api`): Fastify + TypeScript. Resolves the caller from their Entra token, picks the company, merges admin
+  corrections over Entra data and renders the Handlebars template.
+- **Web console** (`/admin`): React + Vite, served by the API.
+  - **Everyone** signs in with Microsoft (OAuth auth code + PKCE) and gets *My signature*: their own signature, where each
+    value comes from, self-service edits if enabled, and a copy button.
+  - **Admins** (admins group, or a local break-glass account) also get the setup wizard, people and corrections, the
+    signature designer with live preview and versions, company/group mapping, shared mailboxes and the data-quality report.
+- **Outlook add-in** (`/addin`): event-based (`OnNewMessageCompose`, `OnNewAppointmentOrganizer`,
+  `OnMessageFromChanged`), NAA with Office SSO fallback.
+
+## Quick start (Docker)
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+docker compose logs signature | grep "Setup code"
+```
+
+Open http://localhost:8085, enter the code and follow the wizard. The full walkthrough, including HTTPS and the Entra
+app registration, is in **[docs/setup-guide.md](docs/setup-guide.md)**.
+
+## Development
+
+```bash
+npm run install:all
+npm test                # API test suite (Vitest)
+npm run preview         # builds admin + add-in, starts the API in mock mode on :8085
+npm run dev:admin       # Vite dev server on :5173 (proxies to :8085), in a second terminal
+```
+
+Mock mode (`MOCK_GRAPH=true`, non-production only) reads `fixtures/users.json` and accepts `X-Mock-User: <upn>` instead
+of a token. The sign-in page then offers "sign in as a fixture user" (`test.tenax@tenaxgrupa.lv` is an admin).
+`/dev/preview` shows every fixture user's new and reply signatures side by side. The header can't be enabled when
+`NODE_ENV=production`; there's a startup assertion and a test for it.
+
+## Layout
+
+```
+api/        Fastify service (src/, test/)
+admin/      React admin SPA
+addin/      manifest.template.xml, launchevent.ts/.html, build scripts
+templates/  <company>/new.hbs, reply.hbs, meta.json  (seed; generated from the current signatures by scripts/seed-templates.mjs)
+assets/     logos and promo banners per company (seed; uploads go to the data volume)
+config/     companies.json, shared_mailboxes.json    (seed; edited in the console afterwards)
+fixtures/   users.json (mock mode)
+scripts/    entra-setup.ps1, deploy-addin.ps1, seed-templates.mjs
+docs/       setup-guide.md, entra-setup.md, pilot-checklist.md, operations.md
+deploy/     Caddyfile for the optional HTTPS profile
+```
+
+`config/` and `templates/` are imported into the database on first launch. After that, the admin console is the source
+of truth (companies, group names/IDs and designs are editable there without redeploying).
+
+## Security notes
+
+- The signature endpoint serves only the caller. Identity comes from the validated token (issuer = our tenant,
+  audience = our app, signature from Entra JWKS), with the `oid` cross-checked against the UPN.
+- Admin endpoints need a local admin session or membership of the admins group.
+- Local passwords use scrypt. Session IDs are stored hashed. Cookies are HttpOnly and SameSite=Strict, with an Origin
+  check on writes.
+- The Graph credential (certificate key or secret) is encrypted at rest with AES-256-GCM.
+- First-launch setup is gated by a one-time code printed to the server log.
+- The service never writes to Entra and never creates users or groups (the setup script creates groups only with
+  `-CreateGroups`).

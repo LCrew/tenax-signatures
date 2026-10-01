@@ -1,0 +1,63 @@
+{
+  "$comment": "Seed values only. On first launch these are imported into the database; afterwards companies and group mappings are edited in the admin UI (Settings → Companies). groupId values are PLACEHOLDERS until the admin fills in the real Entra object IDs.",
+  "defaultCompany": "tenax",
+  "companies": [
+    {
+      "key": "tenax",
+      "displayName": "Tenax",
+      "legalName": "SIA \"Tenax\"",
+      "groupName": "SG-Signature-Tenax",
+      "groupId": "00000000-0000-0000-0000-00000000a001",
+      "priority": 1
+    },
+    {
+      "key": "tenapors",
+      "displayName": "Tenapors",
+      "legalName": "SIA \"Tenapors\"",
+      "groupName": "SG-Signature-Tenapors",
+      "groupId": "00000000-0000-0000-0000-00000000a002",
+      "priority": 2
+    },
+    {
+      "key": "tenaxpanel",
+      "displayName": "Tenax Panel",
+      "legalName": "SIA \"Tenax Panel\"",
+      "groupName": "SG-Signature-TenaxPanel",
+      "groupId": "00000000-0000-0000-0000-00000000a003",
+      "priority": 3
+    },
+    {
+      "key": "tenaxinstall",
+      "displayName": "Tenax Install",
+      "legalName": "SIA \"Tenax Install\"",
+      "groupName": "SG-Signature-TenaxInstall",
+      "groupId": "00000000-0000-0000-0000-00000000a005",
+      "priority": 4
+    },
+    {
+      "key": "vareno",
+      "displayName": "Vareno Group",
+      "legalName": "SIA \"Vareno Group\"",
+      "groupName": "SG-Signature-Vareno",
+      "groupId": "00000000-0000-0000-0000-00000000a004",
+      "priority": 5
+    }
+  ],
+  "groups": {
+    "pilot": {
+      "groupName": "SG-Signature-Pilot",
+      "groupId": "00000000-0000-0000-0000-00000000b001"
+    },
+    "admins": {
+      "groupName": "SG-Signature-Admins",
+      "groupId": "00000000-0000-0000-0000-00000000b002"
+    }
+  },
+  "selfService": {
+    "enabled": false,
+    "fields": [
+      "jobTitleEn",
+      "hideMobile"
+    ]
+  }
+}

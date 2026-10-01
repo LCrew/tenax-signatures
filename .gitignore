@@ -1,0 +1,14 @@
+node_modules/
+dist/
+data/
+.env
+*.pem
+*.key
+*.cer
+*.pfx
+.DS_Store
+backups/
+deploy/*_paraksti/
+CURRENT_PLACEHOLDERS/
+Thumbs.db
+*.log

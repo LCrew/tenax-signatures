@@ -1,0 +1,217 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, Undo2 } from 'lucide-react';
+import { api } from '../lib/api';
+import { useAsync, useCompanies, useDebounced, useToast } from '../lib/hooks';
+import { FIELD_LABELS, type ComposeType, type Overrides, type UserDetail } from '../lib/types';
+import { CompanyName, ErrorNote, Loading, PageHead, timeAgo } from '../components/ui';
+import { LetterPreview } from '../components/LetterPreview';
+
+const TEXT_FIELDS = ['displayName', 'jobTitleLv', 'jobTitleEn', 'mobilePhone', 'officePhone', 'department'] as const;
+type TextField = (typeof TEXT_FIELDS)[number];
+
+function entraValue(u: UserDetail, f: TextField): string | null {
+  switch (f) {
+    case 'displayName': return u.entra.displayName;
+    case 'jobTitleLv': return u.entra.jobTitle;
+    case 'jobTitleEn': return null;
+    case 'mobilePhone': return u.entra.mobilePhone;
+    case 'officePhone': return u.entra.businessPhones?.[0] ?? null;
+    case 'department': return u.entra.department;
+  }
+}
+
+export function Person() {
+  const { upn = '' } = useParams();
+  const toast = useToast();
+  const user = useAsync(() => api.get<UserDetail>(`/api/admin/users/${encodeURIComponent(upn)}`), [upn]);
+  const { companies } = useCompanies();
+  const [draft, setDraft] = useState<Overrides>({});
+  const [type, setType] = useState<ComposeType>('newMail');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (user.data) setDraft(pickOverrides(user.data.overrides));
+  }, [user.data]);
+
+  const saved = useMemo(() => pickOverrides(user.data?.overrides ?? null), [user.data]);
+  const dirty = JSON.stringify(normalize(draft)) !== JSON.stringify(normalize(saved));
+  const debounced = useDebounced(draft, 300);
+  const preview = useAsync(
+    () => (user.data ? api.post<string>(`/api/admin/users/${encodeURIComponent(upn)}/preview-draft`, { type, overrides: normalize(debounced) }) : Promise.resolve('')),
+    [upn, type, JSON.stringify(debounced), !!user.data],
+  );
+
+  if (user.error) return <ErrorNote error={user.error} retry={user.reload} />;
+  if (!user.data) return <Loading />;
+  const u = user.data;
+  const company = companies.find((c) => c.key === u.company);
+
+  async function save() {
+    setSaving(true);
+    try {
+      await api.put(`/api/admin/users/${encodeURIComponent(upn)}/overrides`, normalize(draft));
+      toast('Corrections saved. Outlook picks them up on the next new message.');
+      await user.reload();
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const set = (k: keyof Overrides, v: unknown) => setDraft((d) => ({ ...d, [k]: v }));
+
+  return (
+    <>
+      <Link to="/people" className="btn ghost sm" style={{ marginBottom: 12, paddingLeft: 0 }}>
+        <ArrowLeft size={14} /> People
+      </Link>
+      <PageHead
+        title={u.displayName ?? u.upn}
+        lead={
+          <span className="row" style={{ gap: 8 }}>
+            {u.upn} <CompanyName name={u.companyName} color={company?.color} />
+            {u.isAdmin && <span className="tag action">Admin</span>}
+            {u.isPilot && <span className="tag">Pilot</span>}
+          </span>
+        }
+      />
+      {u.conflict && (
+        <div className="callout warn" style={{ marginBottom: 20 }}>
+          In {u.candidates.length} company groups ({u.candidates.join(', ')}). Using {u.companyName} because it's higher in
+          the priority list. Remove them from the other group in AD to clear this.
+        </div>
+      )}
+      <div className="split">
+        <section className="panel">
+          <div className="panel-head">
+            <h3>Signature details</h3>
+            <span className="spacer" />
+            <span className="xs muted">Empty means "use Entra ID"</span>
+          </div>
+          <div className="panel-body" style={{ paddingTop: 4, paddingBottom: 4 }}>
+            {TEXT_FIELDS.map((f) => {
+              const ev = entraValue(u, f);
+              const ov = (draft[f] as string | null | undefined) ?? '';
+              return (
+                <div className="field-row" key={f}>
+                  <label className="k" htmlFor={`f-${f}`}>
+                    {FIELD_LABELS[f]}
+                  </label>
+                  <div>
+                    <div className="row" style={{ flexWrap: 'nowrap' }}>
+                      <input id={`f-${f}`} type="text" value={ov} placeholder={ev ?? (f === 'jobTitleEn' ? 'Not in Entra; set here' : 'Empty in Entra: line is left out')} onChange={(e) => set(f, e.target.value)} />
+                      {ov && (
+                        <button type="button" className="btn ghost sm" onClick={() => set(f, null)} title="Use the Entra value">
+                          <Undo2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                    <div className="entra">
+                      {ov ? <span className="tag action">Correction</span> : ev ? <span className="tag">From Entra</span> : <span className="tag danger">Missing</span>}
+                      {ov && ev && <span>Entra says: {ev}</span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="field-row">
+              <span className="k">Email</span>
+              <div style={{ paddingTop: 8 }}>
+                {u.entra.mail ?? u.upn} <span className="xs muted">· always from Entra</span>
+              </div>
+            </div>
+            <div className="field-row">
+              <label className="k" htmlFor="f-company">Company</label>
+              <div>
+                <select id="f-company" value={draft.company ?? ''} onChange={(e) => set('company', e.target.value || null)}>
+                  <option value="">From group membership</option>
+                  {companies.map((c) => (
+                    <option key={c.key} value={c.key}>
+                      {c.displayName}
+                    </option>
+                  ))}
+                </select>
+                <div className="entra">
+                  {u.companySource === 'group'
+                    ? "Group membership decides. A company picked here only applies if they're in no company group."
+                    : u.companySource === 'default'
+                      ? 'In no company group, so the default company is used.'
+                      : 'Set by an admin because they are in no company group.'}
+                </div>
+              </div>
+            </div>
+            <div className="field-row">
+              <span className="k">Privacy</span>
+              <label className="check" style={{ paddingTop: 8 }}>
+                <input type="checkbox" checked={draft.hideMobile === true} onChange={(e) => set('hideMobile', e.target.checked ? true : null)} />
+                Leave the mobile number out of the signature
+              </label>
+            </div>
+          </div>
+          <div className="panel-body row" style={{ borderTop: '1px solid var(--line)' }}>
+            <span className="xs muted">
+              {u.overrides?.updatedAt ? `Last corrected ${timeAgo(u.overrides.updatedAt)} by ${u.overrides.updatedBy}` : 'No corrections yet'}
+            </span>
+            <span className="spacer" />
+            <button className="btn ghost" disabled={!dirty || saving} onClick={() => setDraft(saved)}>
+              Discard
+            </button>
+            <button className="btn primary" disabled={!dirty || saving} onClick={save}>
+              {saving ? 'Saving…' : 'Save corrections'}
+            </button>
+          </div>
+        </section>
+
+        <div className="sticky stack">
+          <LetterPreview html={preview.data ?? null} error={preview.error?.message} loading={preview.loading} type={type} onTypeChange={setType} from={{ name: draft.displayName || u.displayName || u.upn, email: u.entra.mail ?? u.upn }} />
+          {dirty && <p className="xs muted">Preview shows unsaved changes.</p>}
+          {u.history.length > 0 && (
+            <section className="panel">
+              <div className="panel-head">
+                <h3>History</h3>
+              </div>
+              <ul className="history panel-body" style={{ paddingTop: 4, paddingBottom: 4 }}>
+                {u.history.map((h) => (
+                  <li key={h.id} style={{ gridTemplateColumns: '1fr auto' }}>
+                    <span>
+                      {h.action === 'overrides.self' ? 'Edited by themselves' : `Corrected by ${h.actor}`}
+                      <span className="xs muted"> · {changedFields(h.before, h.after).join(', ') || 'no field changes'}</span>
+                    </span>
+                    <span className="xs muted">{timeAgo(h.at)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function pickOverrides(o: Overrides | null): Overrides {
+  if (!o) return {};
+  const { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile } = o;
+  return { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile };
+}
+
+/** Empty strings mean "no correction". */
+function normalize(o: Overrides): Overrides {
+  const out: Record<string, unknown> = {};
+  for (const k of ['displayName', 'jobTitleLv', 'jobTitleEn', 'mobilePhone', 'officePhone', 'department', 'company'] as const) {
+    const v = o[k];
+    out[k] = typeof v === 'string' && v.trim() ? v.trim() : null;
+  }
+  out.hideMobile = o.hideMobile === true ? true : null;
+  return out as Overrides;
+}
+
+function changedFields(before: unknown, after: unknown): string[] {
+  const b = (before ?? {}) as Record<string, unknown>;
+  const a = (after ?? {}) as Record<string, unknown>;
+  return Object.keys(FIELD_LABELS)
+    .filter((k) => (b[k] ?? null) !== (a[k] ?? null))
+    .map((k) => FIELD_LABELS[k].toLowerCase());
+}

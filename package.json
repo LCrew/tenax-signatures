@@ -1,0 +1,12 @@
+{
+  "name": "tenax-signature-service",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix api install && npm --prefix admin install && npm --prefix addin install",
+    "build": "npm --prefix addin run build && npm --prefix admin run build && npm --prefix api run build",
+    "test": "npm --prefix api test",
+    "preview": "npm --prefix addin run build && npm --prefix admin run build && npm --prefix api run preview",
+    "dev:api": "npm --prefix api run preview",
+    "dev:admin": "npm --prefix admin run dev"
+  }
+}

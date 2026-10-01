@@ -1,0 +1,11 @@
+<!-- signature:{{company.key}}:reply -->
+{{#if meta.greeting}}<p style="margin:0 0 12px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:11pt;color:{{meta.colors.text}};">{{meta.greeting}}</p>{{/if}}
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:{{meta.colors.text}};">
+  <tr>
+    <td style="padding:0 0 0 8px;border-left:2px solid {{meta.colors.primary}};">
+      <span style="font-weight:bold;color:{{meta.colors.name}};">{{user.displayName}}</span>{{#if user.jobTitleLv}} <span style="color:{{meta.colors.muted}};">| {{user.jobTitleLv}}</span>{{/if}}<br>
+      {{#if meta.footer.companyLine}}{{meta.footer.companyLine}}{{else}}{{company.displayName}}{{/if}}{{#if user.mobilePhone}} <span style="color:{{meta.colors.muted}};">| M:</span> <a href="tel:{{tel user.mobilePhone}}" style="color:{{meta.colors.text}};text-decoration:none;">{{user.mobilePhone}}</a>{{/if}}<br>
+      {{#if user.email}}<a href="mailto:{{user.email}}" style="color:{{meta.colors.primary}};text-decoration:none;">{{user.email}}</a>{{/if}}
+    </td>
+  </tr>
+</table>

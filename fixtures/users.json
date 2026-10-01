@@ -1,0 +1,171 @@
+{
+  "groups": [
+    {
+      "id": "00000000-0000-0000-0000-00000000a001",
+      "displayName": "SG-Signature-Tenax"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000a002",
+      "displayName": "SG-Signature-Tenapors"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000a003",
+      "displayName": "SG-Signature-TenaxPanel"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000a004",
+      "displayName": "SG-Signature-Vareno"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000a005",
+      "displayName": "SG-Signature-TenaxInstall"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000b001",
+      "displayName": "SG-Signature-Pilot"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000b002",
+      "displayName": "SG-Signature-Admins"
+    }
+  ],
+  "users": [
+    {
+      "id": "11111111-0000-0000-0000-000000000001",
+      "userPrincipalName": "test.tenax@tenaxgrupa.lv",
+      "mail": "test.tenax@tenaxgrupa.lv",
+      "displayName": "Jānis Testeris",
+      "jobTitle": "Pārdošanas vadītājs",
+      "mobilePhone": "29123456",
+      "businessPhones": [
+        "+371 67123456"
+      ],
+      "department": "Pārdošana",
+      "groups": [
+        "00000000-0000-0000-0000-00000000a001",
+        "00000000-0000-0000-0000-00000000b002",
+        "00000000-0000-0000-0000-00000000b001"
+      ]
+    },
+    {
+      "id": "11111111-0000-0000-0000-000000000002",
+      "userPrincipalName": "test.tenapors@tenaxgrupa.lv",
+      "mail": "test.tenapors@tenaxgrupa.lv",
+      "displayName": "Anna Bērziņa",
+      "jobTitle": null,
+      "mobilePhone": "+371 26 555 444",
+      "businessPhones": [
+        "+371 67000222"
+      ],
+      "department": "Loģistika",
+      "groups": [
+        "00000000-0000-0000-0000-00000000a002"
+      ]
+    },
+    {
+      "id": "11111111-0000-0000-0000-000000000003",
+      "userPrincipalName": "test.panel@tenaxgrupa.lv",
+      "mail": "test.panel@tenaxgrupa.lv",
+      "displayName": "Pēteris Kalniņš",
+      "jobTitle": "Vecākais inženieris (novecojis)",
+      "mobilePhone": "+37120111222",
+      "businessPhones": [],
+      "department": "Ražošana",
+      "groups": [
+        "00000000-0000-0000-0000-00000000a003"
+      ]
+    },
+    {
+      "id": "11111111-0000-0000-0000-000000000004",
+      "userPrincipalName": "test.vareno@tenaxgrupa.lv",
+      "mail": "test.vareno@tenaxgrupa.lv",
+      "displayName": "Laura Ozola",
+      "jobTitle": "Grāmatvede",
+      "mobilePhone": null,
+      "businessPhones": [
+        "67333444"
+      ],
+      "department": "Finanses",
+      "groups": [
+        "00000000-0000-0000-0000-00000000a004"
+      ]
+    },
+    {
+      "id": "11111111-0000-0000-0000-000000000005",
+      "userPrincipalName": "test.multi@tenaxgrupa.lv",
+      "mail": "test.multi@tenaxgrupa.lv",
+      "displayName": "Mārtiņš Liepa",
+      "jobTitle": "Projektu vadītājs",
+      "mobilePhone": "29888777",
+      "businessPhones": [
+        "+371 67999888"
+      ],
+      "department": "Projekti",
+      "groups": [
+        "00000000-0000-0000-0000-00000000a004",
+        "00000000-0000-0000-0000-00000000a001"
+      ]
+    },
+    {
+      "id": "11111111-0000-0000-0000-000000000006",
+      "userPrincipalName": "test.nogroup@tenaxgrupa.lv",
+      "mail": "test.nogroup@tenaxgrupa.lv",
+      "displayName": "Ilze Priede",
+      "jobTitle": "Asistente",
+      "mobilePhone": "29000111",
+      "businessPhones": [
+        "+371 67000111"
+      ],
+      "department": "Administrācija",
+      "groups": []
+    },
+    {
+      "id": "11111111-0000-0000-0000-000000000007",
+      "userPrincipalName": "test.xss@tenaxgrupa.lv",
+      "mail": "test.xss@tenaxgrupa.lv",
+      "displayName": "<img src=x onerror=alert(1)>",
+      "jobTitle": "\"><script>alert(2)</script>",
+      "mobilePhone": "29000222",
+      "businessPhones": [],
+      "department": null,
+      "groups": [
+        "00000000-0000-0000-0000-00000000a001"
+      ]
+    },
+    {
+      "id": "11111111-0000-0000-0000-000000000008",
+      "userPrincipalName": "test.lv@tenaxgrupa.lv",
+      "mail": "test.lv@tenaxgrupa.lv",
+      "displayName": "Ņikita Āboliņš-Ēķīšūžļģč",
+      "jobTitle": "Kvalitātes speciālists",
+      "mobilePhone": "+371 22 333 444",
+      "businessPhones": [
+        "+371 67444555"
+      ],
+      "department": "Kvalitāte",
+      "groups": [
+        "00000000-0000-0000-0000-00000000a002"
+      ]
+    },
+    {
+      "id": "11111111-0000-0000-0000-000000000009",
+      "userPrincipalName": "test.install@tenaxgrupa.lv",
+      "mail": "test.install@tenaxgrupa.lv",
+      "displayName": "Kārlis Vītols",
+      "jobTitle": "Montāžas brigadieris",
+      "mobilePhone": "26444555",
+      "businessPhones": [],
+      "department": "Montāža",
+      "groups": [
+        "00000000-0000-0000-0000-00000000a005"
+      ]
+    }
+  ],
+  "overrides": [
+    {
+      "upn": "test.panel@tenaxgrupa.lv",
+      "jobTitleLv": "Tehniskais direktors",
+      "jobTitleEn": "Technical Director"
+    }
+  ]
+}

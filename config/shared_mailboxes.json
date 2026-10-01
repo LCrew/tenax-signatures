@@ -1,0 +1,6 @@
+{
+  "$comment": "Seed values only; edited later in the admin UI (Settings → Shared mailboxes).",
+  "sharedMailboxes": [
+    { "email": "info@tenaxgrupa.lv", "company": "tenax", "displayName": "Tenax klientu serviss", "officePhone": "+371 67 000 000" }
+  ]
+}

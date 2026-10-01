@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Tenax Signature: event-based Outlook add-in (add-in only / XML manifest).
+
+  TEMPLATE. The API renders this at request time by replacing:
+    {{PUBLIC_URL}}     https://sig.tenaxgrupa.lv (no trailing slash)
+    {{ADDIN_ID}}       stable GUID of this add-in. Never change it after the first deployment.
+    {{CLIENT_ID}}      Entra app (client) ID of "Tenax Signature API"
+    {{API_SCOPE_URI}}  Application ID URI, e.g. api://sig.tenaxgrupa.lv/<clientId>
+    {{VERSION}}        manifest version, n.n.n.n. Bump it on every change; admins must re-accept updates.
+
+  No ribbon buttons: the add-in only reacts to launch events.
+
+  Requirement gating:
+    - The top-level <Requirements> stays at Mailbox 1.1 (as in Microsoft's signature samples) so Outlook
+      mobile, which reports Mailbox 1.5 but supports event-based activation, still loads the add-in.
+    - The event-based functionality lives in VersionOverridesV1_1, gated at Mailbox 1.10 (brief 7.1).
+    - OnMessageFromChanged needs Mailbox 1.13. The XML schema allows only one VersionOverridesV1_1 block,
+      and LaunchEvent has no per-event requirement, so a separate 1.13 gate can't be expressed here (the
+      unified JSON manifest can do that; XML can't). Clients that don't know the event don't raise it.
+      Clients from the last few years support it: classic Outlook 2304+, Mac 16.77+, mobile 4.2502+,
+      OWA and new Outlook.
+-->
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+           xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
+           xsi:type="MailApp">
+  <Id>{{ADDIN_ID}}</Id>
+  <Version>{{VERSION}}</Version>
+  <ProviderName>Tenax Grupa</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Tenax Signature"/>
+  <Description DefaultValue="Automatically inserts the Tenax Grupa company email signature."/>
+  <IconUrl DefaultValue="{{PUBLIC_URL}}/addin/icon-64.png"/>
+  <HighResolutionIconUrl DefaultValue="{{PUBLIC_URL}}/addin/icon-128.png"/>
+  <SupportUrl DefaultValue="{{PUBLIC_URL}}/"/>
+  <AppDomains>
+    <AppDomain>{{PUBLIC_URL}}</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Mailbox"/>
+  </Hosts>
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.1"/>
+    </Sets>
+  </Requirements>
+
+  <!-- Legacy schema, required by MailApp and overridden by VersionOverrides on every supported client. -->
+  <FormSettings>
+    <Form xsi:type="ItemRead">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="{{PUBLIC_URL}}/addin/launchevent.html"/>
+        <RequestedHeight>250</RequestedHeight>
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+  <!-- setSignatureAsync and disableClientSignatureAsync need read/write on the current item only. -->
+  <Permissions>ReadWriteItem</Permissions>
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Edit"/>
+    <Rule xsi:type="ItemIs" ItemType="Appointment" FormType="Edit"/>
+  </Rule>
+  <DisableEntityHighlighting>true</DisableEntityHighlighting>
+
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
+      <Description resid="AppDescription"/>
+      <Requirements>
+        <bt:Sets DefaultMinVersion="1.10">
+          <bt:Set Name="Mailbox"/>
+        </bt:Sets>
+      </Requirements>
+      <Hosts>
+        <Host xsi:type="MailHost">
+          <Runtimes>
+            <!-- Browser runtime: new Outlook on Windows, Outlook on the web, Mac, mobile. -->
+            <Runtime resid="WebViewRuntime.Url">
+              <!-- JavaScript-only runtime: classic Outlook on Windows. Must be listed in
+                   {{PUBLIC_URL}}/.well-known/microsoft-officeaddins-allowed.json for SSO/CORS. -->
+              <Override type="javascript" resid="JSRuntime.Url"/>
+            </Runtime>
+          </Runtimes>
+
+          <DesktopFormFactor>
+            <ExtensionPoint xsi:type="LaunchEvent">
+              <LaunchEvents>
+                <LaunchEvent Type="OnNewMessageCompose" FunctionName="onNewMessageComposeHandler"/>
+                <LaunchEvent Type="OnNewAppointmentOrganizer" FunctionName="onNewAppointmentComposeHandler"/>
+                <!-- Mailbox 1.13: shared mailbox / delegate / alias From switch. See header comment. -->
+                <LaunchEvent Type="OnMessageFromChanged" FunctionName="onMessageFromChangedHandler"/>
+              </LaunchEvents>
+              <SourceLocation resid="WebViewRuntime.Url"/>
+            </ExtensionPoint>
+          </DesktopFormFactor>
+
+          <!-- Outlook on iOS/Android support only these two events (no appointments). -->
+          <MobileFormFactor>
+            <ExtensionPoint xsi:type="LaunchEvent">
+              <LaunchEvents>
+                <LaunchEvent Type="OnNewMessageCompose" FunctionName="onNewMessageComposeHandler"/>
+                <LaunchEvent Type="OnMessageFromChanged" FunctionName="onMessageFromChangedHandler"/>
+              </LaunchEvents>
+              <SourceLocation resid="WebViewRuntime.Url"/>
+            </ExtensionPoint>
+          </MobileFormFactor>
+        </Host>
+      </Hosts>
+
+      <Resources>
+        <bt:Images>
+          <bt:Image id="Icon.16x16" DefaultValue="{{PUBLIC_URL}}/addin/icon-16.png"/>
+          <bt:Image id="Icon.32x32" DefaultValue="{{PUBLIC_URL}}/addin/icon-32.png"/>
+          <bt:Image id="Icon.64x64" DefaultValue="{{PUBLIC_URL}}/addin/icon-64.png"/>
+          <bt:Image id="Icon.80x80" DefaultValue="{{PUBLIC_URL}}/addin/icon-80.png"/>
+          <bt:Image id="Icon.128x128" DefaultValue="{{PUBLIC_URL}}/addin/icon-128.png"/>
+        </bt:Images>
+        <bt:Urls>
+          <bt:Url id="WebViewRuntime.Url" DefaultValue="{{PUBLIC_URL}}/addin/launchevent.html"/>
+          <bt:Url id="JSRuntime.Url" DefaultValue="{{PUBLIC_URL}}/addin/launchevent.js"/>
+        </bt:Urls>
+        <bt:LongStrings>
+          <bt:String id="AppDescription" DefaultValue="Automatically inserts the Tenax Grupa company email signature."/>
+        </bt:LongStrings>
+      </Resources>
+
+      <!-- Legacy Office SSO fallback (Office.auth / OfficeRuntime.auth.getAccessToken). NAA doesn't use it. -->
+      <WebApplicationInfo>
+        <Id>{{CLIENT_ID}}</Id>
+        <Resource>{{API_SCOPE_URI}}</Resource>
+        <Scopes>
+          <Scope>openid</Scope>
+          <Scope>profile</Scope>
+        </Scopes>
+      </WebApplicationInfo>
+    </VersionOverrides>
+  </VersionOverrides>
+</OfficeApp>

@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "logo": {
+    "file": "logo.png",
+    "width": 191,
+    "height": 142
+  },
+  "colors": {
+    "primary": "#002060",
+    "text": "#002060",
+    "name": "#44546A",
+    "title": "#003366",
+    "muted": "#2F5496",
+    "rule": "#D9D9D9"
+  },
+  "greeting": "",
+  "websites": [
+    {
+      "label": "www.tenaxinstall.com",
+      "url": "https://www.tenaxinstall.com/"
+    }
+  ],
+  "footer": {
+    "companyLine": "TENAX INSTALL SIA, TENAX grupa",
+    "registrationNumber": "",
+    "address": "Spodrības iela 1, Dobele, LV-3701, Latvija",
+    "confidential": ""
+  },
+  "banner": null
+}

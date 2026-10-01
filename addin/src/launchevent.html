@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<!--
+  Browser runtime for event-based activation (new Outlook on Windows, Outlook on the web, Mac, mobile).
+  Referenced by WebViewRuntime.Url in the manifest. Classic Outlook on Windows loads launchevent.js
+  directly (JSRuntime.Url) and never uses this page. launchevent.js is served by the API with the
+  runtime config (globalThis.__SIG_CONFIG__) prepended, so it must stay on the same path.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+  <title>Tenax Signature</title>
+  <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script type="text/javascript" src="launchevent.js"></script>
+</head>
+<body></body>
+</html>

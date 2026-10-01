@@ -1,0 +1,4 @@
+{$TLS_HOST} {
+	encode gzip
+	reverse_proxy signature:8085
+}
