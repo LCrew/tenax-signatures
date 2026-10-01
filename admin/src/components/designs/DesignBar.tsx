@@ -13,6 +13,7 @@ export function DesignBar({
   activeId,
   onSelect,
   onChanged,
+  onUseImage,
 }: {
   company: string;
   companyName: string;
@@ -20,6 +21,7 @@ export function DesignBar({
   activeId: string;
   onSelect: (id: string) => void;
   onChanged: (selectId?: string) => void;
+  onUseImage: (id: string) => void;
 }) {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Design | null>(null);
@@ -32,6 +34,7 @@ export function DesignBar({
           <button key={d.id} role="tab" aria-selected={d.id === activeId} className="design-chip" onClick={() => onSelect(d.id)}>
             {d.isDefault && <Star size={12} aria-label="default" />}
             {d.name}
+            {d.format === 'image' && <span className="tag">Image</span>}
             {d.purpose === 'service' && !/service/i.test(d.name) && <span className="tag">Service</span>}
             {d.purpose === 'person' && !d.selectable && !d.isDefault && <span className="tag" title="Only admins can assign it">Assigned only</span>}
           </button>
@@ -46,7 +49,7 @@ export function DesignBar({
         </button>
       )}
       <NewDesignModal open={creating} onClose={() => setCreating(false)} company={company} designs={designs} activeId={activeId} onCreated={(id) => onChanged(id)} />
-      <DesignSettingsModal design={editing} onClose={() => setEditing(null)} onChanged={() => onChanged()} />
+      <DesignSettingsModal design={editing} onClose={() => setEditing(null)} onChanged={() => onChanged()} onUseImage={onUseImage} />
     </div>
   );
 }
@@ -135,7 +138,7 @@ function NewDesignModal({
   );
 }
 
-function DesignSettingsModal({ design, onClose, onChanged }: { design: Design | null; onClose: () => void; onChanged: () => void }) {
+function DesignSettingsModal({ design, onClose, onChanged, onUseImage }: { design: Design | null; onClose: () => void; onChanged: () => void; onUseImage: (id: string) => void }) {
   const toast = useToast();
   const [name, setName] = useState('');
   const [selectable, setSelectable] = useState(true);
@@ -176,6 +179,29 @@ function DesignSettingsModal({ design, onClose, onChanged }: { design: Design | 
         <button className="btn primary" onClick={() => run(() => api.put(`/api/admin/designs/${design.id}`, { name, selectable }), 'Design settings saved')}>
           Save settings
         </button>
+      </div>
+      <div className="callout row">
+        {design.format === 'image' ? (
+          <>
+            <span style={{ flex: '1 1 220px' }}>This design is one image rendered from an SVG template.</span>
+            <button className="btn sm" onClick={() => run(() => api.put(`/api/admin/designs/${design.id}`, { format: 'html' }), 'Back to the designer layouts')}>
+              Use designer layouts
+            </button>
+          </>
+        ) : (
+          <>
+            <span style={{ flex: '1 1 220px' }}>Use a single image made from an SVG file instead (e.g. a designer’s signature card).</span>
+            <button
+              className="btn sm"
+              onClick={() => {
+                onUseImage(design.id);
+                onClose();
+              }}
+            >
+              Use an SVG image
+            </button>
+          </>
+        )}
       </div>
       {!design.isDefault && design.purpose === 'person' && (
         <div className="callout row">

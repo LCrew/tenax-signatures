@@ -8,6 +8,7 @@ import { api } from '../lib/api';
 import { useApp, useAsync, useDebounced, useToast } from '../lib/hooks';
 import type { Company, ComposeType, Design, MetaOverrides, TemplateKind, TemplateVersion, UserSummary } from '../lib/types';
 import { DesignBar, WordingForm } from '../components/designs/DesignBar';
+import { ImageDesignEditor } from '../components/designs/ImageDesignEditor';
 import { ErrorNote, Field, Loading, Modal, PageHead, Segmented, timeAgo } from '../components/ui';
 import { BlockEditor } from '../components/blocks/BlockEditor';
 import type { BlockDoc } from '../components/blocks/model';
@@ -67,6 +68,7 @@ export function Designs() {
   const users = useAsync(() => api.get<UserSummary[]>('/api/admin/users').catch(() => [] as UserSummary[]));
   const active = rows.data?.find((r) => r.company.key === companyParam) ?? rows.data?.[0];
   const [designId, setDesignId] = useState<string | null>(null);
+  const [imageMode, setImageMode] = useState<string | null>(null);
   useEffect(() => setDesignId(null), [active?.company.key]);
   const activeDesign = active?.designs.find((d) => d.id === designId) ?? active?.designs.find((d) => d.isDefault) ?? active?.designs[0];
   const [wording, setWording] = useState<MetaOverrides>({});
@@ -227,9 +229,22 @@ export function Designs() {
             await rows.reload();
             if (id) setDesignId(id);
           }}
+          onUseImage={(id) => {
+            setDesignId(id);
+            setImageMode(id);
+          }}
         />
       )}
 
+      {activeDesign && (activeDesign.format === 'image' || imageMode === activeDesign.id) ? (
+        <ImageDesignEditor
+          key={activeDesign.id}
+          design={activeDesign}
+          users={users.data ?? []}
+          onSaved={() => void rows.reload()}
+          onLeave={() => setImageMode(null)}
+        />
+      ) : (
       <div className="split">
         <section className="panel">
           <div className="panel-head" style={{ paddingBottom: 0, borderBottom: 0 }}>
@@ -357,6 +372,8 @@ export function Designs() {
           </p>
         </div>
       </div>
+
+      )}
 
       <VersionsModal open={historyOpen} onClose={() => setHistoryOpen(false)} company={active.company} design={activeDesign} onRestored={rows.reload} />
       <Modal open={!!confirmLeave} onClose={() => setConfirmLeave(null)} title="Discard unsaved changes?">

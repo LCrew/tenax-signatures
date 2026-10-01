@@ -1,5 +1,5 @@
 export type ComposeType = 'newMail' | 'reply' | 'forward';
-export type TemplateKind = 'new' | 'reply' | 'meta';
+export type TemplateKind = 'new' | 'reply' | 'meta' | 'image';
 export type CompanySource = 'group' | 'override' | 'default';
 export type DirectoryMode = 'mock' | 'graph';
 export type SignatureLanguage = 'lv' | 'en' | 'bilingual';
@@ -56,6 +56,8 @@ export interface Design {
   isDefault: boolean;
   sort: number;
   metaOverrides: MetaOverrides;
+  /** html: visual designer / HTML; image: SVG template rendered to a PNG per person. */
+  format?: 'html' | 'image';
   createdAt: string;
 }
 

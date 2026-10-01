@@ -69,6 +69,30 @@ The add-in manifest changed (version 1.1.0.0). Download it again (Settings › O
 see the button after the update propagates (hours, up to 24). Update a personal test copy the same way
 (`/addin/manifest.xml?variant=test`, remove the old one and add the new file).
 
+## Image signatures from an SVG (e.g. Vareno Group)
+
+For companies whose signature is one designed image. **Designs** › company › design › **Design settings** ›
+**Use an SVG image** › **Upload SVG** (exported from Inkscape/Illustrator with real text, not outlined).
+- The upload is cleaned: scripts, external links and the bulky colour profile are removed.
+- The service suggests a mapping: the biggest single line becomes the name, the next one the title, and a
+  "Mob…" line gets the mobile number. Check it, adjust any line, and use the **+ Name / + Mobile / …** buttons
+  to insert details.
+- A line whose details are all empty (e.g. no mobile) is left out, and the lines below move up.
+- **Make smaller if too long to fit** shrinks long names or titles so they stay inside the card.
+- **Shown width** is how wide the image appears in the email; it's rendered at twice that for sharp screens.
+  Keep it close to the card's own size so small print stays readable.
+- **Link when clicked** makes the whole image open that address. The contact details are also written into the
+  image's alternative text.
+- **Crop** is detected automatically from the visible artwork; adjust it if needed.
+
+The same image is used for new emails and replies. Each person's image is rendered once and cached. Its address
+(`/sig-img/<hash>.png`) only exists for renders the server created, so nobody can generate images with
+arbitrary text. Images in sent emails never change.
+
+**Fonts:** the server draws the text, so it needs the font files. Poppins is included. Upload the fonts the
+company licenses (e.g. **Arial Nova Light** for Vareno) in **Settings › Fonts** (IT only). They're stored on the
+server's data volume and never published. Until a font is uploaded, the editor warns and a similar font is used.
+
 ## Roll back a design
 
 **Designs › Versions** › **Restore** on any older version. Restoring creates a new version with the old content, so

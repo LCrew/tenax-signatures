@@ -159,7 +159,7 @@ function readMeta(env: Env, company: string): any {
   return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : null;
 }
 
-const FILES: Record<TemplateKind, string> = { new: 'new.hbs', reply: 'reply.hbs', meta: 'meta.json' };
+const FILES: Record<Exclude<TemplateKind, 'image'>, string> = { new: 'new.hbs', reply: 'reply.hbs', meta: 'meta.json' };
 
 /**
  * Import templates/<company>/* as new versions when they differ from the latest DB version.
@@ -173,7 +173,7 @@ export function importTemplatesFromDisk(
   onlyIfMissing = false,
 ): number {
   let imported = 0;
-  for (const kind of Object.keys(FILES) as TemplateKind[]) {
+  for (const kind of Object.keys(FILES) as (keyof typeof FILES)[]) {
     const file = path.join(env.templatesDir, company, FILES[kind]);
     if (!fs.existsSync(file)) continue;
     const content = fs.readFileSync(file, 'utf8');

@@ -65,6 +65,20 @@ export function addinRoutes(app: FastifyInstance, ctx: AppContext) {
       .send(renderManifest(ctx, { test }));
   });
 
+  // Image signatures (SVG designs): only hashes the server recorded when it built someone's signature.
+  app.get('/sig-img/:hash.png', async (req, reply) => {
+    const { hash } = req.params as { hash: string };
+    let png: Buffer | null = null;
+    try {
+      png = ctx.images.png(hash);
+    } catch (e) {
+      req.log.error({ err: e, hash }, 'image signature render failed');
+    }
+    if (!png) return reply.code(404).send();
+    // The hash covers template version, values and fonts, so the image at this URL never changes.
+    return reply.type('image/png').header('Cache-Control', 'public, max-age=31536000, immutable').header('Access-Control-Allow-Origin', '*').send(png);
+  });
+
   // Logos: uploaded (DATA_DIR/assets) wins over bundled (assets/).
   app.get('/assets/:company/:file', async (req, reply) => {
     const { company, file } = req.params as { company: string; file: string };

@@ -12,3 +12,6 @@ deploy/*_paraksti/
 CURRENT_PLACEHOLDERS/
 Thumbs.db
 *.log
+
+# Design source files (company artwork) stay local; upload them in the console instead.
+/*.svg

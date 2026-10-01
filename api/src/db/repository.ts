@@ -38,6 +38,15 @@ export interface Exclusion {
   excludedAt: string;
 }
 
+export interface RenderedImage {
+  hash: string;
+  company: string;
+  design: string;
+  /** templates.id of the image version that was rendered (old emails keep showing the old image). */
+  templateId: number;
+  valuesJson: string;
+}
+
 export interface Session {
   id: string;
   adminId: number;
@@ -97,6 +106,9 @@ export interface Repository {
   getAdminById(id: number): LocalAdmin | undefined;
   listAdmins(): LocalAdmin[];
   createAdmin(username: string, passwordHash: string): LocalAdmin;
+  saveRenderedImage(img: RenderedImage): void;
+  getRenderedImage(hash: string): RenderedImage | undefined;
+
   getExclusion(upn: string): Exclusion | undefined;
   setExclusion(upn: string, reason: string | null, by: string): void;
   removeExclusion(upn: string): void;

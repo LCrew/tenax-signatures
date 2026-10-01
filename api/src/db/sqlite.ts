@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Company, Design, Overrides, SharedMailbox, TemplateKind } from '../types.js';
-import type { AuditEntry, Exclusion, LocalAdmin, Repository, Session, TelemetryEvent, TemplateVersion } from './repository.js';
+import type { AuditEntry, Exclusion, LocalAdmin, RenderedImage, Repository, Session, TelemetryEvent, TemplateVersion } from './repository.js';
 
 export const MIGRATIONS: string[] = [
   `CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -59,6 +59,12 @@ export const MIGRATIONS: string[] = [
    ALTER TABLE signature_overrides ADD COLUMN design_locked INTEGER;
    ALTER TABLE signature_overrides ADD COLUMN chosen_design TEXT;
    ALTER TABLE shared_mailboxes ADD COLUMN design TEXT;`,
+  // v5: image (SVG) designs. format: 'html' (designer/HTML) or 'image' (SVG template → PNG). rendered_images maps
+  // an opaque hash in the public image URL to exactly what was rendered (no free-form text via URLs).
+  `ALTER TABLE designs ADD COLUMN format TEXT NOT NULL DEFAULT 'html';
+   CREATE TABLE rendered_images (
+     hash TEXT PRIMARY KEY, company TEXT NOT NULL, design TEXT NOT NULL, template_id INTEGER NOT NULL,
+     values_json TEXT NOT NULL, created_at TEXT NOT NULL);`,
 ];
 
 const now = () => new Date().toISOString();
@@ -148,6 +154,7 @@ export class SqliteRepository implements Repository {
              is_default=excluded.is_default, sort=excluded.sort, meta_overrides=excluded.meta_overrides`,
         )
         .run({ ...d, selectable: d.selectable ? 1 : 0, isDefault: d.isDefault ? 1 : 0, metaOverrides: JSON.stringify(d.metaOverrides ?? {}) });
+      this.db.prepare('UPDATE designs SET format = ? WHERE id = ?').run(d.format ?? 'html', d.id);
     })();
   }
   deleteDesign(id: string) {
@@ -296,6 +303,16 @@ export class SqliteRepository implements Repository {
       .run(username, passwordHash, now());
     return this.getAdminById(Number(info.lastInsertRowid))!;
   }
+  saveRenderedImage(img: RenderedImage) {
+    this.db
+      .prepare('INSERT OR IGNORE INTO rendered_images(hash, company, design, template_id, values_json, created_at) VALUES(?, ?, ?, ?, ?, ?)')
+      .run(img.hash, img.company, img.design, img.templateId, img.valuesJson, now());
+  }
+  getRenderedImage(hash: string): RenderedImage | undefined {
+    const r = this.db.prepare('SELECT * FROM rendered_images WHERE hash = ?').get(hash) as any;
+    return r ? { hash: r.hash, company: r.company, design: r.design, templateId: r.template_id, valuesJson: r.values_json } : undefined;
+  }
+
   getExclusion(upn: string): Exclusion | undefined {
     const r = this.db.prepare('SELECT * FROM excluded_users WHERE upn = ?').get(upn) as any;
     return r ? { upn: r.upn, reason: r.reason, excludedBy: r.excluded_by, excludedAt: r.excluded_at } : undefined;
@@ -380,6 +397,7 @@ function mapDesign(r: any): Design {
     isDefault: r.is_default === 1,
     sort: r.sort,
     metaOverrides,
+    format: r.format === 'image' ? 'image' : 'html',
     createdAt: r.created_at,
   };
 }

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { Repository } from '../db/repository.js';
 import type { Company, ComposeType, Design, MetaOverrides, ResolvedUser, Settings, SharedMailbox } from '../types.js';
 import { applyOverrides } from './designs.js';
+import type { ImageSignatures } from './imagesig.js';
 import { telHref } from './phone.js';
 import { stripBlocksHeader } from './blocks.js';
 
@@ -165,7 +166,11 @@ type Compiled = HandlebarsTemplateDelegate;
 export class Renderer {
   private compiled = new Map<number, Compiled>();
 
-  constructor(private repo: Repository) {}
+  constructor(
+    private repo: Repository,
+    /** Image (SVG) designs; optional so plain HTML rendering works without fonts (tests, scripts). */
+    private images?: ImageSignatures,
+  ) {}
 
   private compile(id: number, src: string): Compiled {
     let fn = this.compiled.get(id);
@@ -183,7 +188,7 @@ export class Renderer {
     data: SignatureData;
     settings: Settings;
     /** Which design (default design when omitted); its wording overrides apply on top of the company brand. */
-    design?: Pick<Design, 'id' | 'metaOverrides'>;
+    design?: Pick<Design, 'id' | 'metaOverrides'> & Partial<Pick<Design, 'name' | 'format'>>;
     draft?: { template?: string; meta?: string; metaOverrides?: MetaOverrides };
   }): string {
     const kind = opts.type === 'newMail' ? 'new' : 'reply';
@@ -193,6 +198,20 @@ export class Renderer {
     const companyMeta = opts.draft?.meta ?? storedMeta?.content ?? '{}';
     const metaSrc = applyOverrides(companyMeta, opts.draft?.metaOverrides ?? opts.design?.metaOverrides);
     const meta = validateMeta(metaSrc);
+
+    // Image designs: one rendered PNG for new messages and replies alike (Vareno's SVG signature).
+    if (opts.design?.format === 'image' && opts.draft?.template == null) {
+      if (!this.images) throw new TemplateError('Image designs are not available here');
+      const d = applyLanguage(opts.data, opts.settings.language);
+      return this.images.html({
+        company: opts.company,
+        design: { id: opts.design.id, name: opts.design.name ?? opts.design.id },
+        values: { ...d },
+        publicUrl: opts.settings.publicUrl,
+        greeting: meta.greeting,
+        greetingColor: meta.colors?.text,
+      });
+    }
 
     let fn: Compiled;
     if (opts.draft?.template != null) {

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { KeyRound, Plus, RefreshCw, Trash2, Wand2 } from 'lucide-react';
+import { KeyRound, Plus, RefreshCw, Trash2, Upload, Wand2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useApp, useAsync, useToast } from '../lib/hooks';
 import type { LocalAccount, Settings } from '../lib/types';
@@ -9,7 +9,7 @@ import { AddinSteps } from '../components/AddinSteps';
 import { ErrorNote, Field, Loading, Modal, PageHead, timeAgo } from '../components/ui';
 import { SignatureOptions } from './Setup';
 
-type Tab = 'general' | 'directory' | 'options' | 'accounts' | 'addin';
+type Tab = 'general' | 'directory' | 'options' | 'fonts' | 'accounts' | 'addin';
 
 export function SettingsPage() {
   const { refresh } = useApp();
@@ -19,6 +19,7 @@ export function SettingsPage() {
     general: 'Server',
     directory: 'Entra ID connection',
     options: 'Signature options',
+    fonts: 'Fonts',
     accounts: 'Local accounts',
     addin: 'Outlook add-in',
   };
@@ -36,6 +37,7 @@ export function SettingsPage() {
   if (tab === 'directory') body = <DirectoryForm settings={s} onSaved={reload} />;
   if (tab === 'options') body = <SignatureOptions settings={s} onSaved={reload} />;
   if (tab === 'accounts') body = <Accounts />;
+  if (tab === 'fonts') body = <FontsPanel />;
   if (tab === 'addin') body = <AddinSteps settings={s} />;
 
   return (
@@ -224,6 +226,98 @@ function Accounts() {
           </button>
         </div>
       </Modal>
+    </div>
+  );
+}
+
+interface FontInfo {
+  file: string;
+  source: 'bundled' | 'uploaded';
+  family: string;
+  style: string;
+  weight: number;
+  italic: boolean;
+  bytes: number;
+}
+
+/** Fonts for image (SVG) signatures. Commercial fonts the company licenses are uploaded here and stay on the server. */
+function FontsPanel() {
+  const toast = useToast();
+  const list = useAsync(() => api.get<FontInfo[]>('/api/admin/fonts'));
+  const [busy, setBusy] = useState(false);
+
+  async function upload(files: FileList) {
+    setBusy(true);
+    for (const file of Array.from(files)) {
+      try {
+        if (file.size > 12 * 1024 * 1024) throw new Error('larger than 12 MB');
+        const dataBase64 = await new Promise<string>((res, rej) => {
+          const r = new FileReader();
+          r.onload = () => res(String(r.result).split(',')[1]);
+          r.onerror = () => rej(new Error('could not read the file'));
+          r.readAsDataURL(file);
+        });
+        const f = await api.post<FontInfo>('/api/admin/fonts', { name: file.name, dataBase64 });
+        toast(`${f.family} ${f.style} added`);
+      } catch (e) {
+        toast(`${file.name}: ${(e as Error).message}`, 'error');
+      }
+    }
+    setBusy(false);
+    await list.reload();
+  }
+
+  return (
+    <div className="stack">
+      <p className="small muted">
+        Image signatures (designs made from an SVG) are drawn on the server, so it needs the font files the design uses.
+        Poppins is included. Upload the .ttf or .otf files of other fonts your company licenses, for example
+        <strong> Arial Nova Light</strong> for Vareno Group. They’re stored on this server only and never published.
+        After adding a font, new emails use it; images in already-sent emails don’t change.
+      </p>
+      <label className="btn" style={{ alignSelf: 'flex-start' }}>
+        <Upload size={14} /> {busy ? 'Uploading…' : 'Upload font files'}
+        <input type="file" accept=".ttf,.otf,font/ttf,font/otf" multiple className="visually-hidden" disabled={busy} onChange={(e) => e.target.files && upload(e.target.files)} />
+      </label>
+      {list.error && <ErrorNote error={list.error} />}
+      <div className="panel table-wrap">
+        <table className="data">
+          <thead>
+            <tr>
+              <th>Font</th>
+              <th>Weight</th>
+              <th>File</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {(list.data ?? []).map((f) => (
+              <tr key={f.source + f.file}>
+                <td className="name">
+                  {f.family} {f.style} {f.source === 'bundled' && <span className="tag">Included</span>}
+                </td>
+                <td className="sub">{f.weight}{f.italic ? ' italic' : ''}</td>
+                <td className="sub mono">{f.file}</td>
+                <td style={{ textAlign: 'right' }}>
+                  {f.source === 'uploaded' && (
+                    <button
+                      className="btn ghost sm danger"
+                      aria-label={`Remove ${f.file}`}
+                      onClick={async () => {
+                        await api.del(`/api/admin/fonts/${encodeURIComponent(f.file)}`);
+                        toast(`${f.family} ${f.style} removed`);
+                        await list.reload();
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

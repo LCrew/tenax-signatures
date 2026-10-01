@@ -45,6 +45,7 @@ export interface Design {
   isDefault: boolean;
   sort: number;
   metaOverrides: MetaOverrides;
+  format?: 'html' | 'image';
   createdAt: string;
 }
 

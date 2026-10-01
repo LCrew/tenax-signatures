@@ -19,6 +19,7 @@ import { importTemplatesFromDisk } from '../services/settings.js';
 import { blockDocSchema, compileBlocks, extractBlocks, presetDoc, stripBlocksHeader } from '../services/blocks.js';
 import { applyOverrides, ensureDefaultDesign, metaOverridesSchema, newDesignId } from '../services/designs.js';
 import { resolveCompany } from '../services/resolver.js';
+import { MAX_SVG_BYTES, PLACEHOLDERS, imageConfigSchema, listTextFields, missingFonts, renderSignaturePng, sanitizeSvg, suggestCrop, type ImageConfig } from '../services/svgsig.js';
 import type { Company, ComposeType, Design, Overrides, ResolvedUser, TemplateKind } from '../types.js';
 import { overridePatchSchema } from './signature.js';
 import { renderManifest } from './addin.js';
@@ -399,10 +400,12 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
       isDefault: false,
       sort: Math.max(0, ...existing.map((d) => d.sort)) + 1,
       metaOverrides: { ...source.metaOverrides },
+      format: 'html',
       createdAt: new Date().toISOString(),
     };
     ctx.repo.upsertDesign(design);
-    for (const kind of ['new', 'reply'] as const) {
+    if (source.format === 'image') ctx.repo.upsertDesign({ ...design, format: 'image' });
+    for (const kind of ['new', 'reply', 'image'] as const) {
       const t = ctx.repo.latestTemplate(body.company, kind, source.id);
       if (t) ctx.repo.addTemplateVersion({ company: body.company, design: design.id, kind, content: t.content, note: `Copied from ${source.name} v${t.version}`, createdBy: actorOf(admin) });
     }
@@ -414,12 +417,13 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     const before = ctx.repo.getDesign((req.params as any).id);
     if (!before || !access.can(before.company)) return reply.code(404).send({ error: 'Design not found' });
     const body = z
-      .object({ name: designNameSchema.optional(), selectable: z.boolean().optional(), isDefault: z.literal(true).optional(), metaOverrides: metaOverridesSchema.optional() })
+      .object({ name: designNameSchema.optional(), selectable: z.boolean().optional(), isDefault: z.literal(true).optional(), metaOverrides: metaOverridesSchema.optional(), format: z.enum(['html', 'image']).optional() })
       .strict()
       .parse(req.body);
     const next: Design = { ...before, ...body, isDefault: before.isDefault || !!body.isDefault };
     if (next.isDefault && next.purpose === 'service') return reply.code(400).send({ error: 'A service design can’t be the company default' });
     if (next.purpose === 'service') next.selectable = false;
+    if (body.format === 'image' && !ctx.repo.latestTemplate(before.company, 'image', before.id)) return reply.code(400).send({ error: 'Upload an SVG template first' });
     if (body.metaOverrides) {
       // The design's wording must still form valid brand settings and render with its layouts.
       const companyMeta = ctx.repo.latestTemplate(before.company, 'meta')?.content ?? '{}';
@@ -443,6 +447,139 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     ctx.repo.deleteDesign(d.id);
     for (const m of ctx.repo.listSharedMailboxes().filter((x) => x.design === d.id)) ctx.repo.upsertSharedMailbox({ ...m, design: null });
     audit(admin, 'design.delete', `design:${d.id}`, { name: d.name }, null);
+    return { ok: true };
+  }));
+
+  // ───────────────────────────── Image (SVG) designs ─────────────────────────────
+  // A design whose signature is one image rendered from an SVG template (e.g. Vareno). IT and that company's editors.
+
+  const imageBodyLimit = { bodyLimit: 7 * 1024 * 1024 };
+  const imageDraftSchema = imageConfigSchema.extend({ svg: imageConfigSchema.shape.svg.optional() });
+
+  function imageDesign(req: FastifyRequest, reply: FastifyReply, access: Access): Design | null {
+    const d = ctx.repo.getDesign((req.params as any).id);
+    if (!d || !access.can(d.company)) {
+      reply.code(404).send({ error: 'Design not found' });
+      return null;
+    }
+    return d;
+  }
+
+  /** Best guess for a fresh upload: biggest single line = name in capitals, next = title, "Mob…" = mobile, … */
+  function guessFields(fields: ReturnType<typeof listTextFields>): ImageConfig['fields'] {
+    const out: ImageConfig['fields'] = {};
+    const singles = fields.filter((f) => f.lines.length === 1).sort((a, b) => b.size - a.size);
+    if (singles[0]) out[singles[0].id] = { lines: [singles[0].lines[0].text === singles[0].lines[0].text.toUpperCase() ? '{{displayName|upper}}' : '{{displayName}}'], shrinkToFit: true };
+    if (singles[1]) out[singles[1].id] = { lines: ['{{title}}'], shrinkToFit: true };
+    for (const f of fields.filter((x) => x.lines.length > 1)) {
+      out[f.id] = {
+        shrinkToFit: false,
+        lines: f.lines.map(({ text }) => {
+          if (/^\s*(mob|m)\b/i.test(text) && /\d/.test(text)) return text.replace(/[+\d][\d\s()-]{5,}\d/, '{{mobilePhone}}');
+          if (/^\s*(t|tel|tālr)\b/i.test(text) && /\d/.test(text)) return text.replace(/[+\d][\d\s()-]{5,}\d/, '{{officePhone}}');
+          if (/@/.test(text)) return text.replace(/[^\s@]+@[^\s@]+/, '{{email}}');
+          return text;
+        }),
+      };
+    }
+    return out;
+  }
+
+  function imageInfo(svg: string) {
+    return {
+      textFields: listTextFields(svg),
+      missingFonts: missingFonts(svg, (f, w) => ctx.fonts.has(f, w)),
+      placeholders: PLACEHOLDERS.map(([value, label]) => ({ value, label })),
+    };
+  }
+
+  app.get('/api/admin/designs/:id/image', staff(async (req, reply, _admin, access) => {
+    const d = imageDesign(req, reply, access);
+    if (!d) return reply;
+    const latest = ctx.images.latest(d.company, d.id);
+    if (!latest) return { design: d, config: null };
+    const { svg, ...config } = latest.cfg;
+    return { design: d, config, version: latest.version.version, savedAt: latest.version.createdAt, ...imageInfo(svg) };
+  }));
+
+  /** Upload step: clean the SVG and suggest crop + field mapping. Nothing is saved. */
+  app.post('/api/admin/designs/:id/image/analyze', imageBodyLimit, staff(async (req, reply, _admin, access) => {
+    const d = imageDesign(req, reply, access);
+    if (!d) return reply;
+    const { svg: raw } = z.object({ svg: z.string().min(20).max(MAX_SVG_BYTES) }).parse(req.body);
+    const svg = sanitizeSvg(raw);
+    const info = imageInfo(svg);
+    const company = findCompany(d.company)!;
+    const meta = JSON.parse(ctx.repo.latestTemplate(d.company, 'meta')?.content ?? '{}');
+    const website = meta?.websites?.[0]?.url || (meta?.websites?.[0]?.label ? `https://${meta.websites[0].label}` : '');
+    return {
+      svg,
+      bytes: { uploaded: Buffer.byteLength(raw), cleaned: Buffer.byteLength(svg) },
+      suggested: (() => {
+        const crop = suggestCrop(svg, ctx.fonts.files());
+        // Close to the template's own size keeps its small print readable; email layouts top out around 650px.
+        return { crop, fields: guessFields(info.textFields), width: Math.max(200, Math.min(650, Math.round(crop.width))), link: /^https:\/\//.test(website) ? website : '' };
+      })(),
+      company: company.displayName,
+      ...info,
+    };
+  }));
+
+  app.post('/api/admin/designs/:id/image/preview', imageBodyLimit, staff(async (req, reply, _admin, access) => {
+    const d = imageDesign(req, reply, access);
+    if (!d) return reply;
+    const body = imageDraftSchema.extend({ upn: z.string().optional() }).parse(req.body);
+    const svg = body.svg ? sanitizeSvg(body.svg) : ctx.images.latest(d.company, d.id)?.cfg.svg;
+    if (!svg) return reply.code(400).send({ error: 'Upload an SVG first' });
+    let values: SignatureData = SAMPLE_PERSON;
+    if (body.upn) {
+      const user = await scopedUser(access, body.upn);
+      if (!user) return reply.code(404).send({ error: 'User not found in directory' });
+      values = signatureDataFor(user);
+    }
+    const { upn: _upn, ...draft } = body;
+    const cfg = imageConfigSchema.parse({ ...draft, svg });
+    return { dataUrl: ctx.images.previewDataUrl(cfg, values), missingFonts: missingFonts(svg, (f, w) => ctx.fonts.has(f, w)) };
+  }));
+
+  app.post('/api/admin/designs/:id/image', imageBodyLimit, staff(async (req, reply, admin, access) => {
+    const d = imageDesign(req, reply, access);
+    if (!d) return reply;
+    const body = imageDraftSchema.extend({ note: z.string().max(200).optional() }).parse(req.body);
+    const svg = body.svg ? sanitizeSvg(body.svg) : ctx.images.latest(d.company, d.id)?.cfg.svg;
+    if (!svg) return reply.code(400).send({ error: 'Upload an SVG first' });
+    const { note, ...rest } = body;
+    const cfg = imageConfigSchema.parse({ ...rest, svg });
+    // Mapped ids must exist in the template; a trial render proves it draws.
+    const ids = new Set(listTextFields(svg).map((f) => f.id));
+    const unknown = Object.keys(cfg.fields).filter((id) => !ids.has(id));
+    if (unknown.length) return reply.code(400).send({ error: `Text not found in the SVG: ${unknown.join(', ')}` });
+    renderSignaturePng(cfg, { ...SAMPLE_PERSON }, ctx.fonts.files());
+    const content = JSON.stringify(cfg);
+    const before = ctx.repo.latestTemplate(d.company, 'image', d.id);
+    const saved = before?.content === content ? before : ctx.repo.addTemplateVersion({ company: d.company, design: d.id, kind: 'image', content, note: note ?? null, createdBy: actorOf(admin) });
+    if (d.format !== 'image') ctx.repo.upsertDesign({ ...d, format: 'image' });
+    audit(admin, 'design.image', `design:${d.id}`, before ? { version: before.version } : null, { version: saved.version, note: saved.note });
+    return { version: saved.version, missingFonts: missingFonts(svg, (f, w) => ctx.fonts.has(f, w)) };
+  }));
+
+  // ───────────────────────────── Fonts (IT only) ─────────────────────────────
+
+  app.get('/api/admin/fonts', guard(async () => ctx.fonts.list()));
+  app.post('/api/admin/fonts', { bodyLimit: 14 * 1024 * 1024 }, guard(async (req, reply, admin) => {
+    const body = z.object({ name: z.string().max(90), dataBase64: z.string().max(13 * 1024 * 1024) }).parse(req.body);
+    try {
+      const font = ctx.fonts.save(body.name.replace(/[^a-zA-Z0-9._ -]/g, '-'), Buffer.from(body.dataBase64, 'base64'));
+      audit(admin, 'font.upload', `font:${font.file}`, null, { family: font.family, style: font.style, weight: font.weight });
+      return font;
+    } catch (e) {
+      return reply.code(400).send({ error: (e as Error).message });
+    }
+  }));
+  app.delete('/api/admin/fonts/:name', guard(async (req, reply, admin) => {
+    const name = (req.params as any).name as string;
+    if (!ctx.fonts.remove(name)) return reply.code(404).send({ error: 'Font not found (bundled fonts can’t be removed)' });
+    audit(admin, 'font.delete', `font:${name}`, null, null);
     return { ok: true };
   }));
 
@@ -541,6 +678,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     if (old.kind !== 'meta' && !ctx.repo.getDesign(old.design)) return reply.code(409).send({ error: 'That design was removed' });
     // Old versions are re-checked against today's rules before they go live again.
     if (old.kind === 'meta') validateMeta(old.content);
+    else if (old.kind === 'image') imageConfigSchema.parse(JSON.parse(old.content));
     else {
       if (!access.global && !extractBlocks(old.content)) return reply.code(403).send({ error: 'That version is hand-written HTML; only IT can restore it' });
       validateTemplateSource(old.content);

@@ -6,12 +6,17 @@ import { Renderer } from './services/renderer.js';
 import { UserResolver } from './services/resolver.js';
 import { SecretBox } from './services/secrets.js';
 import { SettingsService } from './services/settings.js';
+import { Fonts } from './services/fonts.js';
+import { ImageSignatures } from './services/imagesig.js';
+import path from 'node:path';
 
 export class AppContext {
   readonly secrets: SecretBox;
   readonly settings: SettingsService;
   readonly resolver: UserResolver;
   readonly renderer: Renderer;
+  readonly fonts: Fonts;
+  readonly images: ImageSignatures;
   readonly sessionKey: Buffer;
   /** One-time token printed to the logs; required to create the first admin. Null once an admin exists. */
   setupToken: string | null = null;
@@ -27,7 +32,9 @@ export class AppContext {
   ) {
     this.secrets = new SecretBox(env.dataDir, env.appSecret);
     this.settings = new SettingsService(repo, env, this.secrets);
-    this.renderer = new Renderer(repo);
+    this.fonts = new Fonts(path.join(env.assetsDir, 'fonts'), path.join(env.dataDir, 'fonts'));
+    this.images = new ImageSignatures(repo, this.fonts, path.join(env.dataDir, 'sig-img'));
+    this.renderer = new Renderer(repo, this.images);
     this.resolver = new UserResolver(repo, () => this.directory(), () => this.settings.get());
     this.sessionKey = this.secrets.derive('session-id');
     this.directoryInstance = directoryOverride ?? null;
