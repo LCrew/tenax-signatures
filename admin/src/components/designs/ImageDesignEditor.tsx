@@ -41,10 +41,11 @@ const round = (n: number) => Math.round(n * 100) / 100;
  * Image signature from an SVG template (e.g. Vareno): upload the SVG, map its text to the person's details,
  * and every person gets their own rendered PNG. The same image is used for new messages and replies.
  */
-export function ImageDesignEditor({ design, users, onSaved, onLeave }: { design: Design; users: UserSummary[]; onSaved: () => void; onLeave: () => void }) {
+export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey = 0 }: { design: Design; users: UserSummary[]; onSaved: () => void; onLeave: () => void; reloadKey?: number }) {
   const toast = useToast();
   const { session } = useApp();
-  const current = useAsync(() => api.get<{ config: Config | null; version?: number } & Partial<Info>>(`/api/admin/designs/${design.id}/image`), [design.id]);
+  // reloadKey changes after a restore from Versions, so the editor shows the restored width/crop/mapping.
+  const current = useAsync(() => api.get<{ config: Config | null; version?: number } & Partial<Info>>(`/api/admin/designs/${design.id}/image`), [design.id, reloadKey]);
   const [svg, setSvg] = useState<string | null>(null); // only set after a new upload
   const [info, setInfo] = useState<Info | null>(null);
   const [cfg, setCfg] = useState<Config | null>(null);

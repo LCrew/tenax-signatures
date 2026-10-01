@@ -206,3 +206,48 @@ describe('company chosen by IT overrides group membership', async () => {
     expect(me).toMatchObject({ designLocked: false, design: { id: 'vareno-standard', source: 'default' } });
   });
 });
+
+describe('restoring designs', async () => {
+  const { app, repo } = await makeApp();
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const row = async () => (await app.inject({ url: '/api/admin/templates', headers: IT })).json().find((r: any) => r.company.key === 'tenaxpanel');
+
+  it('restores everything (layout fonts/sizes, wording, brand) to a point in time', async () => {
+    const r0 = await row();
+    const d0 = r0.designs.find((d: any) => d.isDefault);
+    const A = d0.new.blocks;
+    await sleep(15);
+    const checkpoint = new Date().toISOString();
+    await sleep(15);
+    // Change everything after the checkpoint
+    const B = structuredClone(A);
+    B.base.font = 'verdana';
+    B.base.size = 14;
+    B.main[0].style = { ...B.main[0].style, size: 22 };
+    await app.inject({ method: 'POST', url: '/api/admin/templates/tenaxpanel/new', headers: IT, payload: { blocks: B, design: d0.id } });
+    await app.inject({ method: 'PUT', url: `/api/admin/designs/${d0.id}`, headers: IT, payload: { metaOverrides: { greeting: 'Best regards,', footer: { companyLine: 'TENAX PANEL Ltd' } } } });
+    const meta = JSON.parse(r0.meta.content);
+    meta.logo.width = 150;
+    meta.colors.primary = '#FF0000';
+    await app.inject({ method: 'POST', url: '/api/admin/templates/tenaxpanel/meta', headers: IT, payload: { content: JSON.stringify(meta) } });
+
+    const res = await app.inject({ method: 'POST', url: `/api/admin/designs/${d0.id}/restore-to`, headers: IT, payload: { at: checkpoint } });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().restored.sort()).toEqual(['meta', 'new', 'wording']);
+    const r1 = await row();
+    const d1 = r1.designs.find((d: any) => d.isDefault);
+    expect(d1.new.blocks).toEqual(A);
+    expect(d1.metaOverrides).toEqual({});
+    expect(r1.meta.content).toBe(r0.meta.content);
+  });
+
+  it('restoring a single wording version brings those values back', async () => {
+    const d = (await row()).designs.find((x: any) => x.isDefault);
+    await app.inject({ method: 'PUT', url: `/api/admin/designs/${d.id}`, headers: IT, payload: { metaOverrides: { greeting: 'One' } } });
+    await app.inject({ method: 'PUT', url: `/api/admin/designs/${d.id}`, headers: IT, payload: { metaOverrides: { greeting: 'Two' } } });
+    const hist = (await app.inject({ url: `/api/admin/templates/tenaxpanel/history?design=${d.id}&kind=wording`, headers: IT })).json();
+    const one = hist.find((h: any) => repo.getTemplateVersion(h.id)!.content.includes('One'));
+    await app.inject({ method: 'POST', url: `/api/admin/templates/restore/${one.id}`, headers: IT });
+    expect(repo.getDesign(d.id)!.metaOverrides).toEqual({ greeting: 'One' });
+  });
+});

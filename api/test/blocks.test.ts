@@ -94,3 +94,17 @@ describe('visual designs through the API', async () => {
     expect(Object.keys(p)).toEqual(['side', 'stacked', 'textOnly', 'reply']);
   });
 });
+
+describe('uploaded fonts in visual designs', () => {
+  it('uses the family with a fallback stack', () => {
+    const d = doc({ base: { font: 'custom:Arial Nova', fallback: 'arial', size: 10, lineHeight: 1.3, color: 'text' } as any });
+    expect(blockDocSchema.safeParse(d).success).toBe(true);
+    const body = stripBlocksHeader(compileBlocks(blockDocSchema.parse(d), 'new'));
+    expect(body).toContain("font-family:'Arial Nova', Arial, Helvetica, sans-serif");
+  });
+  it('rejects anything that could break out of the style attribute', () => {
+    for (const font of ["custom:x';background:url(y)", 'custom:"x"', 'custom:x;color:red', 'comic']) {
+      expect(blockDocSchema.safeParse(doc({ base: { font, size: 10, lineHeight: 1.3, color: 'text' } as any })).success, font).toBe(false);
+    }
+  });
+});

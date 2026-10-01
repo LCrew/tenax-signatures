@@ -20,7 +20,8 @@ import { blockDocSchema, compileBlocks, extractBlocks, presetDoc, stripBlocksHea
 import { applyOverrides, ensureDefaultDesign, metaOverridesSchema, newDesignId } from '../services/designs.js';
 import { resolveCompany } from '../services/resolver.js';
 import { MAX_SVG_BYTES, PLACEHOLDERS, imageConfigSchema, listTextFields, missingFonts, renderSignaturePng, sanitizeSvg, suggestCrop, type ImageConfig } from '../services/svgsig.js';
-import type { Company, ComposeType, Design, Overrides, ResolvedUser, TemplateKind } from '../types.js';
+import type { TemplateVersion } from '../db/repository.js';
+import type { Company, ComposeType, Design, MetaOverrides, Overrides, ResolvedUser, TemplateKind } from '../types.js';
 import { greetingSchema, overridePatchSchema } from './signature.js';
 import { renderManifest } from './addin.js';
 
@@ -361,6 +362,17 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
   // ───────────────────────────── Designs ─────────────────────────────
   // Several designs per company (Standard, English, Service…). IT and that company's editors manage them.
 
+  /** Records a design's Wording overrides as a version (first change also keeps what it was before). */
+  function versionWording(design: Design, overrides: MetaOverrides, actor: string, note?: string) {
+    const content = JSON.stringify(overrides);
+    const latest = ctx.repo.latestTemplate(design.company, 'wording', design.id);
+    if (latest?.content === content) return;
+    if (!latest && Object.keys(design.metaOverrides ?? {}).length && JSON.stringify(design.metaOverrides) !== content) {
+      ctx.repo.addTemplateVersion({ company: design.company, design: design.id, kind: 'wording', content: JSON.stringify(design.metaOverrides), note: 'Wording before this change', createdBy: actor });
+    }
+    ctx.repo.addTemplateVersion({ company: design.company, design: design.id, kind: 'wording', content, note: note ?? null, createdBy: actor });
+  }
+
   /** The design to work on: an explicit id (must belong to the company) or the company default. */
   function designOf(company: string, id?: string): Design | null {
     if (id) {
@@ -406,6 +418,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     };
     ctx.repo.upsertDesign(design);
     if (source.format === 'image') ctx.repo.upsertDesign({ ...design, format: 'image' });
+    if (Object.keys(design.metaOverrides).length) versionWording(design, design.metaOverrides, actorOf(admin), `Copied from ${source.name}`);
     for (const kind of ['new', 'reply', 'image'] as const) {
       const t = ctx.repo.latestTemplate(body.company, kind, source.id);
       if (t) ctx.repo.addTemplateVersion({ company: body.company, design: design.id, kind, content: t.content, note: `Copied from ${source.name} v${t.version}`, createdBy: actorOf(admin) });
@@ -436,6 +449,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
       }
     }
     ctx.repo.upsertDesign(next);
+    if (body.metaOverrides) versionWording(before, body.metaOverrides, actorOf(admin));
     audit(admin, 'design.update', `design:${before.id}`, { name: before.name, selectable: before.selectable, isDefault: before.isDefault, metaOverrides: before.metaOverrides }, body);
     return ctx.repo.getDesign(before.id);
   }));
@@ -567,6 +581,12 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
   // ───────────────────────────── Fonts (IT only) ─────────────────────────────
 
   app.get('/api/admin/fonts', guard(async () => ctx.fonts.list()));
+  /** Family names for the visual designer's font list (editors too; no files, no IT details). */
+  app.get('/api/admin/fonts/families', staff(async () => {
+    const byFamily = new Map<string, Set<number>>();
+    for (const f of ctx.fonts.list()) byFamily.set(f.family, (byFamily.get(f.family) ?? new Set()).add(f.weight));
+    return [...byFamily].filter(([family]) => /^[A-Za-z0-9][A-Za-z0-9 -]{0,60}$/.test(family)).map(([family, weights]) => ({ family, weights: [...weights].sort() }));
+  }));
   app.post('/api/admin/fonts', { bodyLimit: 14 * 1024 * 1024 }, guard(async (req, reply, admin) => {
     const body = z.object({ name: z.string().max(90), dataBase64: z.string().max(13 * 1024 * 1024) }).parse(req.body);
     try {
@@ -622,7 +642,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     const { company } = req.params as { company: string };
     if (!access.can(company)) return forbidden(reply);
     const q = req.query as { kind?: string; design?: string };
-    const kind = q.kind ? kindSchema.parse(q.kind) : undefined;
+    const kind = q.kind ? z.enum(['new', 'reply', 'meta', 'image', 'wording']).parse(q.kind) : undefined;
     const design = designOf(company, q.design);
     if (!design) return reply.code(404).send({ error: 'Design not found' });
     return ctx.repo.listTemplateVersions(company, kind, design.id).map(({ content: _c, ...rest }) => rest);
@@ -673,22 +693,82 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     return saved;
   }));
 
+  class RestoreError extends Error {
+    constructor(readonly status: number, message: string) {
+      super(message);
+    }
+  }
+
+  /**
+   * Makes an old version current again (as a new version, so history stays linear). Re-checks it against
+   * today's rules; restoring wording also updates the design, restoring an image also switches it to image mode.
+   */
+  function restoreVersion(old: TemplateVersion, access: Access, actor: string, note: string): TemplateVersion {
+    const design = old.kind === 'meta' ? null : ctx.repo.getDesign(old.design);
+    if (old.kind !== 'meta' && !design) throw new RestoreError(409, 'That design was removed');
+    if (old.kind === 'meta') validateMeta(old.content);
+    else if (old.kind === 'image') imageConfigSchema.parse(JSON.parse(old.content));
+    else if (old.kind === 'wording') {
+      const overrides = metaOverridesSchema.parse(JSON.parse(old.content));
+      validateMeta(applyOverrides(ctx.repo.latestTemplate(old.company, 'meta')?.content ?? '{}', overrides));
+      ctx.repo.upsertDesign({ ...design!, metaOverrides: overrides });
+    } else {
+      if (!access.global && !extractBlocks(old.content)) throw new RestoreError(403, 'That version is hand-written HTML; only IT can restore it');
+      validateTemplateSource(old.content);
+      const meta = applyOverrides(ctx.repo.latestTemplate(old.company, 'meta')?.content ?? '{}', design!.metaOverrides);
+      trialRender(old.content, meta, old.kind as 'new' | 'reply');
+    }
+    if (old.kind === 'image' && design!.format !== 'image') ctx.repo.upsertDesign({ ...ctx.repo.getDesign(design!.id)!, format: 'image' });
+    const current = ctx.repo.latestTemplate(old.company, old.kind, old.design || undefined);
+    if (current?.content === old.content) return current;
+    const saved = ctx.repo.addTemplateVersion({ company: old.company, design: old.design || undefined, kind: old.kind, content: old.content, note, createdBy: actor });
+    audit(access.identity, 'template.restore', `template:${old.company}/${old.design ? old.design + '/' : ''}${old.kind}`, { version: old.version }, { version: saved.version });
+    return saved;
+  }
+
   app.post('/api/admin/templates/restore/:id', staff(async (req, reply, admin, access) => {
     const old = ctx.repo.getTemplateVersion(Number((req.params as any).id));
     if (!old || !access.can(old.company)) return reply.code(404).send({ error: 'Version not found' });
-    if (old.kind !== 'meta' && !ctx.repo.getDesign(old.design)) return reply.code(409).send({ error: 'That design was removed' });
-    // Old versions are re-checked against today's rules before they go live again.
-    if (old.kind === 'meta') validateMeta(old.content);
-    else if (old.kind === 'image') imageConfigSchema.parse(JSON.parse(old.content));
-    else {
-      if (!access.global && !extractBlocks(old.content)) return reply.code(403).send({ error: 'That version is hand-written HTML; only IT can restore it' });
-      validateTemplateSource(old.content);
-      const meta = applyOverrides(ctx.repo.latestTemplate(old.company, 'meta')?.content ?? '{}', ctx.repo.getDesign(old.design)!.metaOverrides);
-      trialRender(old.content, meta, old.kind);
+    try {
+      return restoreVersion(old, access, actorOf(admin), `Restored from v${old.version}`);
+    } catch (e) {
+      if (e instanceof RestoreError) return reply.code(e.status).send({ error: e.message });
+      throw e;
     }
-    const saved = ctx.repo.addTemplateVersion({ company: old.company, design: old.design || undefined, kind: old.kind, content: old.content, note: `Restored from v${old.version}`, createdBy: actorOf(admin) });
-    audit(admin, 'template.restore', `template:${old.company}/${old.design ? old.design + '/' : ''}${old.kind}`, { version: old.version }, { version: saved.version });
-    return saved;
+  }));
+
+  /**
+   * Restores a whole design to how it was at a moment: its layouts (new, reply, image), its wording, and the
+   * company brand, each to the latest version saved at or before that time.
+   */
+  app.post('/api/admin/designs/:id/restore-to', staff(async (req, reply, admin, access) => {
+    const d = ctx.repo.getDesign((req.params as any).id);
+    if (!d || !access.can(d.company)) return reply.code(404).send({ error: 'Design not found' });
+    const { at } = z.object({ at: z.string().datetime() }).parse(req.body);
+    const atTime = new Date(at).getTime();
+    const versions = ctx.repo.listTemplateVersions(d.company, undefined, d.id);
+    const restored: string[] = [];
+    const when = new Date(at).toLocaleString('lv-LV');
+    try {
+      for (const kind of ['meta', 'wording', 'new', 'reply', 'image'] as const) {
+        const target = versions.filter((v) => v.kind === kind && new Date(v.createdAt).getTime() <= atTime).sort((a, b) => b.version - a.version)[0];
+        if (!target) continue;
+        const current = ctx.repo.latestTemplate(d.company, kind, kind === 'meta' ? undefined : d.id);
+        if (current?.content === target.content) continue;
+        restoreVersion(target, access, actorOf(admin), `Restored to ${when}`);
+        restored.push(kind);
+      }
+      // Wording that didn't exist yet at that time means "no overrides".
+      if (!versions.some((v) => v.kind === 'wording' && new Date(v.createdAt).getTime() <= atTime) && Object.keys(ctx.repo.getDesign(d.id)!.metaOverrides).length) {
+        ctx.repo.upsertDesign({ ...ctx.repo.getDesign(d.id)!, metaOverrides: {} });
+        versionWording(d, {}, actorOf(admin), `Restored to ${when}`);
+        restored.push('wording');
+      }
+    } catch (e) {
+      if (e instanceof RestoreError) return reply.code(e.status).send({ error: e.message });
+      throw e;
+    }
+    return { restored };
   }));
 
   app.post('/api/admin/templates/reload', guard(async (_req, _reply, admin) => {

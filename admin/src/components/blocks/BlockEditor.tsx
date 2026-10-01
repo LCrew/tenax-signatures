@@ -30,6 +30,8 @@ import {
   type ColorToken,
   type FontKey,
 } from './model';
+import { api } from '../../lib/api';
+import { useAsync } from '../../lib/hooks';
 
 type Zone = 'main' | 'footer';
 
@@ -45,6 +47,8 @@ interface Props {
 export function BlockEditor({ doc, onChange, colors, kind }: Props) {
   const [open, setOpen] = useState<string | null>(null);
   const set = (patch: Partial<BlockDoc>) => onChange({ ...doc, ...patch });
+  const families = useAsync(() => api.get<{ family: string; weights: number[] }[]>('/api/admin/fonts/families').catch(() => [])).data ?? [];
+  const customFont = doc.base.font.startsWith('custom:') ? doc.base.font.slice(7) : null;
 
   return (
     <div className="stack loose">
@@ -101,14 +105,43 @@ export function BlockEditor({ doc, onChange, colors, kind }: Props) {
         <h3>Text</h3>
         <div className="ctl-grid">
           <Ctl label="Font">
-            <select value={doc.base.font} onChange={(e) => set({ base: { ...doc.base, font: e.target.value as FontKey } })}>
-              {(Object.keys(FONTS) as FontKey[]).map((k) => (
-                <option key={k} value={k}>
-                  {FONTS[k]}
-                </option>
-              ))}
+            <select
+              value={doc.base.font}
+              onChange={(e) => {
+                const font = e.target.value as BlockDoc['base']['font'];
+                set({ base: { ...doc.base, font, fallback: font.startsWith('custom:') ? (doc.base.fallback ?? 'arial') : undefined } });
+              }}
+            >
+              <optgroup label="Email-safe (everyone sees these)">
+                {(Object.keys(FONTS) as FontKey[]).map((k) => (
+                  <option key={k} value={k}>
+                    {FONTS[k]}
+                  </option>
+                ))}
+              </optgroup>
+              {families.length > 0 && (
+                <optgroup label="Uploaded fonts (only where installed)">
+                  {families.map((f) => (
+                    <option key={f.family} value={`custom:${f.family}`}>
+                      {f.family}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {customFont && !families.some((f) => f.family === customFont) && <option value={doc.base.font}>{customFont} (not uploaded)</option>}
             </select>
           </Ctl>
+          {customFont && (
+            <Ctl label="If they don’t have it">
+              <select value={doc.base.fallback ?? 'arial'} onChange={(e) => set({ base: { ...doc.base, fallback: e.target.value as FontKey } })}>
+                {(Object.keys(FONTS) as FontKey[]).map((k) => (
+                  <option key={k} value={k}>
+                    {FONTS[k]}
+                  </option>
+                ))}
+              </select>
+            </Ctl>
+          )}
           <Ctl label="Base size">
             <Stepper value={doc.base.size} min={6} max={24} step={0.5} unit="pt" onChange={(v) => set({ base: { ...doc.base, size: v ?? 10 } })} />
           </Ctl>
@@ -127,6 +160,13 @@ export function BlockEditor({ doc, onChange, colors, kind }: Props) {
             <ColorField value={doc.base.color} colors={colors} onChange={(c) => set({ base: { ...doc.base, color: c ?? 'text' } })} />
           </Ctl>
         </div>
+        {customFont && (
+          <p className="xs muted">
+            Email apps draw text with the reader’s own fonts. People who have {customFont} installed see it; everyone else sees{' '}
+            {FONTS[doc.base.fallback ?? 'arial']}. The preview here also uses this computer’s fonts. For an exact look everywhere, use an
+            image (SVG) design.
+          </p>
+        )}
         <label className="switch">
           <input type="checkbox" checked={doc.greeting.show} onChange={(e) => set({ greeting: { ...doc.greeting, show: e.target.checked } })} />
           <span>Show the closing line above the signature (text is set in Brand and footer)</span>

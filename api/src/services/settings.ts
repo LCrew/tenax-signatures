@@ -159,7 +159,7 @@ function readMeta(env: Env, company: string): any {
   return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : null;
 }
 
-const FILES: Record<Exclude<TemplateKind, 'image'>, string> = { new: 'new.hbs', reply: 'reply.hbs', meta: 'meta.json' };
+const FILES: Record<Exclude<TemplateKind, 'image' | 'wording'>, string> = { new: 'new.hbs', reply: 'reply.hbs', meta: 'meta.json' };
 
 /**
  * Import templates/<company>/* as new versions when they differ from the latest DB version.

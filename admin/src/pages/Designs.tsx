@@ -21,7 +21,8 @@ interface Row {
   meta?: TemplateVersion;
   designs: DesignRow[];
 }
-type Drafts = Record<TemplateKind, string>;
+type EditKind = 'new' | 'reply' | 'meta';
+type Drafts = Record<EditKind, string>;
 type MsgKind = 'new' | 'reply';
 type BlockDrafts = Record<MsgKind, BlockDoc | null>;
 type EditorTab = 'brand' | 'new' | 'reply' | 'wording';
@@ -69,6 +70,7 @@ export function Designs() {
   const active = rows.data?.find((r) => r.company.key === companyParam) ?? rows.data?.[0];
   const [designId, setDesignId] = useState<string | null>(null);
   const [imageMode, setImageMode] = useState<string | null>(null);
+  const [restoreTick, setRestoreTick] = useState(0);
   useEffect(() => setDesignId(null), [active?.company.key]);
   const activeDesign = active?.designs.find((d) => d.id === designId) ?? active?.designs.find((d) => d.isDefault) ?? active?.designs[0];
   const [wording, setWording] = useState<MetaOverrides>({});
@@ -98,9 +100,9 @@ export function Designs() {
     setBlockDrafts(savedBlocks);
   }, [saved, savedBlocks]);
 
-  const isDirty = (k: TemplateKind) =>
+  const isDirty = (k: EditKind) =>
     k === 'meta' ? drafts.meta !== saved.meta : blockDrafts[k] ? !same(blockDrafts[k], savedBlocks[k]) : savedBlocks[k] !== null || drafts[k] !== saved[k];
-  const dirtyKinds = (['new', 'reply', 'meta'] as TemplateKind[]).filter(isDirty);
+  const dirtyKinds = (['new', 'reply', 'meta'] as EditKind[]).filter(isDirty);
   const anyDirty = dirtyKinds.length > 0 || wordingDirty;
 
   // Keep the preview on the template being edited.
@@ -179,8 +181,8 @@ export function Designs() {
 
   const meta = safeParse(drafts.meta);
   const tabLabel: Record<EditorTab, string> = { new: 'New message', reply: 'Reply and forward', wording: 'Wording', brand: 'Brand (company)' };
-  const tabKind: Record<EditorTab, TemplateKind | 'wording'> = { brand: 'meta', new: 'new', reply: 'reply', wording: 'wording' };
-  const tabDirty = (t: EditorTab) => (t === 'wording' ? wordingDirty : dirtyKinds.includes(tabKind[t] as TemplateKind));
+  const tabKind: Record<EditorTab, EditKind | 'wording'> = { brand: 'meta', new: 'new', reply: 'reply', wording: 'wording' };
+  const tabDirty = (t: EditorTab) => (t === 'wording' ? wordingDirty : dirtyKinds.includes(tabKind[t] as EditKind));
 
   return (
     <>
@@ -240,6 +242,7 @@ export function Designs() {
         <ImageDesignEditor
           key={activeDesign.id}
           design={activeDesign}
+          reloadKey={restoreTick}
           users={users.data ?? []}
           onSaved={() => void rows.reload()}
           onLeave={() => setImageMode(null)}
@@ -375,7 +378,10 @@ export function Designs() {
 
       )}
 
-      <VersionsModal open={historyOpen} onClose={() => setHistoryOpen(false)} company={active.company} design={activeDesign} onRestored={rows.reload} />
+      <VersionsModal open={historyOpen} onClose={() => setHistoryOpen(false)} company={active.company} design={activeDesign} onRestored={() => {
+        setRestoreTick((t) => t + 1);
+        void rows.reload();
+      }} />
       <Modal open={!!confirmLeave} onClose={() => setConfirmLeave(null)} title="Discard unsaved changes?">
         <p>You changed {active.company.displayName} › {activeDesign?.name} without saving. Switching throws those changes away.</p>
         <div className="row end">
@@ -674,38 +680,67 @@ function VersionsModal({ open, onClose, company, design, onRestored }: { open: b
     () => (open ? api.get<Omit<TemplateVersion, 'content'>[]>(`/api/admin/templates/${company.key}/history${design ? `?design=${encodeURIComponent(design.id)}` : ''}`) : Promise.resolve([])),
     [open, company.key, design?.id],
   );
-  const label: Record<TemplateKind, string> = { new: 'New message', reply: 'Reply', meta: 'Brand' };
+  const label: Record<TemplateKind, string> = { new: 'New message', reply: 'Reply', meta: 'Brand (company)', image: 'Image (SVG)', wording: 'Wording' };
   const latest = new Map<string, number>();
   for (const v of list.data ?? []) latest.set(v.kind, Math.max(latest.get(v.kind) ?? 0, v.version));
+  // Newest first, as a timeline of saves across all parts of the design.
+  const rows = [...(list.data ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id - a.id);
+  const when = (iso: string) => new Date(iso).toLocaleString('lv-LV', { dateStyle: 'short', timeStyle: 'medium' });
+
+  const restoreOne = async (v: Omit<TemplateVersion, 'content'>) => {
+    try {
+      await api.post(`/api/admin/templates/restore/${v.id}`);
+      toast(`${label[v.kind]} restored to v${v.version}`);
+      onRestored();
+      await list.reload();
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    }
+  };
+  const restoreAll = async (v: Omit<TemplateVersion, 'content'>) => {
+    if (!design) return;
+    try {
+      const r = await api.post<{ restored: string[] }>(`/api/admin/designs/${encodeURIComponent(design.id)}/restore-to`, { at: v.createdAt });
+      toast(r.restored.length ? `Restored ${r.restored.map((k) => label[k as TemplateKind]).join(', ')} to ${when(v.createdAt)}` : 'Everything already matches that point');
+      onRestored();
+      await list.reload();
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    }
+  };
 
   return (
     <Modal open={open} onClose={onClose} title={`${company.displayName}${design ? ` › ${design.name}` : ''} versions`}>
+      <p className="xs muted">
+        <strong>Restore</strong> brings back one part. <strong>Restore all to here</strong> brings the whole design (layouts,
+        wording and the company brand) back to how it was right after that save. Restores are saved as new versions, so you
+        can always go forward again.
+      </p>
       {!list.data ? (
         <Loading />
       ) : (
-        <ul className="history" style={{ maxHeight: 420, overflow: 'auto' }}>
-          {list.data.map((v) => (
-            <li key={v.id}>
+        <ul className="history" style={{ maxHeight: 440, overflow: 'auto' }}>
+          {rows.map((v) => (
+            <li key={v.id} style={{ gridTemplateColumns: '44px 1fr auto' }}>
               <span className="tag">v{v.version}</span>
               <span>
-                <strong>{label[v.kind]}</strong> <span className="xs muted">· {v.createdBy} · {timeAgo(v.createdAt)}</span>
+                <strong>{label[v.kind] ?? v.kind}</strong> <span className="xs muted">· {v.createdBy} · {when(v.createdAt)}</span>
                 {v.note && <div className="xs muted">{v.note}</div>}
               </span>
-              {latest.get(v.kind) === v.version ? (
-                <span className="xs muted">Current</span>
-              ) : (
-                <button
-                  className="btn sm"
-                  onClick={async () => {
-                    await api.post(`/api/admin/templates/restore/${v.id}`);
-                    toast(`Restored ${label[v.kind].toLowerCase()} v${v.version} as a new version`);
-                    onRestored();
-                    await list.reload();
-                  }}
-                >
-                  <RotateCcw size={13} /> Restore
-                </button>
-              )}
+              <span className="row" style={{ gap: 4, flexWrap: 'nowrap' }}>
+                {latest.get(v.kind) === v.version ? (
+                  <span className="xs muted">Current</span>
+                ) : (
+                  <button className="btn sm" onClick={() => restoreOne(v)} title={`Restore only the ${label[v.kind]?.toLowerCase()}`}>
+                    <RotateCcw size={13} /> Restore
+                  </button>
+                )}
+                {design && (
+                  <button className="btn ghost sm" onClick={() => restoreAll(v)} title="Restore layouts, wording and brand to right after this save">
+                    Restore all to here
+                  </button>
+                )}
+              </span>
             </li>
           ))}
         </ul>

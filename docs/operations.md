@@ -10,6 +10,9 @@ recorded under **Activity**.
    - **Layout:** logo beside text, logo above text, or text only. Also logo alignment, gap, divider line or accent
      bar, and maximum width.
    - **Text:** font, base size (pt), line spacing, default colour, and whether to show the closing line.
+     Fonts uploaded in **Settings › Fonts** appear under *Uploaded fonts*. Email apps draw text with the
+     reader's own fonts, so an uploaded font shows only for people who have it installed; everyone else sees the
+     *If they don't have it* font. For a pixel-exact look everywhere, use an image (SVG) design instead.
    - **Blocks:** drag to reorder (or use the arrows). Click a block for its size, bold, italic, capitals, colour and
      space after, plus its label (`M:`, `T:`) or its text. The eye icon hides a block without deleting it.
      **Add block** adds fields, websites, free text, spaces and lines.
@@ -95,8 +98,16 @@ server's data volume and never published. Until a font is uploaded, the editor w
 
 ## Roll back a design
 
-**Designs › Versions** › **Restore** on any older version. Restoring creates a new version with the old content, so
-history stays linear and you can restore forward again.
+**Designs › Versions** lists every saved change to the selected design, newest first: *New message*, *Reply*,
+*Wording* (this design's closing line, company line, notice and banner), *Image (SVG)*, and the company's
+*Brand* (colours, logo, footer — shared by all of the company's designs).
+
+- **Restore** brings back just that one part.
+- **Restore all to here** puts every part back the way it was at that moment — layout, fonts, sizes, wording and
+  brand together. Use this when "it looked right yesterday".
+
+Restoring creates a new version with the old content, so history stays linear and you can restore forward again.
+Brand restores affect every design of that company.
 
 ## Rename a company or change its group
 

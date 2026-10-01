@@ -1,5 +1,6 @@
 export type ComposeType = 'newMail' | 'reply' | 'forward';
-export type TemplateKind = 'new' | 'reply' | 'meta' | 'image';
+/** wording = a design's Wording-tab overrides (JSON), versioned so restores bring them back too. */
+export type TemplateKind = 'new' | 'reply' | 'meta' | 'image' | 'wording';
 export type CompanySource = 'group' | 'override' | 'default';
 export type DirectoryMode = 'mock' | 'graph';
 export type SignatureLanguage = 'lv' | 'en' | 'bilingual';

@@ -31,7 +31,8 @@ export interface BlockDoc {
   layout: 'side' | 'stacked' | 'textOnly';
   logo: { valign: 'top' | 'middle'; gap: number };
   divider: { show: boolean; color: BlockColor; thickness: number };
-  base: { font: FontKey; size: number; lineHeight: number; color: BlockColor };
+  /** font: an email-safe key, or "custom:<family>" for an uploaded font (with a fallback for other readers). */
+  base: { font: FontKey | `custom:${string}`; fallback?: FontKey; size: number; lineHeight: number; color: BlockColor };
   maxWidth: number;
   greeting: { show: boolean; style: BlockStyle };
   main: Block[];

@@ -1,5 +1,5 @@
 export type ComposeType = 'newMail' | 'reply' | 'forward';
-export type TemplateKind = 'new' | 'reply' | 'meta';
+export type TemplateKind = 'new' | 'reply' | 'meta' | 'image' | 'wording';
 
 export interface PublicConfig {
   needsFirstAdmin: boolean;

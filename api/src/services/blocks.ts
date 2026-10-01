@@ -22,6 +22,19 @@ export const FONTS = {
 } as const;
 export type FontKey = keyof typeof FONTS;
 
+/**
+ * An uploaded font (Settings › Fonts) used in a visual design: "custom:<family>". Email apps draw text with the
+ * reader's installed fonts, so it shows only where installed; everyone else sees the chosen fallback.
+ * Plain family names only (letters, digits, space, dash), so it can never break out of the style attribute.
+ */
+export const CUSTOM_FONT = /^custom:[A-Za-z0-9][A-Za-z0-9 -]{0,60}$/;
+const fontKeys = Object.keys(FONTS) as [FontKey, ...FontKey[]];
+
+export function fontStack(base: { font: string; fallback?: FontKey }): string {
+  if (base.font.startsWith('custom:')) return `'${base.font.slice(7).trim()}', ${FONTS[base.fallback ?? 'arial']}`;
+  return FONTS[base.font as FontKey] ?? FONTS.arial;
+}
+
 /** Colour tokens resolve to the company's brand colours (meta.json) so one palette drives every block. */
 export const COLOR_TOKENS = ['primary', 'text', 'name', 'title', 'muted', 'rule'] as const;
 const colorSchema = z.union([z.enum(COLOR_TOKENS), z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Colours are hex like #002060')]);
@@ -107,7 +120,9 @@ export const blockDocSchema = z
       .default({ show: true, color: 'primary', thickness: 1 }),
     base: z
       .object({
-        font: z.enum(Object.keys(FONTS) as [FontKey, ...FontKey[]]).default('calibri'),
+        font: z.union([z.enum(fontKeys), z.string().regex(CUSTOM_FONT, 'Unknown font')]).default('calibri'),
+        /** Used where the uploaded font isn't installed. */
+        fallback: z.enum(fontKeys).optional(),
         size: z.number().min(6).max(24).default(10),
         lineHeight: z.number().min(1).max(2).default(1.3),
         color: colorSchema.default('text'),
@@ -174,7 +189,7 @@ function textCss(doc: BlockDoc, style: BlockStyle = {}, defaults: Partial<BlockS
   const s = { ...defaults, ...style };
   const size = s.size ?? doc.base.size;
   return [
-    `font-family:${FONTS[doc.base.font]}`,
+    `font-family:${fontStack(doc.base)}`,
     `font-size:${size}pt`,
     `line-height:${round(size * doc.base.lineHeight)}pt`,
     `color:${color(s.color, doc.base.color)}`,
@@ -267,7 +282,7 @@ function rows(doc: BlockDoc, blocks: Block[]): string {
 const TABLE = 'cellpadding="0" cellspacing="0" border="0" role="presentation"';
 
 export function compileBlocks(doc: BlockDoc, kind: 'new' | 'reply'): string {
-  const font = FONTS[doc.base.font];
+  const font = fontStack(doc.base);
   const divider = doc.divider.show ? `border-left:${doc.divider.thickness}px solid ${color(doc.divider.color, 'primary')};` : '';
   const valign = doc.logo.valign;
   const gap = doc.logo.gap;
