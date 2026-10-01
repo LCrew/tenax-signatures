@@ -30,6 +30,35 @@ blocks is always literal.
 Editing on disk instead: change `templates/<company>/*`, then **Designs › Reload from disk**. Files that differ are
 imported as new versions. `npx tsx scripts/seed-templates.ts` (in `api/`) regenerates the shipped designs.
 
+## Several designs per company (Standard, English, Service…)
+
+**Designs** › company › design chips. **New design** creates a copy. Pick **People** (e.g. "English" for
+English-speaking clients) or **Service accounts** (shared/service mailboxes; only admins assign it).
+- **New message** / **Reply and forward**: this design's layouts.
+- **Wording**: this design's own closing line, company line, confidentiality notice and banner. Anything not set
+  here uses the company's **Brand (company)** settings (logo, colours, websites and address are always company-wide).
+- **Design settings**: rename, *people can choose it*, **Make default** (what everyone gets unless they chose or were
+  assigned something else), remove (its users fall back to their next option, usually the default).
+
+Who gets which design:
+1. A design an admin or the company's editor **assigned and locked** (People › person › *Signature design* + *Lock*).
+2. Otherwise the person's **own choice** (My signature › *Your signature*, or **Make default** in Outlook's
+   Signatures pane). Only designs marked *people can choose*.
+3. Otherwise a design an admin assigned without locking (the person may still change it).
+4. Otherwise the company default.
+
+In Outlook the default is inserted automatically. The **Signatures** button in the compose window lists the
+person's other designs and inserts one for that email only (unless locked).
+
+Shared mailboxes (Shared mailboxes › design) use their chosen design, else the company's Service design, else the
+default.
+
+### After updating to the version with the Signatures button
+The add-in manifest changed (version 1.1.0.0). Download it again (Settings › Outlook add-in) and in the
+**Microsoft 365 admin center** › Integrated apps › *Tenax Signature* › **Update add-in**, upload it and accept. Users
+see the button after the update propagates (hours, up to 24). Update a personal test copy the same way
+(`/addin/manifest.xml?variant=test`, remove the old one and add the new file).
+
 ## Roll back a design
 
 **Designs › Versions** › **Restore** on any older version. Restoring creates a new version with the old content, so

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAsync, useCompanies, useToast } from '../lib/hooks';
-import type { SharedMailbox } from '../lib/types';
+import type { Design, SharedMailbox } from '../lib/types';
 import { CompanyName, ErrorNote, Field, Loading, Modal, PageHead } from '../components/ui';
 
 const EMPTY: SharedMailbox = { email: '', company: '', displayName: '', officePhone: '' };
@@ -103,6 +103,7 @@ export function Mailboxes() {
                 ))}
               </select>
             </Field>
+            <MailboxDesign company={editing.company} value={editing.design ?? ''} onChange={(v) => setEditing({ ...editing, design: v || null })} />
             <Field label="Phone" hint="Optional">
               <input type="text" value={editing.officePhone ?? ''} onChange={(e) => setEditing({ ...editing, officePhone: e.target.value })} />
             </Field>
@@ -138,5 +139,22 @@ export function Mailboxes() {
         </div>
       </Modal>
     </>
+  );
+}
+
+function MailboxDesign({ company, value, onChange }: { company: string; value: string; onChange: (v: string) => void }) {
+  const designs = useAsync(() => (company ? api.get<Design[]>(`/api/admin/designs?company=${encodeURIComponent(company)}`) : Promise.resolve([] as Design[])), [company]);
+  const service = designs.data?.find((d) => d.purpose === 'service');
+  return (
+    <Field label="Design" hint={service ? `Default: ${service.name} (the company's service design)` : 'Default: the company default design'}>
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">{service ? `${service.name} (service design)` : 'Company default'}</option>
+        {(designs.data ?? []).map((d) => (
+          <option key={d.id} value={d.id}>
+            {d.name}
+          </option>
+        ))}
+      </select>
+    </Field>
   );
 }

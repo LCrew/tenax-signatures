@@ -18,6 +18,9 @@ interface Me {
   overrides: Record<string, string | boolean | null>;
   isAdmin: boolean;
   excluded?: boolean;
+  design?: { id: string; name: string; purpose: string; source: string };
+  designLocked?: boolean;
+  designs?: { id: string; name: string; purpose: string; selected: boolean }[];
   selfService: { enabled: boolean; fields: string[] };
 }
 
@@ -53,7 +56,7 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
         : dirty
           ? api.post<string>('/api/me/preview-draft', { type, overrides: debounced })
           : api.get<string>(`/api/me/preview?type=${type}`),
-    [type, JSON.stringify(debounced), !!me.data, dirty],
+    [type, JSON.stringify(debounced), !!me.data, dirty, me.data?.design?.id],
   );
 
   async function save() {
@@ -106,6 +109,7 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
   ) : (
     <div className="split">
       <div className="stack loose">
+        <DesignPicker me={me.data} onChanged={me.reload} />
         <section className="panel">
           <div className="panel-head">
             <h3>Your details</h3>
@@ -292,4 +296,45 @@ function normalize(o: Record<string, unknown>, fields: string[]) {
 
 function firstName(name?: string) {
   return (name ?? '').split(/\s+/)[0] || 'there';
+}
+
+/** Choose which of the company's signatures is your default (if there's more than one and IT hasn't locked it). */
+function DesignPicker({ me, onChanged }: { me: Me; onChanged: () => void }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const designs = me.designs ?? [];
+  if (me.designLocked) {
+    return (
+      <div className="callout">
+        Your signature design is <strong>{me.design?.name}</strong>, set by your administrator.
+      </div>
+    );
+  }
+  if (designs.length < 2) return null;
+  const pick = async (id: string) => {
+    setBusy(true);
+    try {
+      await api.put('/api/me/design', { design: id });
+      toast(`${designs.find((d) => d.id === id)?.name} is now your default signature`);
+      onChanged();
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="stack tight">
+      <h3>Your signature</h3>
+      <p className="small muted">Outlook adds this one automatically. You can switch for a single email with the Signatures button in Outlook.</p>
+      <div className="design-cards" role="radiogroup" aria-label="Your signature design">
+        {designs.map((d) => (
+          <button key={d.id} type="button" role="radio" aria-checked={d.selected} className="design-card" disabled={busy} onClick={() => !d.selected && pick(d.id)}>
+            <strong>{d.name}</strong>
+            <span>{d.selected ? 'Your default' : 'Use as default'}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
 }

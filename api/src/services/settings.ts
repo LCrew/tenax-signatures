@@ -5,6 +5,7 @@ import type { Repository } from '../db/repository.js';
 import type { Env } from '../env.js';
 import type { Company, Settings, TemplateKind } from '../types.js';
 import type { SecretBox } from './secrets.js';
+import { ensureDefaultDesign } from './designs.js';
 
 const DEFAULTS: Settings = {
   publicUrl: 'https://sig.tenax.lv',
@@ -147,7 +148,10 @@ export function seedIfEmpty(repo: Repository, env: Env, settings: SettingsServic
       for (const m of cfg.sharedMailboxes ?? []) repo.upsertSharedMailbox({ officePhone: null, ...m });
     }
   }
-  for (const c of repo.listCompanies()) importTemplatesFromDisk(repo, env, c.key, 'seed', true);
+  for (const c of repo.listCompanies()) {
+    ensureDefaultDesign(repo, c.key);
+    importTemplatesFromDisk(repo, env, c.key, 'seed', true);
+  }
 }
 
 function readMeta(env: Env, company: string): any {

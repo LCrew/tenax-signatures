@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Ban, Undo2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useApp, useAsync, useCompanies, useDebounced, useToast } from '../lib/hooks';
-import { FIELD_LABELS, type ComposeType, type Overrides, type UserDetail } from '../lib/types';
+import { FIELD_LABELS, type ComposeType, type Design, type Overrides, type UserDetail } from '../lib/types';
 import { CompanyName, ErrorNote, Field, Loading, Modal, PageHead, timeAgo } from '../components/ui';
 import { LetterPreview } from '../components/LetterPreview';
 
@@ -144,6 +144,7 @@ export function Person() {
                 </div>
               </div>
             </div>}
+            <DesignRow user={u} draft={draft} set={set} />
             <div className="field-row">
               <span className="k">Privacy</span>
               <label className="check" style={{ paddingTop: 8 }}>
@@ -195,8 +196,8 @@ export function Person() {
 
 function pickOverrides(o: Overrides | null): Overrides {
   if (!o) return {};
-  const { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile } = o;
-  return { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile };
+  const { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile, design, designLocked } = o;
+  return { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile, design, designLocked };
 }
 
 /** Empty strings mean "no correction". */
@@ -207,6 +208,8 @@ function normalize(o: Overrides): Overrides {
     out[k] = typeof v === 'string' && v.trim() ? v.trim() : null;
   }
   out.hideMobile = o.hideMobile === true ? true : null;
+  out.design = o.design || null;
+  out.designLocked = !!o.design && o.designLocked === true;
   return out as Overrides;
 }
 
@@ -275,5 +278,47 @@ function ExclusionBar({ user: u, onChanged }: { user: UserDetail; onChanged: () 
         </div>
       </Modal>
     </>
+  );
+}
+
+/** Which design this person gets: company default, their own choice, or one an admin sets (optionally locked). */
+function DesignRow({ user: u, draft, set }: { user: UserDetail; draft: Overrides; set: (k: keyof Overrides, v: unknown) => void }) {
+  const designs = useAsync(() => api.get<Design[]>(`/api/admin/designs?company=${encodeURIComponent(u.company)}`), [u.company]);
+  const list = designs.data ?? [];
+  if (list.length < 2) return null;
+  const chosen = u.overrides?.chosenDesign ? list.find((d) => d.id === u.overrides!.chosenDesign) : undefined;
+  const sourceText: Record<string, string> = {
+    locked: 'Set by an admin and locked',
+    chosen: 'Their own choice',
+    assigned: 'Set by an admin; they may change it',
+    default: 'Company default',
+  };
+  return (
+    <div className="field-row">
+      <label className="k" htmlFor="f-design">
+        Signature design
+      </label>
+      <div>
+        <select id="f-design" value={draft.design ?? ''} onChange={(e) => set('design', e.target.value || null)}>
+          <option value="">{chosen ? `Their own choice (${chosen.name})` : 'Company default / their own choice'}</option>
+          {list.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name}
+              {d.isDefault ? ' (default)' : ''}
+              {d.purpose === 'service' ? ' (service)' : ''}
+            </option>
+          ))}
+        </select>
+        {draft.design && (
+          <label className="check" style={{ marginTop: 8 }}>
+            <input type="checkbox" checked={draft.designLocked === true} onChange={(e) => set('designLocked', e.target.checked)} />
+            Lock it (they can’t switch in Outlook or My signature)
+          </label>
+        )}
+        <div className="entra">
+          Now: {u.design?.name} · {sourceText[u.design?.source ?? 'default']}
+        </div>
+      </div>
+    </div>
   );
 }

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+  "Signatures" task pane, opened from the compose window button. taskpane.js is served by the API with the
+  runtime config (globalThis.__SIG_CONFIG__) prepended, like launchevent.js.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Signatures</title>
+  <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <style>
+    :root { --ink: #16202a; --muted: #56626d; --line: #dde2e6; --action: #0b6e63; --danger: #b42318; --paper: #f3f5f6; }
+    @media (prefers-color-scheme: dark) {
+      :root { --ink: #e8ecef; --muted: #a3adb6; --line: #2a323a; --action: #3fb3a3; --danger: #f07166; --paper: #12171c; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 16px; font-family: "Segoe UI", -apple-system, system-ui, sans-serif; font-size: 14px; color: var(--ink); background: var(--paper); }
+    h1 { font-size: 16px; margin: 0 0 4px; }
+    p { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+    .design { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .insert { flex: 1; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); font: inherit; cursor: pointer; }
+    .insert:hover { border-color: var(--action); }
+    .insert:disabled { opacity: .6; cursor: progress; }
+    .current .insert { border-color: var(--action); box-shadow: inset 0 0 0 1px var(--action); }
+    .insert span { font-size: 12px; color: var(--muted); }
+    .link { border: 0; background: none; color: var(--action); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .status { font-size: 13px; min-height: 18px; margin: 8px 0; color: var(--muted); }
+    .status.ok { color: var(--action); }
+    .status.error { color: var(--danger); }
+    #signin { padding: 8px 14px; border: 0; border-radius: 6px; background: var(--action); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+    :focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <h1>Signatures</h1>
+  <p>Pick a signature for this email. Your default is added automatically to new emails.</p>
+  <div id="designs" role="list"></div>
+  <p id="locked" hidden>Your administrator has set your signature, so it can’t be changed here.</p>
+  <div id="status" class="status" role="status" aria-live="polite"></div>
+  <button id="signin" hidden>Sign in</button>
+  <script type="text/javascript" src="taskpane.js"></script>
+</body>
+</html>

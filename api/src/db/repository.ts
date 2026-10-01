@@ -1,8 +1,10 @@
-import type { Company, Overrides, SharedMailbox, TemplateKind } from '../types.js';
+import type { Company, Design, Overrides, SharedMailbox, TemplateKind } from '../types.js';
 
 export interface TemplateVersion {
   id: number;
   company: string;
+  /** Design id for new/reply; '' for the company's brand settings (meta). */
+  design: string;
   kind: TemplateKind;
   version: number;
   content: string;
@@ -63,6 +65,11 @@ export interface Repository {
   getSetting<T>(key: string): T | undefined;
   setSetting(key: string, value: unknown): void;
 
+  listDesigns(company?: string): Design[];
+  getDesign(id: string): Design | undefined;
+  upsertDesign(d: Design): void;
+  deleteDesign(id: string): void;
+
   listCompanies(): Company[];
   upsertCompany(c: Company): void;
   deleteCompany(key: string): void;
@@ -76,10 +83,11 @@ export interface Repository {
   listOverrides(): Overrides[];
   saveOverrides(o: Overrides): void;
 
-  latestTemplate(company: string, kind: TemplateKind): TemplateVersion | undefined;
+  /** design omitted = the company's default design (ignored for meta). */
+  latestTemplate(company: string, kind: TemplateKind, design?: string): TemplateVersion | undefined;
   getTemplateVersion(id: number): TemplateVersion | undefined;
-  listTemplateVersions(company: string, kind?: TemplateKind): TemplateVersion[];
-  addTemplateVersion(t: Omit<TemplateVersion, 'id' | 'version' | 'createdAt'>): TemplateVersion;
+  listTemplateVersions(company: string, kind?: TemplateKind, design?: string): TemplateVersion[];
+  addTemplateVersion(t: Omit<TemplateVersion, 'id' | 'version' | 'createdAt' | 'design'> & { design?: string }): TemplateVersion;
 
   audit(actor: string, action: string, target: string, before: unknown, after: unknown): void;
   listAudit(limit: number, target?: string): AuditEntry[];

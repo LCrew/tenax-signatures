@@ -11,9 +11,13 @@ const dist = join(root, "dist");
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
 
-await build({
-  entryPoints: [join(root, "src/launchevent.ts")],
-  outfile: join(dist, "launchevent.js"),
+const entries = [
+  ["src/launchevent.ts", "launchevent.js"],
+  ["src/taskpane.ts", "taskpane.js"],
+];
+for (const [entry, out] of entries) await build({
+  entryPoints: [join(root, entry)],
+  outfile: join(dist, out),
   bundle: true,
   format: "iife", // no ES module syntax at runtime (brief 7.2)
   splitting: false, // dynamic imports get inlined into the single file
@@ -28,12 +32,16 @@ await build({
 
 // Guard: the classic JS runtime can't load modules, so fail the build if any import survived.
 const out = await readFile(join(dist, "launchevent.js"), "utf8");
-if (/(^|[^.\w$])import\s*\(|^\s*import[\s{*]|^\s*export\s/m.test(out)) {
-  console.error("launchevent.js still contains ES import/export syntax; the classic Outlook runtime can't load it.");
-  process.exit(1);
+for (const name of ["launchevent.js", "taskpane.js"]) {
+  const code = await readFile(join(dist, name), "utf8");
+  if (/(^|[^.\w$])import\s*\(|^\s*import[\s{*]|^\s*export\s/m.test(code)) {
+    console.error(`${name} still contains ES import/export syntax; the classic Outlook runtime can't load it.`);
+    process.exit(1);
+  }
 }
 
 await copyFile(join(root, "src/launchevent.html"), join(dist, "launchevent.html"));
+await copyFile(join(root, "src/taskpane.html"), join(dist, "taskpane.html"));
 
 const publicDir = join(root, "public");
 for (const name of await readdir(publicDir)) {

@@ -34,6 +34,29 @@ export interface SharedMailbox {
   company: string;
   displayName: string;
   officePhone: string | null;
+  /** Design to use (e.g. the company's Service design); null = service design if any, else default. */
+  design?: string | null;
+}
+
+/** Per-design wording that may differ from the company's brand settings (e.g. an English version). */
+export interface MetaOverrides {
+  greeting?: string;
+  footer?: { companyLine?: string; confidential?: string };
+  banner?: { file: string; width: number; height: number; link?: string; alt?: string } | null;
+}
+
+export interface Design {
+  id: string;
+  company: string;
+  name: string;
+  /** person: for people; service: for service/shared accounts, assigned by admins only. */
+  purpose: 'person' | 'service';
+  /** People may pick it as their default in My signature / Outlook. */
+  selectable: boolean;
+  isDefault: boolean;
+  sort: number;
+  metaOverrides: MetaOverrides;
+  createdAt: string;
 }
 
 /** Raw directory user as returned by Graph (subset) or fixtures. */
@@ -67,6 +90,11 @@ export interface Overrides {
   department?: string | null;
   company?: string | null;
   hideMobile?: boolean | null;
+  /** Design set by an admin/editor; with designLocked the person can't change it. */
+  design?: string | null;
+  designLocked?: boolean | null;
+  /** The person's own choice (self-service). */
+  chosenDesign?: string | null;
   updatedBy?: string;
   updatedAt?: string;
 }
@@ -98,6 +126,11 @@ export interface ResolvedUser {
   isAdmin: boolean;
   /** Company keys this person may manage as a signature editor. */
   editorOf: string[];
+  /** The design this person gets, and why. */
+  design: { id: string; name: string; purpose: 'person' | 'service'; source: 'locked' | 'chosen' | 'assigned' | 'default' };
+  /** Designs they may choose / switch to in Outlook (just the one when locked). */
+  allowedDesigns: { id: string; name: string; purpose: 'person' | 'service' }[];
+  designLocked: boolean;
   /** Left out of signatures and lists (service accounts etc.): via the exclusion group or by hand. */
   excluded: null | { by: 'group' } | { by: 'manual'; reason: string | null; excludedBy: string; excludedAt: string };
   isPilot: boolean;

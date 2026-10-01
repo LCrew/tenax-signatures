@@ -432,3 +432,26 @@ input[type='range'] { accent-color: var(--action); width: 100%; min-height: 36px
 .save-bar { border-top: 1px solid var(--line); position: sticky; bottom: 0; background: var(--surface); border-radius: 0 0 var(--r-md) var(--r-md); z-index: 5; }
 .split > *, .two-col > * { min-width: 0; }
 .layout-card { min-width: 0; } .layout-card svg { width: 100%; max-width: 96px; height: auto; }
+
+/* ───────── Designs per company ───────── */
+.design-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: -4px 0 16px; }
+.design-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.design-chip {
+  all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px;
+  border: 1px solid var(--line); border-radius: 99px; background: var(--surface); font-size: var(--t-sm); font-weight: 600; color: var(--graphite);
+}
+.design-chip:hover { border-color: var(--line-strong); color: var(--ink); }
+.design-chip[aria-selected='true'] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.design-chip[aria-selected='true'] .tag { background: transparent; color: inherit; border-color: currentColor; }
+.design-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.wording-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.wording-row:last-child { border-bottom: 0; }
+.design-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+.design-card {
+  all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px;
+  border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface);
+}
+.design-card[aria-checked='true'] { border-color: var(--action); box-shadow: inset 0 0 0 1px var(--action); }
+.design-card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.design-card strong { font-size: var(--t-sm); }
+.design-card span { font-size: var(--t-xs); color: var(--graphite); }

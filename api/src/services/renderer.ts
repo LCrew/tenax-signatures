@@ -1,7 +1,8 @@
 import Handlebars from 'handlebars';
 import { z } from 'zod';
 import type { Repository } from '../db/repository.js';
-import type { Company, ComposeType, ResolvedUser, Settings, SharedMailbox } from '../types.js';
+import type { Company, ComposeType, Design, MetaOverrides, ResolvedUser, Settings, SharedMailbox } from '../types.js';
+import { applyOverrides } from './designs.js';
 import { telHref } from './phone.js';
 import { stripBlocksHeader } from './blocks.js';
 
@@ -181,12 +182,16 @@ export class Renderer {
     type: ComposeType;
     data: SignatureData;
     settings: Settings;
-    draft?: { template?: string; meta?: string };
+    /** Which design (default design when omitted); its wording overrides apply on top of the company brand. */
+    design?: Pick<Design, 'id' | 'metaOverrides'>;
+    draft?: { template?: string; meta?: string; metaOverrides?: MetaOverrides };
   }): string {
     const kind = opts.type === 'newMail' ? 'new' : 'reply';
-    const stored = this.repo.latestTemplate(opts.company.key, kind);
+    // A design without its own template (shouldn't happen: designs are created as copies) falls back to the default.
+    const stored = this.repo.latestTemplate(opts.company.key, kind, opts.design?.id) ?? this.repo.latestTemplate(opts.company.key, kind);
     const storedMeta = this.repo.latestTemplate(opts.company.key, 'meta');
-    const metaSrc = opts.draft?.meta ?? storedMeta?.content ?? '{}';
+    const companyMeta = opts.draft?.meta ?? storedMeta?.content ?? '{}';
+    const metaSrc = applyOverrides(companyMeta, opts.draft?.metaOverrides ?? opts.design?.metaOverrides);
     const meta = validateMeta(metaSrc);
 
     let fn: Compiled;

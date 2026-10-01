@@ -11,6 +11,7 @@ import type {
 } from '../types.js';
 import type { Directory } from './directory.js';
 import { normalizePhone } from './phone.js';
+import { ref, resolveDesign } from './designs.js';
 
 const USER_TTL = 10 * 60_000;
 const GROUP_TTL = 30 * 60_000;
@@ -131,6 +132,7 @@ export class UserResolver {
     const overrides = overridesOverride ?? this.repo.getOverrides(entra.userPrincipalName);
     const c = resolveCompany(groupIds, companies, overrides?.company, settings.defaultCompany);
     const { fields, sources, missing } = resolveFields(entra, overrides);
+    const d = resolveDesign(this.repo, c.company, overrides);
     sources.company = c.source === 'override' ? 'override' : c.source === 'group' ? 'entra' : 'none';
     const lowered = new Set(groupIds.map((g) => g.toLowerCase()));
     return {
@@ -147,6 +149,9 @@ export class UserResolver {
       missing,
       isAdmin: !!settings.adminGroupId && lowered.has(settings.adminGroupId.toLowerCase()),
       editorOf: companies.filter((co) => co.editorGroupId && lowered.has(co.editorGroupId.toLowerCase())).map((co) => co.key),
+      design: { ...ref(d.design), source: d.source },
+      allowedDesigns: d.allowed.map(ref),
+      designLocked: d.locked,
       excluded: (() => {
         if (settings.excludeGroupId && lowered.has(settings.excludeGroupId.toLowerCase())) return { by: 'group' as const };
         const x = this.repo.getExclusion(entra.userPrincipalName);

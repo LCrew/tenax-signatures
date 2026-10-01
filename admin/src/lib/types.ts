@@ -30,6 +30,30 @@ export interface Company {
   editorGroupId?: string;
 }
 
+export interface MetaOverrides {
+  greeting?: string;
+  footer?: { companyLine?: string; confidential?: string };
+  banner?: { file: string; width: number; height: number; link?: string; alt?: string } | null;
+}
+
+export interface Design {
+  id: string;
+  company: string;
+  name: string;
+  purpose: 'person' | 'service';
+  selectable: boolean;
+  isDefault: boolean;
+  sort: number;
+  metaOverrides: MetaOverrides;
+  createdAt: string;
+}
+
+export interface DesignRef {
+  id: string;
+  name: string;
+  purpose: 'person' | 'service';
+}
+
 export interface Settings {
   publicUrl: string;
   directoryMode: 'mock' | 'graph';
@@ -72,6 +96,8 @@ export interface UserSummary {
   isAdmin: boolean;
   isPilot: boolean;
   excluded?: null | { by: 'group' } | { by: 'manual'; reason: string | null; excludedBy: string; excludedAt: string };
+  design?: DesignRef & { source: 'locked' | 'chosen' | 'assigned' | 'default' };
+  designLocked?: boolean;
 }
 
 export interface Overrides {
@@ -83,6 +109,9 @@ export interface Overrides {
   department?: string | null;
   company?: string | null;
   hideMobile?: boolean | null;
+  design?: string | null;
+  designLocked?: boolean | null;
+  chosenDesign?: string | null;
   updatedBy?: string;
   updatedAt?: string;
 }
@@ -116,6 +145,7 @@ export interface UserDetail extends UserSummary {
 export interface TemplateVersion {
   id: number;
   company: string;
+  design?: string;
   kind: TemplateKind;
   version: number;
   content: string;
@@ -141,6 +171,7 @@ export interface SharedMailbox {
   company: string;
   displayName: string;
   officePhone: string | null;
+  design?: string | null;
 }
 
 export interface TelemetryEvent {

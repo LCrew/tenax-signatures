@@ -27,7 +27,7 @@ export function renderManifest(ctx: AppContext, opts: { test?: boolean } = {}): 
     ADDIN_ID: opts.test ? testAddinId(s.addinId) : s.addinId,
     CLIENT_ID: s.clientId || '00000000-0000-0000-0000-000000000000',
     API_SCOPE_URI: s.appIdUri || `api://${new URL(s.publicUrl).host}/${s.clientId}`,
-    VERSION: '1.0.0.0',
+    VERSION: '1.1.0.0', // 1.1: Signatures button + task pane. Bump on every manifest change.
   };
   let xml = tpl.replace(/\{\{(\w+)\}\}/g, (m, k) => (k in values ? xmlEscape(values[k]) : m));
   if (opts.test) xml = xml.replace('<DisplayName DefaultValue="Tenax Signature"/>', '<DisplayName DefaultValue="Tenax Signature (test)"/>');
@@ -41,8 +41,8 @@ export function addinRoutes(app: FastifyInstance, ctx: AppContext) {
   }));
 
   /** The bundle with runtime config prepended, so the image never needs rebuilding per tenant. */
-  app.get('/addin/launchevent.js', async (_req, reply) => {
-    const file = path.join(ctx.env.addinDistDir, 'launchevent.js');
+  app.get('/addin/:script(^(?:launchevent|taskpane)$).js', async (req, reply) => {
+    const file = path.join(ctx.env.addinDistDir, `${(req.params as { script: string }).script}.js`);
     if (!fs.existsSync(file)) return reply.code(404).send('// add-in bundle not built');
     const s = ctx.settings.get();
     const cfg = {

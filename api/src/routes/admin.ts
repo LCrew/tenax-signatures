@@ -17,7 +17,8 @@ import {
 } from '../services/renderer.js';
 import { importTemplatesFromDisk } from '../services/settings.js';
 import { blockDocSchema, compileBlocks, extractBlocks, presetDoc, stripBlocksHeader } from '../services/blocks.js';
-import type { Company, ComposeType, ResolvedUser, TemplateKind } from '../types.js';
+import { applyOverrides, ensureDefaultDesign, metaOverridesSchema, newDesignId } from '../services/designs.js';
+import type { Company, ComposeType, Design, Overrides, ResolvedUser, TemplateKind } from '../types.js';
 import { overridePatchSchema } from './signature.js';
 import { renderManifest } from './addin.js';
 
@@ -44,6 +45,8 @@ function summary(u: ResolvedUser, companies: Company[]) {
     isAdmin: u.isAdmin,
     isPilot: u.isPilot,
     excluded: u.excluded,
+    design: u.design,
+    designLocked: u.designLocked,
   };
 }
 
@@ -89,7 +92,18 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
   function renderFor(req: FastifyRequest, user: ResolvedUser, type: ComposeType) {
     const company = findCompany(user.company);
     if (!company) throw new TemplateError(`Company "${user.company}" is not configured`);
-    return ctx.renderer.render({ company, type, data: signatureDataFor(user), settings: previewSettings(req) });
+    return ctx.renderer.render({ company, type, data: signatureDataFor(user), settings: previewSettings(req), design: ctx.repo.getDesign(user.design.id) });
+  }
+
+  /** Admin/editor patch = self-service fields + which design the person gets (optionally locked). */
+  const adminPatchSchema = overridePatchSchema.extend({
+    design: z.union([z.string().max(80), z.null()]).optional(),
+    designLocked: z.boolean().optional(),
+  });
+  function checkDesignFor(user: ResolvedUser, design: string | null | undefined): string | null {
+    if (!design) return null;
+    const d = ctx.repo.getDesign(design);
+    return d && d.company === user.company ? null : 'That design doesn’t belong to this person’s company';
   }
 
   // ───────────────────────────── Users ─────────────────────────────
@@ -141,10 +155,13 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
   /** Preview with unsaved corrections applied (Person page). Nothing is stored. */
   app.post('/api/admin/users/:upn/preview-draft', staff(async (req, reply, _admin, access) => {
     const { upn } = req.params as { upn: string };
-    const body = z.object({ type: typeSchema, overrides: overridePatchSchema.default({}) }).parse(req.body);
+    const body = z.object({ type: typeSchema, overrides: adminPatchSchema.default({}) }).parse(req.body);
     const user = await scopedUser(access, upn);
     if (!user) return reply.code(404).send({ error: 'User not found in directory' });
     if (!access.global && body.overrides.company !== undefined) return reply.code(403).send({ error: 'Only IT administrators can change which company a person belongs to' });
+    const designProblem = checkDesignFor(user, body.overrides.design);
+    if (designProblem) return reply.code(400).send({ error: designProblem });
+    if (body.overrides.design !== undefined && (body.overrides.design ?? null) !== (user.overrides?.design ?? null)) (body.overrides as Overrides).chosenDesign = null;
     const merged = { ...(user.overrides ?? { upn: user.upn }), ...body.overrides, upn: user.upn };
     const groupIds = await ctx.resolver.groupIds(user.oid);
     const draftUser = ctx.resolver.build(user.entra, groupIds, merged);
@@ -153,13 +170,19 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
 
   app.put('/api/admin/users/:upn/overrides', staff(async (req, reply, admin, access) => {
     const { upn } = req.params as { upn: string };
-    const patch = overridePatchSchema.parse(req.body);
+    const patch: Overrides & z.infer<typeof adminPatchSchema> = adminPatchSchema.parse(req.body) as any;
     // Moving someone to another company would take them out of (or into) an editor's scope: IT only.
     if (!access.global && patch.company !== undefined) return reply.code(403).send({ error: 'Only IT administrators can change which company a person belongs to' });
     if (patch.company && !findCompany(patch.company)) return reply.code(400).send({ error: `Unknown company ${patch.company}` });
     const user = await scopedUser(access, upn);
     if (!user) return reply.code(404).send({ error: 'User not found in directory' });
+    const designProblem = checkDesignFor(user, patch.design);
+    if (designProblem) return reply.code(400).send({ error: designProblem });
     const before = ctx.repo.getOverrides(user.upn);
+    // An admin CHANGING the assigned design replaces the person's own earlier choice (they may choose again unless
+    // locked). Saving other corrections leaves their choice alone.
+    if (patch.design !== undefined && (patch.design ?? null) !== (before?.design ?? null)) patch.chosenDesign = null;
+    if (patch.design === null) patch.designLocked = false;
     const next = { ...(before ?? { upn: user.upn }), ...patch, upn: user.upn, updatedBy: actorOf(admin), updatedAt: new Date().toISOString() };
     ctx.repo.saveOverrides(next);
     audit(admin, 'overrides.update', user.upn, before, next);
@@ -268,6 +291,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     if (findCompany(body.key)) return reply.code(409).send({ error: 'A company with that key already exists' });
     const { copyFrom, ...company } = body;
     ctx.repo.upsertCompany(company);
+    ensureDefaultDesign(ctx.repo, body.key);
     const source = copyFrom ?? ctx.repo.listCompanies()[0]?.key;
     for (const kind of ['new', 'reply', 'meta'] as TemplateKind[]) {
       const t = source && ctx.repo.latestTemplate(source, kind);
@@ -302,12 +326,14 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     company: z.string(),
     displayName: z.string().trim().min(1).max(120),
     officePhone: z.string().trim().max(40).nullable().optional().transform((v) => v || null),
+    design: z.string().max(80).nullable().optional().transform((v) => v || null),
   });
 
   app.get('/api/admin/shared-mailboxes', guard(async () => ctx.repo.listSharedMailboxes()));
   app.put('/api/admin/shared-mailboxes/:email', guard(async (req, reply, admin) => {
     const body = mailboxSchema.parse({ ...(req.body as object), email: (req.params as any).email });
     if (!findCompany(body.company)) return reply.code(400).send({ error: 'Unknown company' });
+    if (body.design && ctx.repo.getDesign(body.design)?.company !== body.company) return reply.code(400).send({ error: 'That design belongs to another company' });
     const before = ctx.repo.getSharedMailbox(body.email);
     ctx.repo.upsertSharedMailbox(body);
     audit(admin, before ? 'mailbox.update' : 'mailbox.create', `mailbox:${body.email}`, before ?? null, body);
@@ -321,6 +347,96 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     return { ok: true };
   }));
 
+  // ───────────────────────────── Designs ─────────────────────────────
+  // Several designs per company (Standard, English, Service…). IT and that company's editors manage them.
+
+  /** The design to work on: an explicit id (must belong to the company) or the company default. */
+  function designOf(company: string, id?: string): Design | null {
+    if (id) {
+      const d = ctx.repo.getDesign(id);
+      return d && d.company === company ? d : null;
+    }
+    return ctx.repo.listDesigns(company).find((d) => d.isDefault) ?? null;
+  }
+
+  app.get('/api/admin/designs', staff(async (req, reply, _admin, access) => {
+    const company = String((req.query as any).company ?? '');
+    if (company && !access.can(company)) return forbidden(reply);
+    return ctx.repo.listDesigns(company || undefined).filter((d) => access.can(d.company));
+  }));
+
+  const designNameSchema = z.string().trim().min(1).max(60);
+  app.post('/api/admin/designs', staff(async (req, reply, admin, access) => {
+    const body = z
+      .object({
+        company: z.string(),
+        name: designNameSchema,
+        purpose: z.enum(['person', 'service']).default('person'),
+        selectable: z.boolean().default(true),
+        copyFrom: z.string().optional(),
+      })
+      .parse(req.body);
+    if (!findCompany(body.company)) return reply.code(404).send({ error: 'Unknown company' });
+    if (!access.can(body.company)) return forbidden(reply);
+    const source = designOf(body.company, body.copyFrom);
+    if (!source) return reply.code(400).send({ error: 'Copy from a design of the same company' });
+    const existing = ctx.repo.listDesigns(body.company);
+    const design: Design = {
+      id: newDesignId(ctx.repo, body.company, body.name),
+      company: body.company,
+      name: body.name,
+      purpose: body.purpose,
+      selectable: body.purpose === 'person' && body.selectable,
+      isDefault: false,
+      sort: Math.max(0, ...existing.map((d) => d.sort)) + 1,
+      metaOverrides: { ...source.metaOverrides },
+      createdAt: new Date().toISOString(),
+    };
+    ctx.repo.upsertDesign(design);
+    for (const kind of ['new', 'reply'] as const) {
+      const t = ctx.repo.latestTemplate(body.company, kind, source.id);
+      if (t) ctx.repo.addTemplateVersion({ company: body.company, design: design.id, kind, content: t.content, note: `Copied from ${source.name} v${t.version}`, createdBy: actorOf(admin) });
+    }
+    audit(admin, 'design.create', `design:${design.id}`, null, { name: design.name, purpose: design.purpose, copyFrom: source.id });
+    return design;
+  }));
+
+  app.put('/api/admin/designs/:id', staff(async (req, reply, admin, access) => {
+    const before = ctx.repo.getDesign((req.params as any).id);
+    if (!before || !access.can(before.company)) return reply.code(404).send({ error: 'Design not found' });
+    const body = z
+      .object({ name: designNameSchema.optional(), selectable: z.boolean().optional(), isDefault: z.literal(true).optional(), metaOverrides: metaOverridesSchema.optional() })
+      .strict()
+      .parse(req.body);
+    const next: Design = { ...before, ...body, isDefault: before.isDefault || !!body.isDefault };
+    if (next.isDefault && next.purpose === 'service') return reply.code(400).send({ error: 'A service design can’t be the company default' });
+    if (next.purpose === 'service') next.selectable = false;
+    if (body.metaOverrides) {
+      // The design's wording must still form valid brand settings and render with its layouts.
+      const companyMeta = ctx.repo.latestTemplate(before.company, 'meta')?.content ?? '{}';
+      const merged = applyOverrides(companyMeta, body.metaOverrides);
+      validateMeta(merged);
+      for (const k of ['new', 'reply'] as const) {
+        const t = ctx.repo.latestTemplate(before.company, k, before.id);
+        if (t) trialRender(t.content, merged, k);
+      }
+    }
+    ctx.repo.upsertDesign(next);
+    audit(admin, 'design.update', `design:${before.id}`, { name: before.name, selectable: before.selectable, isDefault: before.isDefault, metaOverrides: before.metaOverrides }, body);
+    return ctx.repo.getDesign(before.id);
+  }));
+
+  app.delete('/api/admin/designs/:id', staff(async (req, reply, admin, access) => {
+    const d = ctx.repo.getDesign((req.params as any).id);
+    if (!d || !access.can(d.company)) return reply.code(404).send({ error: 'Design not found' });
+    if (d.isDefault) return reply.code(409).send({ error: 'Make another design the default before removing this one' });
+    // People using it fall back to their next valid design (resolveDesign ignores unknown ids); versions are kept.
+    ctx.repo.deleteDesign(d.id);
+    for (const m of ctx.repo.listSharedMailboxes().filter((x) => x.design === d.id)) ctx.repo.upsertSharedMailbox({ ...m, design: null });
+    audit(admin, 'design.delete', `design:${d.id}`, { name: d.name }, null);
+    return { ok: true };
+  }));
+
   // ───────────────────────────── Templates ─────────────────────────────
 
   /** Latest version plus its visual design (null = hand-written HTML). */
@@ -329,9 +445,15 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
   app.get('/api/admin/templates', staff(async (_req, _reply, _admin, access) =>
     ctx.repo.listCompanies().filter((c) => access.can(c.key)).map((c) => ({
       company: access.global ? c : { key: c.key, displayName: c.displayName, legalName: c.legalName, priority: c.priority },
+      // Default design's layouts (kept for older clients), the company brand, and every design with its layouts.
       new: withBlocks(ctx.repo.latestTemplate(c.key, 'new')),
       reply: withBlocks(ctx.repo.latestTemplate(c.key, 'reply')),
       meta: ctx.repo.latestTemplate(c.key, 'meta'),
+      designs: ctx.repo.listDesigns(c.key).map((d) => ({
+        ...d,
+        new: withBlocks(ctx.repo.latestTemplate(c.key, 'new', d.id)),
+        reply: withBlocks(ctx.repo.latestTemplate(c.key, 'reply', d.id)),
+      })),
     })),
   ));
 
@@ -352,8 +474,11 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
   app.get('/api/admin/templates/:company/history', staff(async (req, reply, _admin, access) => {
     const { company } = req.params as { company: string };
     if (!access.can(company)) return forbidden(reply);
-    const kind = (req.query as any).kind ? kindSchema.parse((req.query as any).kind) : undefined;
-    return ctx.repo.listTemplateVersions(company, kind).map(({ content: _c, ...rest }) => rest);
+    const q = req.query as { kind?: string; design?: string };
+    const kind = q.kind ? kindSchema.parse(q.kind) : undefined;
+    const design = designOf(company, q.design);
+    if (!design) return reply.code(404).send({ error: 'Design not found' });
+    return ctx.repo.listTemplateVersions(company, kind, design.id).map(({ content: _c, ...rest }) => rest);
   }));
 
   app.get('/api/admin/templates/version/:id', staff(async (req, reply, _admin, access) => {
@@ -367,9 +492,11 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     if (!findCompany(company)) return reply.code(404).send({ error: 'Unknown company' });
     if (!access.can(company)) return forbidden(reply);
     const raw = z
-      .object({ content: z.string().min(1).max(100_000).optional(), blocks: z.unknown().optional(), note: z.string().max(200).optional() })
+      .object({ content: z.string().min(1).max(100_000).optional(), blocks: z.unknown().optional(), note: z.string().max(200).optional(), design: z.string().max(80).optional() })
       .refine((b) => b.content || b.blocks, 'Send content or blocks')
       .parse(req.body);
+    const design = kind === 'meta' ? null : designOf(company, raw.design);
+    if (kind !== 'meta' && !design) return reply.code(404).send({ error: 'Design not found' });
     // Visual designs are compiled here, so the stored template is always server-generated, email-safe HTML.
     if (raw.blocks && kind === 'meta') return reply.code(400).send({ error: 'Brand settings have no visual layout' });
     // Hand-written HTML can put anything into every email the company sends: IT only. Editors use the visual designer.
@@ -377,36 +504,42 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
       return reply.code(403).send({ error: 'Signature editors can only save visual designs. Ask IT for hand-written HTML changes.' });
     }
     const body = { note: raw.note, content: raw.blocks ? compileBlocks(blockDocSchema.parse(raw.blocks), kind as 'new' | 'reply') : raw.content! };
+    const companyMeta = ctx.repo.latestTemplate(company, 'meta')?.content ?? '{}';
     if (kind === 'meta') {
       validateMeta(body.content);
-      // New brand settings must still render with the current designs.
-      for (const k of ['new', 'reply'] as const) {
-        const t = ctx.repo.latestTemplate(company, k);
-        if (t) trialRender(t.content, body.content, k);
+      // New brand settings must still render with every design's layouts and wording.
+      for (const d of ctx.repo.listDesigns(company)) {
+        for (const k of ['new', 'reply'] as const) {
+          const t = ctx.repo.latestTemplate(company, k, d.id);
+          if (t) trialRender(t.content, applyOverrides(body.content, d.metaOverrides), k);
+        }
       }
     } else {
       validateTemplateSource(body.content);
-      trialRender(body.content, ctx.repo.latestTemplate(company, 'meta')?.content ?? '{}', kind as 'new' | 'reply');
+      trialRender(body.content, applyOverrides(companyMeta, design!.metaOverrides), kind as 'new' | 'reply');
     }
-    const before = ctx.repo.latestTemplate(company, kind);
+    const before = ctx.repo.latestTemplate(company, kind, design?.id);
     if (before?.content === body.content) return before;
-    const saved = ctx.repo.addTemplateVersion({ company, kind, content: body.content, note: body.note ?? null, createdBy: actorOf(admin) });
-    audit(admin, 'template.save', `template:${company}/${kind}`, before ? { version: before.version } : null, { version: saved.version, note: saved.note });
+    const saved = ctx.repo.addTemplateVersion({ company, design: design?.id, kind, content: body.content, note: body.note ?? null, createdBy: actorOf(admin) });
+    const target = design ? `template:${company}/${design.id}/${kind}` : `template:${company}/${kind}`;
+    audit(admin, 'template.save', target, before ? { version: before.version } : null, { version: saved.version, note: saved.note });
     return saved;
   }));
 
   app.post('/api/admin/templates/restore/:id', staff(async (req, reply, admin, access) => {
     const old = ctx.repo.getTemplateVersion(Number((req.params as any).id));
     if (!old || !access.can(old.company)) return reply.code(404).send({ error: 'Version not found' });
+    if (old.kind !== 'meta' && !ctx.repo.getDesign(old.design)) return reply.code(409).send({ error: 'That design was removed' });
     // Old versions are re-checked against today's rules before they go live again.
     if (old.kind === 'meta') validateMeta(old.content);
     else {
       if (!access.global && !extractBlocks(old.content)) return reply.code(403).send({ error: 'That version is hand-written HTML; only IT can restore it' });
       validateTemplateSource(old.content);
-      trialRender(old.content, ctx.repo.latestTemplate(old.company, 'meta')?.content ?? '{}', old.kind);
+      const meta = applyOverrides(ctx.repo.latestTemplate(old.company, 'meta')?.content ?? '{}', ctx.repo.getDesign(old.design)!.metaOverrides);
+      trialRender(old.content, meta, old.kind);
     }
-    const saved = ctx.repo.addTemplateVersion({ company: old.company, kind: old.kind, content: old.content, note: `Restored from v${old.version}`, createdBy: actorOf(admin) });
-    audit(admin, 'template.restore', `template:${old.company}/${old.kind}`, { version: old.version }, { version: saved.version });
+    const saved = ctx.repo.addTemplateVersion({ company: old.company, design: old.design || undefined, kind: old.kind, content: old.content, note: `Restored from v${old.version}`, createdBy: actorOf(admin) });
+    audit(admin, 'template.restore', `template:${old.company}/${old.design ? old.design + '/' : ''}${old.kind}`, { version: old.version }, { version: saved.version });
     return saved;
   }));
 
@@ -422,15 +555,19 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     company: z.string(),
     type: typeSchema,
     upn: z.string().optional(),
+    design: z.string().max(80).optional(),
     template: z.string().max(100_000).optional(),
     blocks: z.unknown().optional(),
     meta: z.string().max(20_000).optional(),
+    metaOverrides: metaOverridesSchema.optional(),
   });
   app.post('/api/admin/templates/preview', staff(async (req, reply, _admin, access) => {
     const body = previewSchema.parse(req.body);
     const company = findCompany(body.company);
     if (!company) return reply.code(404).send({ error: 'Unknown company' });
     if (!access.can(company.key)) return forbidden(reply);
+    const design = designOf(company.key, body.design);
+    if (!design) return reply.code(404).send({ error: 'Design not found' });
     let data: SignatureData = SAMPLE_PERSON;
     if (body.upn) {
       // Editors can preview as people of their own companies only (it shows that person's details).
@@ -439,7 +576,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
       data = signatureDataFor(user);
     }
     const template = body.blocks ? compileBlocks(blockDocSchema.parse(body.blocks), body.type === 'newMail' ? 'new' : 'reply') : body.template;
-    const html = ctx.renderer.render({ company, type: body.type, data, settings: previewSettings(req), draft: { template, meta: body.meta } });
+    const html = ctx.renderer.render({ company, type: body.type, data, settings: previewSettings(req), design, draft: { template, meta: body.meta, metaOverrides: body.metaOverrides } });
     return reply.type('text/html; charset=utf-8').send(html);
   }));
 

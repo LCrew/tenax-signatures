@@ -104,6 +104,12 @@ export function People() {
                           <span key={m} className="tag danger">No {FIELD_LABELS[m]?.toLowerCase() ?? m}</span>
                         ))}
                         {u.overridden.length > 0 && <span className="tag action">{u.overridden.length} corrected</span>}
+                        {u.design && u.design.source !== 'default' && (
+                          <span className={`tag ${u.design.purpose === 'service' ? '' : 'action'}`} title={u.designLocked ? 'Locked by an admin' : undefined}>
+                            {u.design.name}
+                            {u.designLocked ? ' 🔒' : ''}
+                          </span>
+                        )}
                         {u.excluded && <span className="tag">{u.excluded.by === 'group' ? 'Excluded by group' : `Excluded${u.excluded.reason ? `: ${u.excluded.reason}` : ''}`}</span>}
                         {!u.excluded && u.missing.length === 0 && u.overridden.length === 0 && <span className="tag ok">Complete</span>}
                       </div>

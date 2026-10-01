@@ -6,22 +6,24 @@ import { json as jsonLang } from '@codemirror/lang-json';
 import { FolderSync, History, Plus, RotateCcw, Trash2, Upload } from 'lucide-react';
 import { api } from '../lib/api';
 import { useApp, useAsync, useDebounced, useToast } from '../lib/hooks';
-import type { Company, ComposeType, TemplateKind, TemplateVersion, UserSummary } from '../lib/types';
+import type { Company, ComposeType, Design, MetaOverrides, TemplateKind, TemplateVersion, UserSummary } from '../lib/types';
+import { DesignBar, WordingForm } from '../components/designs/DesignBar';
 import { ErrorNote, Field, Loading, Modal, PageHead, Segmented, timeAgo } from '../components/ui';
 import { BlockEditor } from '../components/blocks/BlockEditor';
 import type { BlockDoc } from '../components/blocks/model';
 import { LetterPreview } from '../components/LetterPreview';
 
+type Layout = TemplateVersion & { blocks?: BlockDoc | null };
+type DesignRow = Design & { new?: Layout; reply?: Layout };
 interface Row {
   company: Company;
-  new?: TemplateVersion & { blocks?: BlockDoc | null };
-  reply?: TemplateVersion & { blocks?: BlockDoc | null };
   meta?: TemplateVersion;
+  designs: DesignRow[];
 }
 type Drafts = Record<TemplateKind, string>;
 type MsgKind = 'new' | 'reply';
 type BlockDrafts = Record<MsgKind, BlockDoc | null>;
-type EditorTab = 'brand' | 'new' | 'reply';
+type EditorTab = 'brand' | 'new' | 'reply' | 'wording';
 type Presets = Record<'side' | 'stacked' | 'textOnly' | 'reply', BlockDoc>;
 
 const VARIABLES: [string, string][] = [
@@ -64,6 +66,13 @@ export function Designs() {
   const presets = useAsync(() => api.get<Presets>('/api/admin/templates/presets'));
   const users = useAsync(() => api.get<UserSummary[]>('/api/admin/users').catch(() => [] as UserSummary[]));
   const active = rows.data?.find((r) => r.company.key === companyParam) ?? rows.data?.[0];
+  const [designId, setDesignId] = useState<string | null>(null);
+  useEffect(() => setDesignId(null), [active?.company.key]);
+  const activeDesign = active?.designs.find((d) => d.id === designId) ?? active?.designs.find((d) => d.isDefault) ?? active?.designs[0];
+  const [wording, setWording] = useState<MetaOverrides>({});
+  const savedWording = useMemo(() => activeDesign?.metaOverrides ?? {}, [activeDesign]);
+  useEffect(() => setWording(savedWording), [savedWording]);
+  const wordingDirty = !same(wording, savedWording);
 
   const [tab, setTab] = useState<EditorTab>('new');
   const [drafts, setDrafts] = useState<Drafts>({ new: '', reply: '', meta: '' });
@@ -78,10 +87,10 @@ export function Designs() {
   const [toVisual, setToVisual] = useState<MsgKind | null>(null);
 
   const saved: Drafts = useMemo(
-    () => ({ new: active?.new?.content ?? '', reply: active?.reply?.content ?? '', meta: active?.meta?.content ?? '{}' }),
-    [active],
+    () => ({ new: activeDesign?.new?.content ?? '', reply: activeDesign?.reply?.content ?? '', meta: active?.meta?.content ?? '{}' }),
+    [active, activeDesign],
   );
-  const savedBlocks: BlockDrafts = useMemo(() => ({ new: active?.new?.blocks ?? null, reply: active?.reply?.blocks ?? null }), [active]);
+  const savedBlocks: BlockDrafts = useMemo(() => ({ new: activeDesign?.new?.blocks ?? null, reply: activeDesign?.reply?.blocks ?? null }), [activeDesign]);
   useEffect(() => {
     setDrafts(saved);
     setBlockDrafts(savedBlocks);
@@ -90,6 +99,7 @@ export function Designs() {
   const isDirty = (k: TemplateKind) =>
     k === 'meta' ? drafts.meta !== saved.meta : blockDrafts[k] ? !same(blockDrafts[k], savedBlocks[k]) : savedBlocks[k] !== null || drafts[k] !== saved[k];
   const dirtyKinds = (['new', 'reply', 'meta'] as TemplateKind[]).filter(isDirty);
+  const anyDirty = dirtyKinds.length > 0 || wordingDirty;
 
   // Keep the preview on the template being edited.
   useEffect(() => {
@@ -97,7 +107,7 @@ export function Designs() {
     if (tab === 'reply') setPreviewType('reply');
   }, [tab]);
 
-  const draftState = useMemo(() => ({ drafts, blockDrafts }), [drafts, blockDrafts]);
+  const draftState = useMemo(() => ({ drafts, blockDrafts, wording }), [drafts, blockDrafts, wording]);
   const debounced = useDebounced(draftState, 300);
   const previewKind: MsgKind = previewType === 'newMail' ? 'new' : 'reply';
   const preview = useAsync(
@@ -105,35 +115,45 @@ export function Designs() {
       active && debounced.drafts.meta // drafts are empty for one render before the saved versions load
         ? api.post<string>('/api/admin/templates/preview', {
             company: active.company.key,
+            design: activeDesign?.id,
+            metaOverrides: debounced.wording,
             type: previewType,
             upn: as || undefined,
             ...(debounced.blockDrafts[previewKind] ? { blocks: debounced.blockDrafts[previewKind] } : { template: debounced.drafts[previewKind] }),
             meta: debounced.drafts.meta,
           })
         : Promise.resolve(''),
-    [active?.company.key, previewType, as, JSON.stringify(debounced)],
+    [active?.company.key, activeDesign?.id, previewType, as, JSON.stringify(debounced)],
   );
 
   const switchCompany = (key: string) => {
-    if (dirtyKinds.length) setConfirmLeave(key);
+    if (anyDirty) setConfirmLeave(key);
     else nav(`/designs/${key}`);
+  };
+  const switchDesign = (id: string) => {
+    if (anyDirty) setConfirmLeave(`design:${id}`);
+    else setDesignId(id);
   };
 
   const discard = () => {
     setDrafts(saved);
     setBlockDrafts(savedBlocks);
+    setWording(savedWording);
   };
 
   async function save() {
     if (!active) return;
     setSaving(true);
     try {
-      for (const kind of dirtyKinds) {
-        const payload = kind !== 'meta' && blockDrafts[kind] ? { blocks: blockDrafts[kind] } : { content: drafts[kind] };
-        await api.post(`/api/admin/templates/${active.company.key}/${kind}`, { ...payload, note: note || undefined });
+      // Brand first (layouts are trial-rendered against it), then this design's wording, then its layouts.
+      if (dirtyKinds.includes('meta')) await api.post(`/api/admin/templates/${active.company.key}/meta`, { content: drafts.meta, note: note || undefined });
+      if (wordingDirty && activeDesign) await api.put(`/api/admin/designs/${activeDesign.id}`, { metaOverrides: wording });
+      for (const kind of dirtyKinds.filter((k) => k !== 'meta')) {
+        const payload = blockDrafts[kind] ? { blocks: blockDrafts[kind] } : { content: drafts[kind] };
+        await api.post(`/api/admin/templates/${active.company.key}/${kind}`, { ...payload, design: activeDesign?.id, note: note || undefined });
       }
       setNote('');
-      toast(`Saved. New messages use the ${active.company.displayName} design from now on.`);
+      toast(`Saved. New messages with ${active.company.displayName} › ${activeDesign?.name ?? 'this design'} use it from now on.`);
       await rows.reload();
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -156,14 +176,15 @@ export function Designs() {
   if (!rows.data || !active) return <Loading />;
 
   const meta = safeParse(drafts.meta);
-  const tabLabel: Record<EditorTab, string> = { new: 'New message', reply: 'Reply and forward', brand: 'Brand and footer' };
-  const tabKind: Record<EditorTab, TemplateKind> = { brand: 'meta', new: 'new', reply: 'reply' };
+  const tabLabel: Record<EditorTab, string> = { new: 'New message', reply: 'Reply and forward', wording: 'Wording', brand: 'Brand (company)' };
+  const tabKind: Record<EditorTab, TemplateKind | 'wording'> = { brand: 'meta', new: 'new', reply: 'reply', wording: 'wording' };
+  const tabDirty = (t: EditorTab) => (t === 'wording' ? wordingDirty : dirtyKinds.includes(tabKind[t] as TemplateKind));
 
   return (
     <>
       <PageHead
         title="Designs"
-        lead="One design per company. Changes apply to the next message people write. Every save is kept as a version you can go back to."
+        lead="Each company can have several designs, e.g. Standard, English and Service. Changes apply to the next message people write. Every save is kept as a version you can go back to."
         actions={
           <>
             <button className="btn" onClick={() => setHistoryOpen(true)}>
@@ -195,6 +216,20 @@ export function Designs() {
         })}
       </div>
 
+      {activeDesign && (
+        <DesignBar
+          company={active.company.key}
+          companyName={active.company.displayName}
+          designs={active.designs}
+          activeId={activeDesign.id}
+          onSelect={switchDesign}
+          onChanged={async (id) => {
+            await rows.reload();
+            if (id) setDesignId(id);
+          }}
+        />
+      )}
+
       <div className="split">
         <section className="panel">
           <div className="panel-head" style={{ paddingBottom: 0, borderBottom: 0 }}>
@@ -202,14 +237,19 @@ export function Designs() {
               {(Object.keys(tabLabel) as EditorTab[]).map((t) => (
                 <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
                   {tabLabel[t]}
-                  {dirtyKinds.includes(tabKind[t]) && <span className="dirty-dot" aria-label="unsaved changes" />}
+                  {tabDirty(t) && <span className="dirty-dot" aria-label="unsaved changes" />}
                 </button>
               ))}
             </div>
           </div>
           <div className="panel-body stack">
             {tab === 'brand' ? (
-              <BrandForm company={active.company} metaText={drafts.meta} meta={meta} onChange={(m) => setDrafts((d) => ({ ...d, meta: m }))} />
+              <>
+                <p className="small muted">Shared by every {active.company.displayName} design. Each design can change some wording in its Wording tab.</p>
+                <BrandForm company={active.company} metaText={drafts.meta} meta={meta} onChange={(m) => setDrafts((d) => ({ ...d, meta: m }))} />
+              </>
+            ) : tab === 'wording' ? (
+              <WordingForm company={active.company.key} companyMeta={meta} value={wording} onChange={setWording} />
             ) : (
               <>
                 <div className="mode-bar">
@@ -245,7 +285,7 @@ export function Designs() {
                 )}
                 {blockDrafts[tab] ? (
                   <BlockEditor
-                    key={`${active.company.key}-${tab}`}
+                    key={`${active.company.key}-${activeDesign?.id}-${tab}`}
                     doc={blockDrafts[tab]!}
                     kind={tab}
                     colors={meta?.colors ?? {}}
@@ -289,10 +329,10 @@ export function Designs() {
           </div>
           <div className="panel-body row save-bar">
             <input type="text" placeholder="What changed? (optional)" value={note} onChange={(e) => setNote(e.target.value)} style={{ flex: '1 1 200px' }} aria-label="Version note" />
-            <button className="btn ghost" disabled={!dirtyKinds.length || saving} onClick={discard}>
+            <button className="btn ghost" disabled={!anyDirty || saving} onClick={discard}>
               Discard
             </button>
-            <button className="btn primary" disabled={!dirtyKinds.length || saving || !!preview.error} onClick={save} title={preview.error ? 'Fix the error shown in the preview first' : undefined}>
+            <button className="btn primary" disabled={!anyDirty || saving || !!preview.error} onClick={save} title={preview.error ? 'Fix the error shown in the preview first' : undefined}>
               {saving ? 'Saving…' : 'Save version'}
             </button>
           </div>
@@ -312,15 +352,15 @@ export function Designs() {
           </Field>
           <LetterPreview html={preview.data ?? null} error={preview.error?.message} loading={preview.loading} type={previewType} onTypeChange={setPreviewType} />
           <p className="xs muted">
-            Current versions: new v{active.new?.version ?? '–'}, reply v{active.reply?.version ?? '–'}, brand v{active.meta?.version ?? '–'}
-            {active.new && <> · last saved {timeAgo([active.new, active.reply, active.meta].filter(Boolean).map((t) => t!.createdAt).sort().pop())}</>}
+            {activeDesign?.name}: new v{activeDesign?.new?.version ?? '–'}, reply v{activeDesign?.reply?.version ?? '–'} · brand v{active.meta?.version ?? '–'}
+            {activeDesign?.new && <> · last saved {timeAgo([activeDesign.new, activeDesign.reply, active.meta].filter(Boolean).map((t) => t!.createdAt).sort().pop())}</>}
           </p>
         </div>
       </div>
 
-      <VersionsModal open={historyOpen} onClose={() => setHistoryOpen(false)} company={active.company} onRestored={rows.reload} />
+      <VersionsModal open={historyOpen} onClose={() => setHistoryOpen(false)} company={active.company} design={activeDesign} onRestored={rows.reload} />
       <Modal open={!!confirmLeave} onClose={() => setConfirmLeave(null)} title="Discard unsaved changes?">
-        <p>You changed the {active.company.displayName} design without saving. Switching company throws those changes away.</p>
+        <p>You changed {active.company.displayName} › {activeDesign?.name} without saving. Switching throws those changes away.</p>
         <div className="row end">
           <button className="btn ghost" onClick={() => setConfirmLeave(null)}>
             Keep editing
@@ -330,7 +370,10 @@ export function Designs() {
             onClick={() => {
               const k = confirmLeave!;
               setConfirmLeave(null);
-              nav(`/designs/${k}`);
+              if (k.startsWith('design:')) {
+                discard();
+                setDesignId(k.slice(7));
+              } else nav(`/designs/${k}`);
             }}
           >
             Discard changes
@@ -608,15 +651,18 @@ function BrandForm({ company, metaText, meta, onChange }: { company: Company; me
 }
 
 // ───────── Versions ─────────
-function VersionsModal({ open, onClose, company, onRestored }: { open: boolean; onClose: () => void; company: Company; onRestored: () => void }) {
+function VersionsModal({ open, onClose, company, design, onRestored }: { open: boolean; onClose: () => void; company: Company; design?: Design; onRestored: () => void }) {
   const toast = useToast();
-  const list = useAsync(() => (open ? api.get<Omit<TemplateVersion, 'content'>[]>(`/api/admin/templates/${company.key}/history`) : Promise.resolve([])), [open, company.key]);
+  const list = useAsync(
+    () => (open ? api.get<Omit<TemplateVersion, 'content'>[]>(`/api/admin/templates/${company.key}/history${design ? `?design=${encodeURIComponent(design.id)}` : ''}`) : Promise.resolve([])),
+    [open, company.key, design?.id],
+  );
   const label: Record<TemplateKind, string> = { new: 'New message', reply: 'Reply', meta: 'Brand' };
   const latest = new Map<string, number>();
   for (const v of list.data ?? []) latest.set(v.kind, Math.max(latest.get(v.kind) ?? 0, v.version));
 
   return (
-    <Modal open={open} onClose={onClose} title={`${company.displayName} versions`}>
+    <Modal open={open} onClose={onClose} title={`${company.displayName}${design ? ` › ${design.name}` : ''} versions`}>
       {!list.data ? (
         <Loading />
       ) : (
