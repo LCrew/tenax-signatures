@@ -116,3 +116,46 @@ describe('add-in manifest', async () => {
     expect(test1).toContain('https://sig.tenax.lv/addin/launchevent.js');
   });
 });
+
+describe('personal closing line', async () => {
+  const { app, ctx, repo } = await makeApp();
+  const PANEL = mock('test.panel@tenaxgrupa.lv');
+  const sig = () => app.inject({ url: '/api/signature?type=newMail', headers: PANEL }).then((r) => r.body);
+
+  it('works with self-service turned off, replaces the company line, and can hide it', async () => {
+    ctx.settings.update({ selfServiceEnabled: false });
+    const meta = JSON.parse(repo.latestTemplate('tenaxpanel', 'meta')!.content);
+    meta.greeting = 'Ar cieņu,';
+    repo.addTemplateVersion({ company: 'tenaxpanel', kind: 'meta', content: JSON.stringify(meta), note: null, createdBy: 'test' });
+    expect(await sig()).toContain('Ar cieņu,');
+    expect((await app.inject({ url: '/api/me', headers: PANEL })).json()).toMatchObject({ greeting: null, defaultGreeting: 'Ar cieņu,' });
+
+    // Live preview of an unsaved closing line (no self-service needed)
+    const prev = await app.inject({ method: 'POST', url: '/api/me/preview-draft', headers: PANEL, payload: { type: 'newMail', greeting: 'Paldies!' } });
+    expect(prev.statusCode).toBe(200);
+    expect(prev.body).toContain('Paldies!');
+
+    expect((await app.inject({ method: 'PUT', url: '/api/me/greeting', headers: PANEL, payload: { greeting: '  Best regards,\n' } })).statusCode).toBe(200);
+    const own = await sig();
+    expect(own).toContain('Best regards,');
+    expect(own).not.toContain('Ar cieņu,');
+
+    await app.inject({ method: 'PUT', url: '/api/me/greeting', headers: PANEL, payload: { greeting: '' } });
+    expect(await sig()).not.toMatch(/Best regards|Ar cieņu/);
+
+    await app.inject({ method: 'PUT', url: '/api/me/greeting', headers: PANEL, payload: { greeting: null } });
+    expect(await sig()).toContain('Ar cieņu,');
+  });
+
+  it('is plain text and limited in length', async () => {
+    await app.inject({ method: 'PUT', url: '/api/me/greeting', headers: PANEL, payload: { greeting: '<img src=x onerror=alert(1)>' } });
+    expect(await sig()).toContain('&lt;img src&#x3D;x onerror&#x3D;alert(1)&gt;');
+    expect((await app.inject({ method: 'PUT', url: '/api/me/greeting', headers: PANEL, payload: { greeting: 'x'.repeat(121) } })).statusCode).toBe(400);
+  });
+
+  it('admins can set it too', async () => {
+    const res = await app.inject({ method: 'PUT', url: '/api/admin/users/test.panel@tenaxgrupa.lv/overrides', headers: mock('test.tenax@tenaxgrupa.lv'), payload: { greeting: 'Ar labākajiem vēlējumiem,' } });
+    expect(res.statusCode).toBe(200);
+    expect(await sig()).toContain('Ar labākajiem vēlējumiem,');
+  });
+});

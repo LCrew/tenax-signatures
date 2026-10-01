@@ -28,6 +28,7 @@ const ACTIONS: Record<string, string> = {
   'design.update': 'Changed a design',
   'design.delete': 'Removed a design',
   'design.self': 'Chose their signature design',
+  'greeting.self': 'Changed their closing line',
   'design.image': 'Saved an image (SVG) design',
   'font.upload': 'Uploaded a font',
   'font.delete': 'Removed a font',

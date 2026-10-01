@@ -146,6 +146,25 @@ export function Person() {
             </div>}
             <DesignRow user={u} draft={draft} set={set} />
             <div className="field-row">
+              <label className="k" htmlFor="f-greeting">Closing line</label>
+              <div>
+                <select
+                  id="f-greeting-mode"
+                  aria-label="Closing line"
+                  value={draft.greeting == null ? 'default' : draft.greeting === '' ? 'none' : 'own'}
+                  onChange={(e) => set('greeting', e.target.value === 'default' ? null : e.target.value === 'none' ? '' : draft.greeting || 'Ar cieņu,')}
+                >
+                  <option value="default">Company / design default</option>
+                  <option value="own">Own text</option>
+                  <option value="none">None</option>
+                </select>
+                {draft.greeting != null && draft.greeting !== '' && (
+                  <input id="f-greeting" type="text" maxLength={120} style={{ marginTop: 8 }} value={draft.greeting} onChange={(e) => set('greeting', e.target.value)} />
+                )}
+                <div className="entra">The person can also change this themselves in My signature.</div>
+              </div>
+            </div>
+            <div className="field-row">
               <span className="k">Privacy</span>
               <label className="check" style={{ paddingTop: 8 }}>
                 <input type="checkbox" checked={draft.hideMobile === true} onChange={(e) => set('hideMobile', e.target.checked ? true : null)} />
@@ -196,8 +215,8 @@ export function Person() {
 
 function pickOverrides(o: Overrides | null): Overrides {
   if (!o) return {};
-  const { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile, design, designLocked } = o;
-  return { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile, design, designLocked };
+  const { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile, design, designLocked, greeting } = o;
+  return { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile, design, designLocked, greeting };
 }
 
 /** Empty strings mean "no correction". */
@@ -209,6 +228,7 @@ function normalize(o: Overrides): Overrides {
   }
   out.hideMobile = o.hideMobile === true ? true : null;
   out.design = o.design || null;
+  out.greeting = o.greeting == null ? null : o.greeting.trim();
   out.designLocked = !!o.design && o.designLocked === true;
   return out as Overrides;
 }

@@ -6,7 +6,7 @@ import { useApp, useAsync, useDebounced, useToast } from '../lib/hooks';
 import { FIELD_LABELS, type ComposeType } from '../lib/types';
 import { LetterPreview } from '../components/LetterPreview';
 import { Mark, signOut } from '../components/Layout';
-import { ErrorNote, Loading } from '../components/ui';
+import { ErrorNote, Loading, Segmented } from '../components/ui';
 
 interface Me {
   upn: string;
@@ -21,6 +21,8 @@ interface Me {
   design?: { id: string; name: string; purpose: string; source: string };
   designLocked?: boolean;
   designs?: { id: string; name: string; purpose: string; selected: boolean }[];
+  greeting?: string | null;
+  defaultGreeting?: string;
   selfService: { enabled: boolean; fields: string[] };
 }
 
@@ -48,15 +50,19 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
   const clean = useMemo(() => normalize(draft, editable), [draft, editable]);
   const saved = useMemo(() => normalize(me.data?.overrides ?? {}, editable), [me.data, editable]);
   const dirty = JSON.stringify(clean) !== JSON.stringify(saved);
-  const debounced = useDebounced(clean, 300);
+  // Closing line: undefined = untouched, otherwise the draft value (null = default, '' = none).
+  const [greetingDraft, setGreetingDraft] = useState<string | null | undefined>(undefined);
+  useEffect(() => setGreetingDraft(undefined), [me.data]);
+  const greetingDirty = greetingDraft !== undefined && greetingDraft !== (me.data?.greeting ?? null);
+  const debounced = useDebounced(JSON.stringify({ clean, greetingDraft }), 300);
   const preview = useAsync(
     () =>
       !me.data
         ? Promise.resolve('')
-        : dirty
-          ? api.post<string>('/api/me/preview-draft', { type, overrides: debounced })
+        : dirty || greetingDirty
+          ? api.post<string>('/api/me/preview-draft', { type, overrides: dirty ? clean : undefined, ...(greetingDirty ? { greeting: greetingDraft } : {}) })
           : api.get<string>(`/api/me/preview?type=${type}`),
-    [type, JSON.stringify(debounced), !!me.data, dirty, me.data?.design?.id],
+    [type, debounced, !!me.data, dirty, greetingDirty, me.data?.design?.id, me.data?.greeting],
   );
 
   async function save() {
@@ -110,6 +116,7 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
     <div className="split">
       <div className="stack loose">
         <DesignPicker me={me.data} onChanged={me.reload} />
+        <GreetingEditor me={me.data} draft={greetingDraft} setDraft={setGreetingDraft} dirty={greetingDirty} onSaved={me.reload} />
         <section className="panel">
           <div className="panel-head">
             <h3>Your details</h3>
@@ -334,6 +341,78 @@ function DesignPicker({ me, onChanged }: { me: Me; onChanged: () => void }) {
             <span>{d.selected ? 'Your default' : 'Use as default'}</span>
           </button>
         ))}
+      </div>
+    </section>
+  );
+}
+
+/** The person's own closing line above the signature: company default, their own words, or none. */
+function GreetingEditor({
+  me,
+  draft,
+  setDraft,
+  dirty,
+  onSaved,
+}: {
+  me: Me;
+  draft: string | null | undefined;
+  setDraft: (v: string | null | undefined) => void;
+  dirty: boolean;
+  onSaved: () => void;
+}) {
+  const toast = useToast();
+  const [saving, setSaving] = useState(false);
+  const value = draft !== undefined ? draft : me.greeting ?? null;
+  const mode: 'default' | 'own' | 'none' = value === null ? 'default' : value === '' ? 'none' : 'own';
+  const def = me.defaultGreeting ?? '';
+
+  async function save() {
+    setSaving(true);
+    try {
+      await api.put('/api/me/greeting', { greeting: value });
+      toast(value === null ? 'Using the company closing line' : value === '' ? 'No closing line from now on' : 'Closing line saved');
+      onSaved();
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <h3>Closing line</h3>
+        <span className="spacer" />
+        <span className="xs muted">Shown above your signature</span>
+      </div>
+      <div className="panel-body stack tight">
+        <Segmented<'default' | 'own' | 'none'>
+          label="Closing line"
+          value={mode}
+          onChange={(m) => setDraft(m === 'default' ? null : m === 'none' ? '' : value && value !== '' ? value : def || 'Ar cieņu,')}
+          options={[
+            { value: 'default', label: 'Company default' },
+            { value: 'own', label: 'My own' },
+            { value: 'none', label: 'None' },
+          ]}
+        />
+        {mode === 'own' && (
+          <input type="text" maxLength={120} value={value ?? ''} placeholder="e.g. Ar cieņu, / Best regards," onChange={(e) => setDraft(e.target.value)} aria-label="Your closing line" />
+        )}
+        <p className="xs muted">
+          {mode === 'default' ? (def ? `Your company uses “${def}”.` : 'Your company doesn’t add a closing line.') : mode === 'none' ? 'Nothing is added above your signature.' : 'Used in every new email and reply.'}
+        </p>
+        {dirty && (
+          <div className="row end">
+            <button className="btn ghost sm" onClick={() => setDraft(undefined)}>
+              Discard
+            </button>
+            <button className="btn primary sm" disabled={saving || (mode === 'own' && !value?.trim())} onClick={save}>
+              {saving ? 'Saving…' : 'Save closing line'}
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );

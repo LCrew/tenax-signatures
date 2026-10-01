@@ -21,7 +21,7 @@ import { applyOverrides, ensureDefaultDesign, metaOverridesSchema, newDesignId }
 import { resolveCompany } from '../services/resolver.js';
 import { MAX_SVG_BYTES, PLACEHOLDERS, imageConfigSchema, listTextFields, missingFonts, renderSignaturePng, sanitizeSvg, suggestCrop, type ImageConfig } from '../services/svgsig.js';
 import type { Company, ComposeType, Design, Overrides, ResolvedUser, TemplateKind } from '../types.js';
-import { overridePatchSchema } from './signature.js';
+import { greetingSchema, overridePatchSchema } from './signature.js';
 import { renderManifest } from './addin.js';
 
 type Handler = (req: FastifyRequest, reply: FastifyReply, admin: Identity) => Promise<unknown>;
@@ -101,6 +101,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
   const adminPatchSchema = overridePatchSchema.extend({
     design: z.union([z.string().max(80), z.null()]).optional(),
     designLocked: z.boolean().optional(),
+    greeting: greetingSchema.optional(),
   });
   function checkDesignFor(user: ResolvedUser, design: string | null | undefined, company?: string | null): string | null {
     if (!design) return null;

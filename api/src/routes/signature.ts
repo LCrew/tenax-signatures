@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { AppContext } from '../context.js';
 import { actorOf, requireUser } from '../auth/plugin.js';
 import { signatureDataFor, signatureDataForMailbox } from '../services/renderer.js';
+import { applyOverrides } from '../services/designs.js';
 import type { ComposeType, Design, Overrides, ResolvedUser, SharedMailbox } from '../types.js';
 
 const typeSchema = z.enum(['newMail', 'reply', 'forward']).default('newMail');
@@ -84,6 +85,9 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
       excluded: !!user.excluded,
       design: user.design,
       designLocked: user.designLocked,
+      // Closing line: theirs (null = default, '' = none) and the default it falls back to.
+      greeting: user.fields.greeting,
+      defaultGreeting: defaultGreeting(user),
       designs: user.allowedDesigns.map((d) => ({ ...d, selected: d.id === user.design.id })),
       selfService: { enabled: s.selfServiceEnabled, fields: s.selfServiceFields },
     };
@@ -115,6 +119,30 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
     if (!company) return reply.code(500).send({ error: `Company "${user.company}" is not configured` });
     const html = ctx.renderer.render({ company, type: type.data as ComposeType, data: signatureDataFor(user), settings: previewSettings(req), design: designFor(user, requestedDesign) });
     return reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-store').send(html);
+  });
+
+  /** The closing line the person's design would use without a personal one. */
+  function defaultGreeting(user: ResolvedUser): string {
+    const design = ctx.repo.getDesign(user.design.id);
+    const meta = applyOverrides(ctx.repo.latestTemplate(user.company, 'meta')?.content ?? '{}', design?.metaOverrides);
+    try {
+      return String(JSON.parse(meta).greeting ?? '');
+    } catch {
+      return '';
+    }
+  }
+
+  /** Everyone may set their own closing line (a personal preference, like choosing a design). */
+  app.put('/api/me/greeting', async (req, reply) => {
+    const body = greetingBodySchema.safeParse(req.body);
+    if (!body.success) return reply.code(400).send({ error: 'Keep the closing line to one line of at most 120 characters' });
+    const user = await requireUser(req, reply, ctx);
+    if (!user) return;
+    const before = ctx.repo.getOverrides(user.upn);
+    const next: Overrides = { ...(before ?? { upn: user.upn }), upn: user.upn, greeting: body.data.greeting, updatedBy: actorOf(req.identity), updatedAt: new Date().toISOString() };
+    ctx.repo.saveOverrides(next);
+    ctx.repo.audit(actorOf(req.identity), 'greeting.self', user.upn, { greeting: before?.greeting ?? null }, { greeting: body.data.greeting });
+    return { ok: true };
   });
 
   /** Designs the caller may use (Outlook task pane / My signature). */
@@ -149,15 +177,21 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
 
   /** Preview with unsaved self-service edits. Same rules as saving; nothing is stored. */
   app.post('/api/me/preview-draft', async (req, reply) => {
-    const body = z.object({ type: typeSchema, overrides: z.unknown().optional(), design: z.string().max(80).optional() }).safeParse(req.body);
+    const body = z
+      .object({ type: typeSchema, overrides: z.unknown().optional(), design: z.string().max(80).optional(), greeting: greetingSchema.optional() })
+      .safeParse(req.body);
     if (!body.success) return reply.code(400).send({ error: 'Invalid preview request' });
     const user = await requireUser(req, reply, ctx);
     if (!user) return;
-    const patch = parseSelfPatch(body.data.overrides);
+    // Corrections follow the self-service rules; a closing line (or no changes) needs no self-service.
+    const raw = body.data.overrides;
+    const hasCorrections = raw != null && typeof raw === 'object' && Object.keys(raw as object).length > 0;
+    const patch = hasCorrections ? parseSelfPatch(raw) : ({ ok: true, data: {} } as const);
     if (!patch.ok) return reply.code(patch.status).send({ error: patch.error });
     const company = ctx.repo.listCompanies().find((c) => c.key === user.company);
     if (!company) return reply.code(500).send({ error: `Company "${user.company}" is not configured` });
-    const draft = ctx.resolver.build(user.entra, await ctx.resolver.groupIds(user.oid), { ...(user.overrides ?? { upn: user.upn }), ...patch.data, upn: user.upn });
+    const draftOverrides = { ...(user.overrides ?? { upn: user.upn }), ...patch.data, upn: user.upn, ...(body.data.greeting !== undefined ? { greeting: body.data.greeting } : {}) };
+    const draft = ctx.resolver.build(user.entra, await ctx.resolver.groupIds(user.oid), draftOverrides);
     const html = ctx.renderer.render({ company, type: body.data.type as ComposeType, data: signatureDataFor(draft), settings: previewSettings(req), design: designFor(user, body.data.design) });
     return reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-store').send(html);
   });
@@ -210,6 +244,16 @@ const nullableText = (max: number) =>
   z
     .union([z.string().max(max), z.null()])
     .transform((v) => (v == null || v.trim() === '' ? null : v.trim()));
+
+/** One line, plain text; null = use the company/design closing line, '' = no closing line. */
+export const greetingSchema = z.union([
+  z.null(),
+  z
+    .string()
+    .max(120)
+    .transform((v) => v.replace(/[\r\n\t]+/g, ' ').trim()),
+]);
+const greetingBodySchema = z.object({ greeting: greetingSchema }).strict();
 
 export const overridePatchSchema = z
   .object({

@@ -97,6 +97,8 @@ export interface Overrides {
   designLocked?: boolean | null;
   /** The person's own choice (self-service). */
   chosenDesign?: string | null;
+  /** Personal closing line: null/undefined = company or design default, '' = none. */
+  greeting?: string | null;
   updatedBy?: string;
   updatedAt?: string;
 }
@@ -121,6 +123,8 @@ export interface ResolvedUser {
     email: string | null;
     department: string | null;
     hideMobile: boolean;
+    /** null = use the company/design closing line; '' = no closing line. */
+    greeting: string | null;
   };
   sources: Record<string, FieldSource>;
   entra: DirectoryUser;

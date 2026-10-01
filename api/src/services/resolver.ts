@@ -74,8 +74,10 @@ export function resolveFields(entra: DirectoryUser, o: Overrides | null) {
     email: f('email', null, entra.mail ?? entra.userPrincipalName),
     department: f('department', o?.department, entra.department),
     hideMobile: o?.hideMobile === true,
+    greeting: o?.greeting ?? null,
   };
   sources.hideMobile = o?.hideMobile != null ? 'override' : 'none';
+  sources.greeting = o?.greeting != null ? 'override' : 'none';
   const missing = REPORTED_FIELDS.filter((k) => fields[k] == null);
   return { fields, sources, missing: [...missing] };
 }

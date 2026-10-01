@@ -65,6 +65,8 @@ export const MIGRATIONS: string[] = [
    CREATE TABLE rendered_images (
      hash TEXT PRIMARY KEY, company TEXT NOT NULL, design TEXT NOT NULL, template_id INTEGER NOT NULL,
      values_json TEXT NOT NULL, created_at TEXT NOT NULL);`,
+  // v6: personal closing line ("Ar cieņu," / "Best regards,"). NULL = company/design default, '' = none.
+  `ALTER TABLE signature_overrides ADD COLUMN greeting TEXT;`,
 ];
 
 const now = () => new Date().toISOString();
@@ -200,13 +202,14 @@ export class SqliteRepository implements Repository {
     this.db
       .prepare(
         `INSERT INTO signature_overrides(upn, display_name, job_title_lv, job_title_en, mobile_phone, office_phone, department, company, hide_mobile,
-           design, design_locked, chosen_design, updated_by, updated_at)
+           design, design_locked, chosen_design, greeting, updated_by, updated_at)
          VALUES(@upn, @displayName, @jobTitleLv, @jobTitleEn, @mobilePhone, @officePhone, @department, @company, @hideMobile,
-           @design, @designLocked, @chosenDesign, @updatedBy, @updatedAt)
+           @design, @designLocked, @chosenDesign, @greeting, @updatedBy, @updatedAt)
          ON CONFLICT(upn) DO UPDATE SET display_name=excluded.display_name, job_title_lv=excluded.job_title_lv,
            job_title_en=excluded.job_title_en, mobile_phone=excluded.mobile_phone, office_phone=excluded.office_phone,
            department=excluded.department, company=excluded.company, hide_mobile=excluded.hide_mobile,
            design=excluded.design, design_locked=excluded.design_locked, chosen_design=excluded.chosen_design,
+           greeting=excluded.greeting,
            updated_by=excluded.updated_by, updated_at=excluded.updated_at`,
       )
       .run({
@@ -222,6 +225,7 @@ export class SqliteRepository implements Repository {
         design: o.design ?? null,
         designLocked: o.designLocked ? 1 : null,
         chosenDesign: o.chosenDesign ?? null,
+        greeting: o.greeting ?? null,
         updatedBy: o.updatedBy ?? 'system',
         updatedAt: o.updatedAt ?? now(),
       });
@@ -415,6 +419,7 @@ function mapOverrides(r: any): Overrides {
     design: r.design ?? null,
     designLocked: r.design_locked === 1,
     chosenDesign: r.chosen_design ?? null,
+    greeting: r.greeting ?? null,
     updatedBy: r.updated_by,
     updatedAt: r.updated_at,
   };

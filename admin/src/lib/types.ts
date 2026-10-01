@@ -113,6 +113,7 @@ export interface Overrides {
   design?: string | null;
   designLocked?: boolean | null;
   chosenDesign?: string | null;
+  greeting?: string | null;
   updatedBy?: string;
   updatedAt?: string;
 }

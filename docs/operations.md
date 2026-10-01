@@ -156,6 +156,13 @@ To give a team their company's design: create the group in Entra (the setup scri
 `SG-Signature-<Company>-Editors`), add the people, then in **Companies and groups** use **Find** next to *Signature
 editors* and save. New members can edit after their next sign-in (group memberships are cached for up to 30 minutes).
 
+## Closing line ("Ar cieņu,")
+
+Each design has a closing line, set in **Brand (company)** or per design under **Wording**. Everyone can replace
+it with their own on **My signature › Closing line**: **Company default**, **My own** (one line, max 120
+characters) or **None**. This doesn't depend on the self-service setting. Admins can set it on the person page too.
+It works for every design type, including SVG image designs, where it appears as text above the image.
+
 ## Service accounts and unlicensed accounts
 
 People lists only **enabled member accounts with an active Exchange Online mailbox plan**. Accounts without a licence,

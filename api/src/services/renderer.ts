@@ -34,6 +34,8 @@ export interface SignatureData {
   officePhone: string | null;
   email: string | null;
   department: string | null;
+  /** The person's own closing line (null/undefined = the design's; '' = none). */
+  greeting?: string | null;
 }
 
 /**
@@ -198,15 +200,17 @@ export class Renderer {
     const companyMeta = opts.draft?.meta ?? storedMeta?.content ?? '{}';
     const metaSrc = applyOverrides(companyMeta, opts.draft?.metaOverrides ?? opts.design?.metaOverrides);
     const meta = validateMeta(metaSrc);
+    // A personal closing line replaces the company/design one ('' hides it).
+    if (opts.data.greeting != null) meta.greeting = opts.data.greeting;
 
     // Image designs: one rendered PNG for new messages and replies alike (Vareno's SVG signature).
     if (opts.design?.format === 'image' && opts.draft?.template == null) {
       if (!this.images) throw new TemplateError('Image designs are not available here');
-      const d = applyLanguage(opts.data, opts.settings.language);
+      const { greeting: _g, ...d } = applyLanguage(opts.data, opts.settings.language);
       return this.images.html({
         company: opts.company,
         design: { id: opts.design.id, name: opts.design.name ?? opts.design.id },
-        values: { ...d },
+        values: { ...d }, // the closing line is HTML above the image, never part of the rendered image
         publicUrl: opts.settings.publicUrl,
         greeting: meta.greeting,
         greetingColor: meta.colors?.text,
@@ -288,6 +292,7 @@ export function signatureDataFor(user: ResolvedUser): SignatureData {
     officePhone: f.officePhone,
     email: f.email,
     department: f.department,
+    greeting: f.greeting,
   };
 }
 
