@@ -216,7 +216,7 @@ export function Designs() {
                   <p className="small muted" style={{ flex: '1 1 260px' }}>
                     {tab === 'new' ? 'The full signature for new messages and meeting invites.' : 'A shorter signature for replies and forwards.'}
                   </p>
-                  <Segmented<'visual' | 'html'>
+                  {session?.isAdmin && <Segmented<'visual' | 'html'>
                     label="Editor"
                     value={blockDrafts[tab] ? 'visual' : 'html'}
                     options={[
@@ -230,8 +230,19 @@ export function Designs() {
                         else setToVisual(tab);
                       }
                     }}
-                  />
+                  />}
                 </div>
+                {!session?.isAdmin && !blockDrafts[tab] && (
+                  <div className="callout row">
+                    <span style={{ flex: '1 1 240px' }}>
+                      This design is hand-written HTML maintained by IT. You can replace it with a visual layout; the
+                      current version stays in Versions.
+                    </span>
+                    <button className="btn sm" onClick={() => setToVisual(tab)}>
+                      Start a visual layout
+                    </button>
+                  </div>
+                )}
                 {blockDrafts[tab] ? (
                   <BlockEditor
                     key={`${active.company.key}-${tab}`}
@@ -240,7 +251,7 @@ export function Designs() {
                     colors={meta?.colors ?? {}}
                     onChange={(d) => setBlockDrafts((b) => ({ ...b, [tab]: d }))}
                   />
-                ) : (
+                ) : !session?.isAdmin ? null : (
                   <>
                     <p className="xs muted">Email HTML: tables and inline styles, max 600px wide.</p>
                     <div className="editor">

@@ -7,6 +7,9 @@ import { newSetupToken } from './auth/local.js';
 import { seedIfEmpty } from './services/settings.js';
 import { MockDirectory } from './services/directory.js';
 
+// New files (database, uploaded images, app.key) readable by the service user only.
+process.umask(0o077);
+
 const env = loadEnv();
 const repo = new SqliteRepository(path.join(env.dataDir, 'signature.db'));
 const ctx = new AppContext(env, repo);

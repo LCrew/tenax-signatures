@@ -33,8 +33,15 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
 
     const company = companies.find((c) => c.key === user.company);
     if (!company) return reply.code(500).send({ error: `Company "${user.company}" is not configured` });
-    const html = ctx.renderer.render({ company, type: type.data as ComposeType, data: signatureDataFor(user), settings });
-    return reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-store').send(html);
+    try {
+      const html = ctx.renderer.render({ company, type: type.data as ComposeType, data: signatureDataFor(user), settings });
+      return reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-store').send(html);
+    } catch (e) {
+      // A broken design must never break composing: insert nothing (204) and leave a trace for IT.
+      req.log.error({ err: e, company: company.key }, 'signature render failed');
+      ctx.repo.addTelemetry({ upn: user.upn, event: 'server', stage: 'render', message: String((e as Error).message).slice(0, 300), host: null, platform: null });
+      return reply.code(204).send();
+    }
   });
 
   /** Self-service: the signed-in person's own data (Microsoft sign-in, never a upn parameter). */
@@ -134,15 +141,18 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
     const body = telemetrySchema.safeParse(req.body);
     if (!body.success) return reply.code(400).send({ error: 'Invalid telemetry' });
     const upn = req.identity && req.identity.kind !== 'local' ? req.identity.upn : null;
+    // Client-reported and unauthenticated: scrub email addresses (some AADSTS messages embed the UPN) and keep
+    // the log line short so anonymous senders can't fill the disk.
+    const scrub = (v?: string) => v?.replace(/[^\s@<>"']+@[^\s@<>"']+\.[a-z]{2,}/gi, '[email]') ?? null;
     ctx.repo.addTelemetry({
       upn,
       event: body.data.event,
       stage: [body.data.stage, body.data.composeType].filter(Boolean).join('/') || null,
-      message: body.data.message ?? null,
+      message: scrub(body.data.message),
       host: body.data.host ?? null,
       platform: body.data.platform ?? null,
     });
-    req.log.warn({ telemetry: body.data, upn }, 'add-in reported a failure');
+    req.log.info({ event: body.data.event, stage: body.data.stage, upn }, 'add-in reported a failure');
     return reply.code(204).send();
   });
 }

@@ -26,7 +26,7 @@ export async function signToken(
   claims: Record<string, unknown>,
   opts: { aud?: string; iss?: string; exp?: string | number } = {},
 ) {
-  return new SignJWT({ tid: TENANT, scp: 'Signature.Read', ...claims })
+  return new SignJWT({ tid: TENANT, scp: 'Signature.Read', azp: CLIENT, ...claims })
     .setProtectedHeader({ alg: 'RS256', kid: 'test-key' })
     .setIssuer(opts.iss ?? `https://login.microsoftonline.com/${TENANT}/v2.0`)
     .setAudience(opts.aud ?? APP_ID_URI)

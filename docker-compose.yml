@@ -11,10 +11,23 @@ services:
       NODE_ENV: production
       DATA_DIR: /data
     ports:
-      # HOST_BIND=127.0.0.1 keeps the port off the network when a tunnel/proxy on this host is the only way in.
-      - "${HOST_BIND:-0.0.0.0}:${HOST_PORT:-8085}:8085"
+      # Default: only this host (and a tunnel/proxy running on it) can reach the app. Docker-published ports bypass
+      # host firewalls, so exposing it to the LAN must be a deliberate HOST_BIND=0.0.0.0.
+      - "${HOST_BIND:-127.0.0.1}:${HOST_PORT:-8085}:8085"
     volumes:
       - sig-data:/data
+    # Hardening: read-only image, no Linux capabilities, no privilege escalation, rotated logs.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   # Optional: Cloudflare Zero Trust tunnel. Outbound-only, so no open inbound ports are needed.
   # In the Zero Trust dashboard, point the public hostname at  http://signature:8085

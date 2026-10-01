@@ -6,6 +6,8 @@ export interface EntraIdentity {
   upn: string;
   tenantId: string;
   scopes: string[];
+  /** Client app the token was issued to (azp in v2, appid in v1). */
+  clientApp: string;
 }
 
 export class AuthError extends Error {
@@ -67,5 +69,6 @@ export async function validateEntraToken(token: string, opts: TokenValidatorOpti
   if (opts.requiredScope && !scopes.includes(opts.requiredScope)) {
     throw new AuthError(`Missing scope ${opts.requiredScope}`, 403);
   }
-  return { kind: 'entra', oid, upn, tenantId: String(payload.tid), scopes };
+  const clientApp = String(payload.azp ?? payload.appid ?? '');
+  return { kind: 'entra', oid, upn, tenantId: String(payload.tid), scopes, clientApp };
 }

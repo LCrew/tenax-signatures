@@ -1,3 +1,4 @@
+import { LRUCache } from 'lru-cache';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { AppContext } from '../context.js';
@@ -45,13 +46,21 @@ export function publicRoutes(app: FastifyInstance, ctx: AppContext) {
     async (req, reply) => {
       const body = loginSchema.safeParse(req.body);
       if (!body.success) return reply.code(400).send({ error: 'Enter a username and password' });
-      const admin = ctx.repo.getAdminByUsername(body.data.username.trim());
+      const username = body.data.username.trim().toLowerCase();
+      // Per-account throttle, independent of IP: break-glass accounts can't be guessed from many addresses.
+      const fails = loginFailures.get(username) ?? 0;
+      if (fails >= LOGIN_MAX_FAILURES) {
+        return reply.code(429).send({ error: 'Too many failed sign-ins for this account. Try again in 15 minutes.' });
+      }
+      const admin = ctx.repo.getAdminByUsername(username);
       const ok = await verifyPassword(body.data.password, admin?.passwordHash ?? DUMMY_HASH);
       if (!admin || !ok) {
-        ctx.repo.audit(`local:${body.data.username}`, 'login.failed', 'auth', null, { ip: req.ip });
+        loginFailures.set(username, fails + 1);
+        ctx.repo.audit(`local:${username.slice(0, 64)}`, 'login.failed', 'auth', null, { ip: req.ip });
         return reply.code(401).send({ error: 'Username or password is incorrect' });
       }
-      startSession(ctx, reply, admin.id, req.protocol === 'https');
+      loginFailures.delete(username);
+      startSession(ctx, reply, admin.id, secureCookie(ctx, req));
       ctx.repo.touchAdminLogin(admin.id);
       ctx.repo.audit(`local:${admin.username}`, 'login', 'auth', null, { ip: req.ip });
       return { username: admin.username };
@@ -103,15 +112,35 @@ export function publicRoutes(app: FastifyInstance, ctx: AppContext) {
     }
     const problem = passwordProblems(body.data.password);
     if (problem) return reply.code(400).send({ error: problem });
-    const admin = ctx.repo.createAdmin(body.data.username, await hashPassword(body.data.password));
-    ctx.setupToken = null; // single use
+    // Claim the code BEFORE any await: parallel requests with the same code can't each create an admin.
+    ctx.setupToken = null;
+    const hash = await hashPassword(body.data.password);
+    const admin = ctx.repo.createFirstAdmin(body.data.username, hash);
+    if (!admin) return reply.code(409).send({ error: 'Setup has already created an admin account' });
     ctx.repo.audit(`local:${admin.username}`, 'setup.admin.created', 'auth', null, { username: admin.username });
     ctx.settings.update({ setupStep: Math.max(ctx.settings.get().setupStep, 2) });
-    startSession(ctx, reply, admin.id, req.protocol === 'https');
+    startSession(ctx, reply, admin.id, secureCookie(ctx, req));
     req.log.info(`First admin "${admin.username}" created; setup code revoked`);
     return { username: admin.username };
   });
 
+}
+
+const LOGIN_MAX_FAILURES = 10;
+const loginFailures = new LRUCache<string, number>({ max: 10_000, ttl: 15 * 60_000 });
+
+/**
+ * Secure cookies whenever the request came in over https (proxy hop trusted) OR is addressed to the https public
+ * host (e.g. TRUST_PROXY misconfigured behind the tunnel). Plain http://localhost keeps working for local setup.
+ */
+export function secureCookie(ctx: AppContext, req: { protocol: string; host: string }): boolean {
+  if (req.protocol === 'https') return true;
+  try {
+    const pub = new URL(ctx.settings.get().publicUrl);
+    return pub.protocol === 'https:' && pub.host === req.host;
+  } catch {
+    return false;
+  }
 }
 
 function normalizeToken(t: string) {

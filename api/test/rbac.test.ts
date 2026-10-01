@@ -54,8 +54,11 @@ describe('company signature editors', async () => {
   });
 
   it('can edit their own company’s designs and images, nobody else’s', async () => {
-    const own = await send('POST', '/api/admin/templates/tenapors/reply', { content: '<p>{{user.displayName}}</p>' });
+    const presets = (await get('/api/admin/templates/presets')).json();
+    const own = await send('POST', '/api/admin/templates/tenapors/reply', { blocks: presets.reply });
     expect(own.statusCode).toBe(200);
+    const html = await send('POST', '/api/admin/templates/tenapors/reply', { content: '<p>{{user.displayName}}</p><a href="https://evil.example">x</a>' });
+    expect(html.statusCode).toBe(403); // hand-written HTML is IT-only
     const other = await send('POST', '/api/admin/templates/tenax/reply', { content: '<p>pwned</p>' });
     expect(other.statusCode).toBe(403);
     expect(repo.latestTemplate('tenax', 'reply')!.content).not.toContain('pwned');

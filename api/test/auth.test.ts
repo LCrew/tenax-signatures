@@ -145,12 +145,12 @@ describe('first launch + local login', async () => {
     const ok = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { username: 'ADMIN', password: 'correct horse 42' } });
     expect(ok.statusCode).toBe(200);
     const c = cookieOf(ok);
-    await app.inject({ method: 'POST', url: '/api/auth/logout', headers: { cookie: c } });
+    await app.inject({ method: 'POST', url: '/api/auth/logout', headers: { cookie: c, origin: 'http://localhost:80' } });
     expect((await app.inject({ url: '/api/admin/settings', headers: { cookie: c } })).statusCode).toBe(401);
   });
   it('lets an admin rename a company group and see it take effect', async () => {
     const res = await app.inject({
-      method: 'PUT', url: '/api/admin/companies/vareno', headers: { cookie },
+      method: 'PUT', url: '/api/admin/companies/vareno', headers: { cookie, 'sec-fetch-site': 'same-origin' },
       payload: { displayName: 'Vareno', legalName: 'SIA "Vareno Group"', groupName: 'SG-Sig-Vareno-New', groupId: '00000000-0000-0000-0000-00000000a004', priority: 4 },
     });
     expect(res.statusCode).toBe(200);

@@ -1,4 +1,5 @@
 import Handlebars from 'handlebars';
+import { z } from 'zod';
 import type { Repository } from '../db/repository.js';
 import type { Company, ComposeType, ResolvedUser, Settings, SharedMailbox } from '../types.js';
 import { telHref } from './phone.js';
@@ -34,12 +35,19 @@ export interface SignatureData {
 }
 
 /**
- * Handlebars with escaping ON. Triple-stash ({{{ }}}) and SafeString helpers are rejected at
- * compile/save time so user data can never reach the output unescaped.
+ * Handlebars with escaping ON. Templates are checked on the parsed AST (not with regexes), so no form of
+ * unescaped output ({{{x}}}, {{&x}}, {{~{x}~}} …), partials or decorators can reach a signature.
  */
 const hb = Handlebars.create();
 hb.registerHelper('tel', (v: unknown) => telHref(typeof v === 'string' ? v : ''));
 hb.registerHelper('eq', (a: unknown, b: unknown) => a === b);
+// Templates must not write to the server log or call unknown helpers.
+hb.registerHelper('log', () => '');
+hb.registerHelper('helperMissing', function (...args: any[]) {
+  const options = args[args.length - 1];
+  if (args.length > 1) throw new TemplateError(`Unknown helper "${options?.name}"`);
+  return undefined;
+});
 
 export class TemplateError extends Error {
   constructor(message: string, readonly line?: number) {
@@ -47,42 +55,108 @@ export class TemplateError extends Error {
   }
 }
 
-export function validateTemplateSource(src: string): void {
-  if (/\{\{\{|\{\{&/.test(src)) {
-    throw new TemplateError('Unescaped output ({{{ … }}} or {{& … }}) is not allowed in signature templates.');
+const ALLOWED_BLOCK_HELPERS = new Set(['if', 'unless', 'each', 'with']);
+const ALLOWED_HELPERS = new Set(['tel', 'eq']);
+
+class SafetyVisitor extends (Handlebars as any).Visitor {
+  MustacheStatement(node: any) {
+    if (node.escaped === false) {
+      throw new TemplateError('Unescaped output ({{{ … }}} or {{& … }}) is not allowed in signature templates.', node.loc?.start?.line);
+    }
+    if (node.params?.length && !ALLOWED_HELPERS.has(node.path?.original)) {
+      throw new TemplateError(`Unknown helper "${node.path?.original}"`, node.loc?.start?.line);
+    }
+    return super.MustacheStatement(node);
   }
+  BlockStatement(node: any) {
+    if (!ALLOWED_BLOCK_HELPERS.has(node.path?.original)) {
+      throw new TemplateError(`Only {{#if}}, {{#unless}}, {{#each}} and {{#with}} blocks are allowed (found {{#${node.path?.original}}})`, node.loc?.start?.line);
+    }
+    return super.BlockStatement(node);
+  }
+  PartialStatement(node: any) {
+    throw new TemplateError('Partials ({{> … }}) are not allowed in signature templates.', node.loc?.start?.line);
+  }
+  PartialBlockStatement(node: any) {
+    throw new TemplateError('Partials ({{#> … }}) are not allowed in signature templates.', node.loc?.start?.line);
+  }
+  DecoratorBlock(node: any) {
+    throw new TemplateError('Decorators are not allowed in signature templates.', node.loc?.start?.line);
+  }
+  Decorator(node: any) {
+    throw new TemplateError('Decorators are not allowed in signature templates.', node.loc?.start?.line);
+  }
+}
+
+export function validateTemplateSource(src: string): void {
   if (/<script[\s>]/i.test(src)) throw new TemplateError('<script> is not allowed in signature templates.');
+  let ast: unknown;
   try {
-    hb.precompile(src, { strict: false });
+    ast = hb.parse(src);
   } catch (e: any) {
     const line = /line (\d+)/.exec(e.message)?.[1];
     throw new TemplateError(e.message.split('\n')[0], line ? Number(line) : undefined);
   }
+  new SafetyVisitor().accept(ast);
 }
 
+// Strict schema for brand settings (meta.json). Everything that reaches an attribute or style is typed and bounded,
+// so e.g. a logo width can't smuggle CSS ("1px;background:url(…)").
+const httpsUrl = z
+  .string()
+  .max(500)
+  .refine((v) => {
+    try {
+      const u = new URL(v);
+      return u.protocol === 'https:' && !u.username && !u.password;
+    } catch {
+      return false;
+    }
+  }, 'Links must be full https:// addresses');
+const assetFile = z.string().regex(/^[a-z0-9][a-z0-9._-]{0,63}\.(png|jpe?g|gif)$/i, 'Image file name: letters, digits, dot, dash; .png/.jpg/.gif');
+const px = (max: number) => z.number().int().min(1).max(max);
+const text = (max: number) => z.string().max(max);
+const metaSchema = z
+  .object({
+    version: z.number().optional(),
+    logo: z.object({ file: assetFile, width: px(1200), height: px(1200), alt: text(200).optional() }).strict().optional(),
+    colors: z
+      .record(z.enum(['primary', 'text', 'name', 'title', 'muted', 'rule']), z.string().regex(/^#[0-9a-fA-F]{3,8}$/, 'Colours must be hex values like #1F4E8C'))
+      .optional(),
+    greeting: text(200).optional(),
+    websites: z.array(z.object({ label: z.string().min(1, 'Every website needs a label, e.g. www.tenax.lv').max(100), url: z.union([httpsUrl, z.literal('')]).optional() }).strict()).max(8).optional(),
+    footer: z
+      .object({
+        companyLine: text(200).optional(),
+        registrationNumber: text(60).optional(),
+        address: text(300).optional(),
+        website: text(100).optional(),
+        confidential: text(3000).optional(),
+      })
+      .strict()
+      .optional(),
+    banner: z
+      .union([
+        z.null(),
+        z.object({ file: assetFile, width: px(1200), height: px(1200), link: z.union([httpsUrl, z.literal('')]).optional(), alt: text(200).optional() }).strict(),
+      ])
+      .optional(),
+  })
+  .strict();
+
 export function validateMeta(src: string): TemplateMeta {
-  let meta: TemplateMeta;
+  let raw: unknown;
   try {
-    meta = JSON.parse(src);
+    raw = JSON.parse(src);
   } catch (e: any) {
-    throw new TemplateError(`meta.json is not valid JSON: ${e.message}`);
+    throw new TemplateError(`Brand settings are not valid JSON: ${e.message}`);
   }
-  if (meta.logo && (!meta.logo.file || !meta.logo.width || !meta.logo.height)) {
-    throw new TemplateError('meta.logo needs file, width and height');
+  const parsed = metaSchema.safeParse(raw);
+  if (!parsed.success) {
+    const i = parsed.error.issues[0];
+    throw new TemplateError(`${i.path.join('.') || 'Brand settings'}: ${i.message}`);
   }
-  for (const [k, v] of Object.entries(meta.colors ?? {})) {
-    if (!/^#[0-9a-f]{3,8}$/i.test(v)) throw new TemplateError(`Colour "${k}" must be a hex value like #1F4E8C`);
-  }
-  if (meta.websites && !Array.isArray(meta.websites)) throw new TemplateError('meta.websites must be a list');
-  for (const w of meta.websites ?? []) {
-    if (!w?.label) throw new TemplateError('Every website needs a label, e.g. www.tenax.lv');
-    if (w.url && !/^https?:\/\//i.test(w.url)) throw new TemplateError(`Website link "${w.url}" must start with https://`);
-  }
-  if (meta.banner) {
-    if (!meta.banner.file || !meta.banner.width || !meta.banner.height) throw new TemplateError('meta.banner needs file, width and height');
-    if (meta.banner.link && !/^https?:\/\//i.test(meta.banner.link)) throw new TemplateError('The banner link must start with https://');
-  }
-  return meta;
+  return parsed.data as TemplateMeta;
 }
 
 type Compiled = HandlebarsTemplateDelegate;
@@ -162,6 +236,22 @@ function applyLanguage(d: SignatureData, lang: Settings['language']): SignatureD
   if (lang === 'lv') return { ...d, jobTitleEn: null };
   if (lang === 'en') return { ...d, jobTitleLv: d.jobTitleEn ?? d.jobTitleLv, jobTitleEn: null };
   return d;
+}
+
+/** Proves a template + brand settings actually render (catches runtime-only failures before they reach Outlook). */
+export function trialRender(template: string, metaSrc: string, kind: 'new' | 'reply'): void {
+  const meta = validateMeta(metaSrc);
+  const fn = hb.compile(stripBlocksHeader(template), { strict: false });
+  try {
+    fn({
+      user: { displayName: 'A', jobTitleLv: 'B', jobTitleEn: 'C', mobilePhone: '+371 20 000 000', officePhone: '+371 60 000 000', email: 'a@example.com', department: 'D' },
+      company: { key: 'x', displayName: 'X', legalName: 'X' },
+      meta: { ...meta, colors: { primary: '#000000', ...meta.colors }, logoUrl: 'https://x/a.png', logoWidth: 1, logoHeight: 1, logoAlt: 'X', websites: [{ label: 'x', url: 'https://x' }], footer: { ...meta.footer, websiteUrl: 'https://x' }, bannerUrl: '' },
+      type: kind === 'new' ? 'newMail' : 'reply',
+    });
+  } catch (e: any) {
+    throw new TemplateError(`This template fails when rendered: ${String(e.message).split('\n')[0]}`);
+  }
 }
 
 export function signatureDataFor(user: ResolvedUser): SignatureData {

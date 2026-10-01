@@ -61,11 +61,28 @@ of truth (companies, group names/IDs and designs are editable there without rede
 ## Security notes
 
 - The signature endpoint serves only the caller. Identity comes from the validated token (issuer = our tenant,
-  audience = our app, signature from Entra JWKS), with the `oid` cross-checked against the UPN.
-- Admin endpoints need a local admin session or membership of the admins group.
-- Local passwords use scrypt. Session IDs are stored hashed. Cookies are HttpOnly and SameSite=Strict, with an Origin
-  check on writes.
-- The Graph credential (certificate key or secret) is encrypted at rest with AES-256-GCM.
-- First-launch setup is gated by a one-time code printed to the server log.
+  audience = our app, signature from Entra JWKS), with the `oid` cross-checked against the UPN. Guests and disabled
+  accounts are refused.
+- Roles:
+  - **IT administrators** (a group, or local break-glass accounts) can do everything.
+  - **Signature editors** are per company. They can edit only that company's visual designs, brand details and its
+    people's signature data.
+  - Admin rights need a token issued to this app with the `Signature.Read` scope.
+- Templates are validated on the parsed Handlebars AST: no unescaped output, partials, decorators or unknown helpers.
+  Every save does a trial render. Brand settings use a strict schema (https-only links, integer sizes, hex colours).
+  Hand-written HTML is IT-only.
+- HTML returned by the API carries a sandboxing CSP. The console has a strict CSP.
+- Local accounts:
+  - passwords use scrypt;
+  - session IDs are stored hashed;
+  - cookies are HttpOnly, SameSite=Strict and Secure on https;
+  - CSRF checks fail closed;
+  - accounts lock after 10 failures;
+  - the setup code is single-use (race-safe).
+- Rate limits use the matched route and the real client IP (only the proxy hop is trusted).
+- The Graph credential is encrypted at rest (AES-256-GCM). Set `APP_SECRET` to keep the key out of the data volume.
+- Container: read-only filesystem, no capabilities, no-new-privileges, bound to 127.0.0.1 by default, rotated logs,
+  data files 0600.
 - The service never writes to Entra and never creates users or groups (the setup script creates groups only with
   `-CreateGroups`).
+- Production settings outside the code: see the security checklist in [docs/setup-guide.md](docs/setup-guide.md).

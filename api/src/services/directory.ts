@@ -18,7 +18,7 @@ export interface Directory {
   testConnection(): Promise<{ ok: true; detail: string }>;
 }
 
-const USER_SELECT = 'id,userPrincipalName,mail,displayName,jobTitle,mobilePhone,businessPhones,department';
+const USER_SELECT = 'id,userPrincipalName,mail,displayName,jobTitle,mobilePhone,businessPhones,department,userType,accountEnabled';
 
 // ───────────────────────────── Mock (fixtures/users.json) ─────────────────────────────
 

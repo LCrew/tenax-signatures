@@ -5,11 +5,12 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { AppContext } from '../context.js';
 import { actorOf, requireStaff, type Access, type Identity } from '../auth/plugin.js';
-import { hashPassword, passwordProblems } from '../auth/local.js';
+import { SESSION_COOKIE, hashPassword, hashSessionId, passwordProblems } from '../auth/local.js';
 import { GraphDiagnosticError, certThumbprintSha256, splitPem } from '../services/directory.js';
 import {
   TemplateError,
   signatureDataFor,
+  trialRender,
   validateMeta,
   validateTemplateSource,
   type SignatureData,
@@ -348,9 +349,22 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
       .parse(req.body);
     // Visual designs are compiled here, so the stored template is always server-generated, email-safe HTML.
     if (raw.blocks && kind === 'meta') return reply.code(400).send({ error: 'Brand settings have no visual layout' });
+    // Hand-written HTML can put anything into every email the company sends: IT only. Editors use the visual designer.
+    if (kind !== 'meta' && raw.content && !access.global) {
+      return reply.code(403).send({ error: 'Signature editors can only save visual designs. Ask IT for hand-written HTML changes.' });
+    }
     const body = { note: raw.note, content: raw.blocks ? compileBlocks(blockDocSchema.parse(raw.blocks), kind as 'new' | 'reply') : raw.content! };
-    if (kind === 'meta') validateMeta(body.content);
-    else validateTemplateSource(body.content);
+    if (kind === 'meta') {
+      validateMeta(body.content);
+      // New brand settings must still render with the current designs.
+      for (const k of ['new', 'reply'] as const) {
+        const t = ctx.repo.latestTemplate(company, k);
+        if (t) trialRender(t.content, body.content, k);
+      }
+    } else {
+      validateTemplateSource(body.content);
+      trialRender(body.content, ctx.repo.latestTemplate(company, 'meta')?.content ?? '{}', kind as 'new' | 'reply');
+    }
     const before = ctx.repo.latestTemplate(company, kind);
     if (before?.content === body.content) return before;
     const saved = ctx.repo.addTemplateVersion({ company, kind, content: body.content, note: body.note ?? null, createdBy: actorOf(admin) });
@@ -361,6 +375,13 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
   app.post('/api/admin/templates/restore/:id', staff(async (req, reply, admin, access) => {
     const old = ctx.repo.getTemplateVersion(Number((req.params as any).id));
     if (!old || !access.can(old.company)) return reply.code(404).send({ error: 'Version not found' });
+    // Old versions are re-checked against today's rules before they go live again.
+    if (old.kind === 'meta') validateMeta(old.content);
+    else {
+      if (!access.global && !extractBlocks(old.content)) return reply.code(403).send({ error: 'That version is hand-written HTML; only IT can restore it' });
+      validateTemplateSource(old.content);
+      trialRender(old.content, ctx.repo.latestTemplate(old.company, 'meta')?.content ?? '{}', old.kind);
+    }
     const saved = ctx.repo.addTemplateVersion({ company: old.company, kind: old.kind, content: old.content, note: `Restored from v${old.version}`, createdBy: actorOf(admin) });
     audit(admin, 'template.restore', `template:${old.company}/${old.kind}`, { version: old.version }, { version: saved.version });
     return saved;
@@ -450,7 +471,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
 
   const generalSchema = z
     .object({
-      publicUrl: z.string().url().refine((u) => /^https?:\/\//.test(u), 'Must start with https://'),
+      publicUrl: originSchema(false),
       defaultCompany: z.string(),
       adminGroupId: optionalGuid,
       adminGroupName: z.string().trim().max(256),
@@ -459,7 +480,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
       selfServiceEnabled: z.boolean(),
       selfServiceFields: z.array(z.enum(['jobTitleEn', 'hideMobile', 'mobilePhone', 'jobTitleLv'])),
       language: z.enum(['lv', 'en', 'bilingual']),
-      allowedOrigins: z.array(z.string().url()).max(10),
+      allowedOrigins: z.array(originSchema(true)).max(10),
       setupStep: z.number().int().min(0).max(20),
     })
     .partial();
@@ -586,8 +607,10 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     const problem = passwordProblems(password);
     if (problem) return reply.code(400).send({ error: problem });
     ctx.repo.updateAdminPassword(id, await hashPassword(password));
-    // Sign out everywhere except the current session if you're changing your own password.
-    if (!(admin.kind === 'local' && admin.adminId === id)) ctx.repo.deleteSessionsForAdmin(id);
+    // A new password signs the account out everywhere, except the session that changed its own password.
+    const own = admin.kind === 'local' && admin.adminId === id && req.cookies[SESSION_COOKIE];
+    if (own) ctx.repo.deleteSessionsForAdminExcept(id, hashSessionId(req.cookies[SESSION_COOKIE]!, ctx.sessionKey));
+    else ctx.repo.deleteSessionsForAdmin(id);
     audit(admin, 'account.password', `account:${target.username}`, null, null);
     return { ok: true };
   }));
@@ -615,6 +638,32 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
       .header('Content-Disposition', 'attachment; filename="tenax-signature-manifest.xml"')
       .send(xml);
   }));
+}
+
+/**
+ * A bare origin ("https://sig.tenax.lv"): https only (http://localhost allowed where noted), no credentials, path,
+ * query or fragment. Stored normalised, so it can't carry markup into the manifest, CORS or the well-known file.
+ */
+function originSchema(allowLocalHttp: boolean) {
+  return z
+    .string()
+    .trim()
+    .max(200)
+    .transform((v, c) => {
+      let u: URL;
+      try {
+        u = new URL(v);
+      } catch {
+        c.addIssue({ code: 'custom', message: 'Enter a full address like https://sig.tenax.lv' });
+        return z.NEVER;
+      }
+      const localHttp = allowLocalHttp && u.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(u.hostname);
+      if ((u.protocol !== 'https:' && !localHttp) || u.username || u.password || (u.pathname !== '/' && u.pathname !== '') || u.search || u.hash) {
+        c.addIssue({ code: 'custom', message: 'Use https:// and a host name only, e.g. https://sig.tenax.lv' });
+        return z.NEVER;
+      }
+      return u.origin;
+    });
 }
 
 const SAMPLE_PERSON: SignatureData = {

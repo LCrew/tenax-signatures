@@ -24,7 +24,8 @@ export interface Env {
   setupToken?: string;
   appSecret?: string;
   publicUrl?: string;
-  trustProxy: boolean;
+  /** true = trust the proxy hop on loopback/private networks; or an explicit list like "10.0.0.0/8,loopback". */
+  trustProxy: boolean | string;
   logLevel: string;
 }
 
@@ -51,7 +52,7 @@ export function loadEnv(overrides: Partial<Env> = {}): Env {
     setupToken: e.SETUP_TOKEN || undefined,
     appSecret: e.APP_SECRET || undefined,
     publicUrl: e.PUBLIC_URL?.replace(/\/+$/, '') || undefined,
-    trustProxy: e.TRUST_PROXY === 'true',
+    trustProxy: e.TRUST_PROXY === 'true' ? true : e.TRUST_PROXY && e.TRUST_PROXY !== 'false' ? e.TRUST_PROXY : false,
     logLevel: e.LOG_LEVEL ?? 'info',
     ...overrides,
   };
@@ -63,5 +64,8 @@ export function loadEnv(overrides: Partial<Env> = {}): Env {
 export function assertSafe(env: Env): void {
   if (env.isProduction && env.mockAuthHeader) {
     throw new Error('FATAL: X-Mock-User auth cannot be enabled when NODE_ENV=production');
+  }
+  if (env.isProduction && env.setupToken && env.setupToken.replace(/[^A-Za-z0-9]/g, '').length < 16) {
+    throw new Error('FATAL: SETUP_TOKEN must have at least 16 letters/digits (or leave it empty for a random one)');
   }
 }

@@ -40,7 +40,7 @@ export function ActivityPage() {
     <>
       <PageHead
         title="Activity"
-        lead="Every change made in this console, and failures reported by Outlook clients."
+        lead="Every change made in this console, and failures reported by Outlook clients. Add-in errors are reported anonymously by the client, so treat their text as unverified."
         actions={
           <Segmented
             label="View"

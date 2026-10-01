@@ -82,6 +82,9 @@ export interface Repository {
   getAdminById(id: number): LocalAdmin | undefined;
   listAdmins(): LocalAdmin[];
   createAdmin(username: string, passwordHash: string): LocalAdmin;
+  /** Atomically creates the first admin; null if any admin already exists. */
+  createFirstAdmin(username: string, passwordHash: string): LocalAdmin | null;
+  deleteSessionsForAdminExcept(adminId: number, keepSessionId: string): void;
   updateAdminPassword(id: number, passwordHash: string): void;
   deleteAdmin(id: number): void;
   touchAdminLogin(id: number): void;

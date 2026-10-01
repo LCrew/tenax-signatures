@@ -5,7 +5,7 @@ import { AuthError, validateEntraToken } from './entra.js';
 import { SESSION_COOKIE, hashSessionId } from './local.js';
 
 export type Identity =
-  | { kind: 'entra'; oid: string; upn: string; scopes: string[] }
+  | { kind: 'entra'; oid: string; upn: string; scopes: string[]; clientApp: string }
   | { kind: 'local'; adminId: number; username: string }
   | { kind: 'mock'; upn: string };
 
@@ -47,7 +47,7 @@ export function registerAuth(app: FastifyInstance, ctx: AppContext) {
           audiences: ctx.settings.audiences(),
           jwks: ctx.jwks,
         });
-        req.identity = { kind: 'entra', oid: id.oid, upn: id.upn, scopes: id.scopes };
+        req.identity = { kind: 'entra', oid: id.oid, upn: id.upn, scopes: id.scopes, clientApp: id.clientApp };
       } catch (e) {
         req.authError = e instanceof AuthError ? e : new AuthError('Invalid token');
       }
@@ -73,22 +73,23 @@ export function registerAuth(app: FastifyInstance, ctx: AppContext) {
     }
   });
 
-  // Cookie-authenticated state changes must come from our own origin (CSRF defence on top of SameSite=Strict).
+  // Cookie-authenticated state changes must provably come from our own page (CSRF defence on top of
+  // SameSite=Strict). Fail closed: no Origin and no Sec-Fetch-Site = rejected.
   app.addHook('preHandler', async (req, reply) => {
     if (req.identity?.kind !== 'local') return;
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return;
     const origin = req.headers.origin;
-    if (origin && !sameOrigin(origin, req, ctx)) {
-      return reply.code(403).send({ error: 'Cross-origin request rejected' });
-    }
+    const fetchSite = req.headers['sec-fetch-site'];
+    const ok = origin ? sameOrigin(origin, req, ctx) : fetchSite === 'same-origin';
+    if (!ok) return reply.code(403).send({ error: 'Cross-origin request rejected' });
   });
 }
 
 function sameOrigin(origin: string, req: FastifyRequest, ctx: AppContext): boolean {
-  const host = req.headers['x-forwarded-host'] ?? req.headers.host;
   try {
     const o = new URL(origin);
-    if (o.host === host) return true;
+    // req.host honours trustProxy (no raw X-Forwarded-Host); normalise through URL so default ports compare equal.
+    if (o.host === new URL(`${req.protocol}://${req.host}`).host) return true;
     return new URL(ctx.settings.get().publicUrl).origin === o.origin;
   } catch {
     return false;
@@ -111,6 +112,15 @@ export async function requireUser(req: FastifyRequest, reply: FastifyReply, ctx:
   const user = await ctx.resolver.resolve(lookup);
   if (!user) {
     reply.code(404).send({ error: 'User not found in directory' });
+    return null;
+  }
+  // Only enabled member accounts: guests (B2B) and disabled accounts get no signature and no console.
+  if (user.entra.userType && user.entra.userType !== 'Member') {
+    reply.code(403).send({ error: 'Guest accounts can’t use the signature service' });
+    return null;
+  }
+  if (user.entra.accountEnabled === false) {
+    reply.code(403).send({ error: 'This account is disabled' });
     return null;
   }
   // Cross-check: the object ID in the token must belong to the UPN in the token.
@@ -159,6 +169,12 @@ export async function requireStaff(req: FastifyRequest, reply: FastifyReply, ctx
     return null;
   }
   if (id.kind === 'local') return { identity: id, global: true, companies: new Set(), can: () => true };
+  // Admin powers only via tokens issued to OUR app with our own scope (the console/add-in), not via Office's
+  // legacy-SSO token (access_as_user) or any other app a user may have consented to.
+  if (id.kind === 'entra' && (id.clientApp !== ctx.settings.get().clientId || !id.scopes.includes(API_SCOPE))) {
+    reply.code(403).send({ error: 'Sign in to the console to use admin functions' });
+    return null;
+  }
   const user = await requireUser(req, reply, ctx);
   if (!user) return null;
   if (user.isAdmin) return { identity: id, global: true, companies: new Set(), can: () => true };

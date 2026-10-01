@@ -168,6 +168,40 @@ The script only creates the app registration and grants read-only Graph permissi
    through [pilot-checklist.md](pilot-checklist.md).
 5. **Roll out.** In the M365 admin center, change the add-in's assignment from the pilot group to the entire organisation.
 
+## Security checklist (production)
+
+Settings outside the code that the security review asked for. Do them once.
+
+**Server `.env`**
+- `TRUST_PROXY=true`: the app then trusts only the proxy hop (cloudflared on this host), so it sees https and the
+  real client IP for rate limits, and clients can't spoof it.
+- `HOST_BIND=127.0.0.1`: port 8085 is reachable only from the host itself, so only through the tunnel. Check with
+  `ss -ltnp | grep 8085`; it should show `127.0.0.1:8085`.
+- `APP_SECRET=<openssl rand -base64 32>`, with a copy in your password manager. Without it, the key that encrypts
+  the Entra certificate sits in the same volume as the database. **On an existing install**, after setting it,
+  re-enter the certificate under Settings › Entra ID connection, and expect everyone to sign in again.
+
+**Cloudflare (dashboard for tenax.lv)**
+- SSL/TLS › Edge Certificates: **Always Use HTTPS** on. **HSTS**: enable with max-age ≥ 6 months (the app also
+  sends HSTS on https).
+- Caching › Configuration › Browser Cache TTL: **Respect Existing Headers**. Or add a Cache Rule that bypasses the
+  cache for `/addin/*` and `/.well-known/*`, so add-in changes reach Outlook immediately.
+- Optional: Security › WAF rate-limit rule for `/api/auth/login` and `/api/telemetry`.
+- No Cloudflare Access login on the whole hostname (see Cloudflare Tunnel above).
+
+**Entra app registration**
+- Remove `http://localhost:8085/` from the SPA redirect URIs once you no longer test on a laptop. Use a separate
+  app registration for development.
+- Optional, stricter: Enterprise applications › Tenax Signature API › Properties › **Assignment required = Yes**,
+  then assign the company groups, the editors groups and the IT admins group. Guests and disabled accounts are
+  refused by the service either way.
+- Keep the certificate's expiry in your calendar (Settings shows the date).
+
+**Access**
+- Keep the IT admins group small. Give design work to the per-company *Signature editors* groups instead.
+- Local accounts are full IT admins: strong unique passwords, few accounts. After 10 failed sign-ins an account is
+  locked for 15 minutes.
+
 ## Troubleshooting first launch
 
 | Symptom | Fix |

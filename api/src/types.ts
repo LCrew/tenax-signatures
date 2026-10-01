@@ -46,6 +46,8 @@ export interface DirectoryUser {
   mobilePhone: string | null;
   businessPhones: string[];
   department: string | null;
+  userType?: string | null;
+  accountEnabled?: boolean | null;
 }
 
 export interface DirectoryGroup {

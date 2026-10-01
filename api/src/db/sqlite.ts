@@ -184,6 +184,10 @@ export class SqliteRepository implements Repository {
     this.db
       .prepare('INSERT INTO audit_log(at, actor, action, target, before_json, after_json) VALUES(?, ?, ?, ?, ?, ?)')
       .run(now(), actor, action, target, JSON.stringify(before ?? null), JSON.stringify(after ?? null));
+    // Failed sign-ins are noise an attacker controls: keep 30 days, never let them fill the disk.
+    if (action === 'login.failed') {
+      this.db.prepare("DELETE FROM audit_log WHERE action = 'login.failed' AND at < ?").run(new Date(Date.now() - 30 * 86_400_000).toISOString());
+    }
   }
   listAudit(limit: number, target?: string): AuditEntry[] {
     const rows = target
@@ -219,6 +223,15 @@ export class SqliteRepository implements Repository {
       .prepare('INSERT INTO local_admins(username, password_hash, created_at) VALUES(?, ?, ?)')
       .run(username, passwordHash, now());
     return this.getAdminById(Number(info.lastInsertRowid))!;
+  }
+  createFirstAdmin(username: string, passwordHash: string): LocalAdmin | null {
+    const info = this.db
+      .prepare('INSERT INTO local_admins(username, password_hash, created_at) SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM local_admins)')
+      .run(username, passwordHash, now());
+    return info.changes ? this.getAdminById(Number(info.lastInsertRowid))! : null;
+  }
+  deleteSessionsForAdminExcept(adminId: number, keepSessionId: string) {
+    this.db.prepare('DELETE FROM sessions WHERE admin_id = ? AND id <> ?').run(adminId, keepSessionId);
   }
   updateAdminPassword(id: number, passwordHash: string) {
     this.db.prepare('UPDATE local_admins SET password_hash = ? WHERE id = ?').run(passwordHash, id);
