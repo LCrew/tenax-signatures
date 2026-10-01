@@ -68,18 +68,31 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
     }
   }
 
+  // The real signature (absolute https:// image URLs) is fetched ahead of time: browsers only allow clipboard writes
+  // inside the click itself, so there's no time to fetch it after the click.
+  const real = useAsync(() => (me.data ? api.get<string>(`/api/signature?type=${type}`) : Promise.resolve('')), [type, me.data]);
+
   /** For Outlook clients without the add-in: copy the real signature as rich text to paste into signature settings. */
-  async function copy() {
-    try {
-      const html = await api.get<string>(`/api/signature?type=${type}`);
-      const text = new DOMParser().parseFromString(html, 'text/html').body.innerText;
-      await navigator.clipboard.write([
-        new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([text], { type: 'text/plain' }) }),
-      ]);
+  function copy() {
+    const done = () => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    };
+    const fail = (e: unknown) => toast(`Couldn't copy: ${(e as Error)?.message ?? 'the browser blocked it'}. Select the preview and copy it instead.`, 'error');
+    const toText = (h: string) => new DOMParser().parseFromString(h, 'text/html').body.innerText;
+
+    // Called synchronously in the click: a ClipboardItem may hold promises, so this also works if the prefetch
+    // hasn't finished yet (Safari and Chrome both support that).
+    const html: Promise<string> = real.data ? Promise.resolve(real.data) : api.get<string>(`/api/signature?type=${type}`);
+    try {
+      const item = new ClipboardItem({
+        'text/html': html.then((h) => new Blob([h], { type: 'text/html' })),
+        'text/plain': html.then((h) => new Blob([toText(h)], { type: 'text/plain' })),
+      });
+      navigator.clipboard.write([item]).then(done, () => (real.data && legacyCopy(real.data) ? done() : fail(new Error('the browser blocked clipboard access'))));
     } catch (e) {
-      toast(`Couldn't copy: ${(e as Error).message}`, 'error');
+      if (real.data && legacyCopy(real.data)) done();
+      else fail(e);
     }
   }
 
@@ -168,7 +181,7 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
           from={{ name: (draft.displayName as string) || (me.data.fields.displayName as string) || me.data.upn, email: me.data.upn }}
         />
         <div className="row">
-          <button className="btn" onClick={copy} disabled={dirty} title={dirty ? 'Save first, then copy' : undefined}>
+          <button className="btn" onClick={copy} disabled={dirty || !real.data} title={dirty ? 'Save first, then copy' : undefined}>
             {copied ? <Check size={14} /> : <ClipboardCopy size={14} />} {copied ? 'Copied' : 'Copy signature'}
           </button>
           <span className="xs muted" style={{ flex: '1 1 220px' }}>
@@ -233,6 +246,29 @@ function ReadOnlyRow({ label, value, source }: { label: string; value: string | 
       </div>
     </div>
   );
+}
+
+/** Fallback for browsers without async clipboard support: copy a rendered, selected copy of the HTML. */
+function legacyCopy(html: string): boolean {
+  const el = document.createElement('div');
+  el.contentEditable = 'true';
+  el.innerHTML = html;
+  Object.assign(el.style, { position: 'fixed', left: '-9999px', top: '0', background: '#fff' });
+  document.body.appendChild(el);
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const sel = window.getSelection();
+  sel?.removeAllRanges();
+  sel?.addRange(range);
+  let ok = false;
+  try {
+    ok = document.execCommand('copy');
+  } catch {
+    ok = false;
+  }
+  sel?.removeAllRanges();
+  el.remove();
+  return ok;
 }
 
 function entraFor(me: Me, f: string): string | null {
