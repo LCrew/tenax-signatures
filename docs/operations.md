@@ -53,6 +53,16 @@ person's other designs and inserts one for that email only (unless locked).
 Shared mailboxes (Shared mailboxes › design) use their chosen design, else the company's Service design, else the
 default.
 
+### Finding and pinning the Signatures button
+The button (navy square with a red signature) is in the compose window. Where it sits depends on the Outlook client:
+- **Classic Outlook (Windows):** on the **Message** ribbon tab, in the **Tenax** group. Always visible.
+- **New Outlook (Windows) and Outlook on the web:** under the **Apps** button in the compose toolbar. To pin it to the
+  toolbar: in the compose window click **⋯** › **Customize actions**, tick **Signatures** under add-ins, and **Save**.
+  Each person does this once; it isn't a central setting.
+- **Outlook for Mac (new):** in the compose toolbar, or under **⋯** when the window is narrow. To keep it visible:
+  **⋯** › **Customize toolbar**, then drag **Signatures** into the toolbar.
+- **Mobile:** not available; the default signature is still inserted automatically.
+
 ### After updating to the version with the Signatures button
 The add-in manifest changed (version 1.1.0.0). Download it again (Settings › Outlook add-in) and in the
 **Microsoft 365 admin center** › Integrated apps › *Tenax Signature* › **Update add-in**, upload it and accept. Users

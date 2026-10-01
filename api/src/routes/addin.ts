@@ -27,7 +27,7 @@ export function renderManifest(ctx: AppContext, opts: { test?: boolean } = {}): 
     ADDIN_ID: opts.test ? testAddinId(s.addinId) : s.addinId,
     CLIENT_ID: s.clientId || '00000000-0000-0000-0000-000000000000',
     API_SCOPE_URI: s.appIdUri || `api://${new URL(s.publicUrl).host}/${s.clientId}`,
-    VERSION: '1.1.0.0', // 1.1: Signatures button + task pane. Bump on every manifest change.
+    VERSION: '1.1.1.0', // 1.1: Signatures button + task pane; 1.1.1: Tenax red signature icon. Bump on every manifest change.
   };
   let xml = tpl.replace(/\{\{(\w+)\}\}/g, (m, k) => (k in values ? xmlEscape(values[k]) : m));
   if (opts.test) xml = xml.replace('<DisplayName DefaultValue="Tenax Signature"/>', '<DisplayName DefaultValue="Tenax Signature (test)"/>');

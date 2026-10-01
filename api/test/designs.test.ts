@@ -178,7 +178,8 @@ describe('Outlook add-in: Signatures button', async () => {
       expect(xml).toContain('MessageComposeCommandSurface');
       expect(xml).toContain('AppointmentOrganizerCommandSurface');
       expect(xml).toContain('https://sig.tenax.lv/addin/taskpane.html');
-      expect(xml).toContain('<Version>1.1.0.0</Version>');
+      expect(xml).toContain('<Version>1.1.1.0</Version>');
+      expect(xml).toContain('/addin/icon-sig-64.png');
     }
   });
 });

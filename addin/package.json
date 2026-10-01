@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Tenax signature Outlook add-in: event-based launch handlers (classic JS runtime + browser runtime).",
   "scripts": {
-    "icons": "node scripts/make-icons.mjs",
+    "icons": "python3 scripts/make-icons.py",
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

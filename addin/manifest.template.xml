@@ -32,8 +32,8 @@
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Tenax Signature"/>
   <Description DefaultValue="Automatically inserts the Tenax Grupa company email signature."/>
-  <IconUrl DefaultValue="{{PUBLIC_URL}}/addin/icon-64.png"/>
-  <HighResolutionIconUrl DefaultValue="{{PUBLIC_URL}}/addin/icon-128.png"/>
+  <IconUrl DefaultValue="{{PUBLIC_URL}}/addin/icon-sig-64.png"/>
+  <HighResolutionIconUrl DefaultValue="{{PUBLIC_URL}}/addin/icon-sig-128.png"/>
   <SupportUrl DefaultValue="{{PUBLIC_URL}}/"/>
   <AppDomains>
     <AppDomain>{{PUBLIC_URL}}</AppDomain>
@@ -155,11 +155,11 @@
 
       <Resources>
         <bt:Images>
-          <bt:Image id="Icon.16x16" DefaultValue="{{PUBLIC_URL}}/addin/icon-16.png"/>
-          <bt:Image id="Icon.32x32" DefaultValue="{{PUBLIC_URL}}/addin/icon-32.png"/>
-          <bt:Image id="Icon.64x64" DefaultValue="{{PUBLIC_URL}}/addin/icon-64.png"/>
-          <bt:Image id="Icon.80x80" DefaultValue="{{PUBLIC_URL}}/addin/icon-80.png"/>
-          <bt:Image id="Icon.128x128" DefaultValue="{{PUBLIC_URL}}/addin/icon-128.png"/>
+          <bt:Image id="Icon.16x16" DefaultValue="{{PUBLIC_URL}}/addin/icon-sig-16.png"/>
+          <bt:Image id="Icon.32x32" DefaultValue="{{PUBLIC_URL}}/addin/icon-sig-32.png"/>
+          <bt:Image id="Icon.64x64" DefaultValue="{{PUBLIC_URL}}/addin/icon-sig-64.png"/>
+          <bt:Image id="Icon.80x80" DefaultValue="{{PUBLIC_URL}}/addin/icon-sig-80.png"/>
+          <bt:Image id="Icon.128x128" DefaultValue="{{PUBLIC_URL}}/addin/icon-sig-128.png"/>
         </bt:Images>
         <bt:Urls>
           <bt:Url id="WebViewRuntime.Url" DefaultValue="{{PUBLIC_URL}}/addin/launchevent.html"/>
