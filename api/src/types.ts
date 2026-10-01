@@ -59,6 +59,8 @@ export interface Design {
   metaOverrides: MetaOverrides;
   /** html: visual designer / HTML; image: SVG template rendered to a PNG per person. */
   format?: 'html' | 'image';
+  /** Job title language for this design; null/undefined = the global setting. */
+  language?: SignatureLanguage | null;
   createdAt: string;
 }
 

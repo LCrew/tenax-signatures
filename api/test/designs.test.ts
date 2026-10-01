@@ -251,3 +251,28 @@ describe('restoring designs', async () => {
     expect(repo.getDesign(d.id)!.metaOverrides).toEqual({ greeting: 'One' });
   });
 });
+
+describe('job title language per design', async () => {
+  const { app, ctx } = await makeApp();
+  const O = { origin: 'https://sig.tenax.lv' };
+  const sig = async () => (await app.inject({ url: '/api/signature?type=newMail', headers: TENAPORS_EDITOR })).body;
+
+  it('a design can show English titles even when Settings say Latvian only, and copies keep it', async () => {
+    await app.inject({ method: 'PUT', url: '/api/admin/users/test.lv@tenaxgrupa.lv/overrides', headers: { ...IT, ...O }, payload: { jobTitleEn: 'Quality Specialist' } });
+    ctx.settings.update({ language: 'lv' });
+    expect(await sig()).not.toContain('Quality Specialist');
+
+    const def = ctx.repo.listDesigns('tenapors').find((d) => d.isDefault)!;
+    const put = await app.inject({ method: 'PUT', url: `/api/admin/designs/${def.id}`, headers: { ...TENAPORS_EDITOR, ...O }, payload: { language: 'bilingual' } });
+    expect(put.json().language).toBe('bilingual');
+    expect(await sig()).toContain('Quality Specialist');
+
+    const copy = (await app.inject({ method: 'POST', url: '/api/admin/designs', headers: { ...IT, ...O }, payload: { company: 'tenapors', name: 'Copy', copyFrom: def.id } })).json();
+    expect(copy.language).toBe('bilingual');
+
+    await app.inject({ method: 'PUT', url: `/api/admin/designs/${def.id}`, headers: { ...IT, ...O }, payload: { language: null } });
+    expect(await sig()).not.toContain('Quality Specialist');
+    expect((await app.inject({ method: 'PUT', url: `/api/admin/designs/${def.id}`, headers: { ...IT, ...O }, payload: { language: 'de' } })).statusCode).toBe(400);
+    ctx.settings.update({ language: 'bilingual' });
+  });
+});

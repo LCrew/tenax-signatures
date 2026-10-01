@@ -67,6 +67,8 @@ export const MIGRATIONS: string[] = [
      values_json TEXT NOT NULL, created_at TEXT NOT NULL);`,
   // v6: personal closing line ("Ar cieņu," / "Best regards,"). NULL = company/design default, '' = none.
   `ALTER TABLE signature_overrides ADD COLUMN greeting TEXT;`,
+  // v7: per-design job title language ('lv' | 'en' | 'bilingual'). NULL = Settings › Signature options.
+  `ALTER TABLE designs ADD COLUMN language TEXT;`,
 ];
 
 const now = () => new Date().toISOString();
@@ -156,7 +158,7 @@ export class SqliteRepository implements Repository {
              is_default=excluded.is_default, sort=excluded.sort, meta_overrides=excluded.meta_overrides`,
         )
         .run({ ...d, selectable: d.selectable ? 1 : 0, isDefault: d.isDefault ? 1 : 0, metaOverrides: JSON.stringify(d.metaOverrides ?? {}) });
-      this.db.prepare('UPDATE designs SET format = ? WHERE id = ?').run(d.format ?? 'html', d.id);
+      this.db.prepare('UPDATE designs SET format = ?, language = ? WHERE id = ?').run(d.format ?? 'html', d.language ?? null, d.id);
     })();
   }
   deleteDesign(id: string) {
@@ -402,6 +404,7 @@ function mapDesign(r: any): Design {
     sort: r.sort,
     metaOverrides,
     format: r.format === 'image' ? 'image' : 'html',
+    language: ['lv', 'en', 'bilingual'].includes(r.language) ? r.language : null,
     createdAt: r.created_at,
   };
 }

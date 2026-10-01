@@ -46,6 +46,8 @@ export interface Design {
   sort: number;
   metaOverrides: MetaOverrides;
   format?: 'html' | 'image';
+  /** Job title language for this design; null = Settings › Signature options. */
+  language?: 'lv' | 'en' | 'bilingual' | null;
   createdAt: string;
 }
 

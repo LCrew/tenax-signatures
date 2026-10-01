@@ -59,6 +59,13 @@ const safeParse = (s: string) => {
 };
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
+type Language = 'lv' | 'en' | 'bilingual';
+const LANGUAGE_LABELS: Record<Language, string> = {
+  bilingual: 'Latvian and English',
+  lv: 'Latvian only',
+  en: 'English only (Latvian when no English title)',
+};
+
 export function Designs() {
   const { company: companyParam } = useParams();
   const { session } = useApp();
@@ -66,6 +73,7 @@ export function Designs() {
   const toast = useToast();
   const rows = useAsync(() => api.get<Row[]>('/api/admin/templates'));
   const presets = useAsync(() => api.get<Presets>('/api/admin/templates/presets'));
+  const globalLanguage = useAsync(() => api.get<{ language: Language }>('/api/admin/templates/language')).data?.language;
   const users = useAsync(() => api.get<UserSummary[]>('/api/admin/users').catch(() => [] as UserSummary[]));
   const active = rows.data?.find((r) => r.company.key === companyParam) ?? rows.data?.[0];
   const [designId, setDesignId] = useState<string | null>(null);
@@ -127,7 +135,7 @@ export function Designs() {
             meta: debounced.drafts.meta,
           })
         : Promise.resolve(''),
-    [active?.company.key, activeDesign?.id, previewType, as, JSON.stringify(debounced)],
+    [active?.company.key, activeDesign?.id, activeDesign?.language, previewType, as, JSON.stringify(debounced)],
   );
 
   const switchCompany = (key: string) => {
@@ -306,6 +314,7 @@ export function Designs() {
                     key={`${active.company.key}-${activeDesign?.id}-${tab}`}
                     doc={blockDrafts[tab]!}
                     kind={tab}
+                    language={activeDesign?.language ?? globalLanguage}
                     colors={meta?.colors ?? {}}
                     onChange={(d) => setBlockDrafts((b) => ({ ...b, [tab]: d }))}
                   />
@@ -357,6 +366,29 @@ export function Designs() {
         </section>
 
         <div className="sticky stack">
+          {activeDesign && globalLanguage && (
+            <Field label="Job titles in this design">
+              <select
+                value={activeDesign.language ?? ''}
+                onChange={async (e) => {
+                  try {
+                    await api.put(`/api/admin/designs/${activeDesign.id}`, { language: e.target.value || null });
+                    await rows.reload();
+                    toast(`Job titles saved for ${activeDesign.name}`);
+                  } catch (err) {
+                    toast((err as Error).message, 'error');
+                  }
+                }}
+              >
+                <option value="">Same as Settings ({LANGUAGE_LABELS[globalLanguage]})</option>
+                {(Object.keys(LANGUAGE_LABELS) as Language[]).map((l) => (
+                  <option key={l} value={l}>
+                    {LANGUAGE_LABELS[l]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
           <Field label="Preview as">
             <select value={as} onChange={(e) => setAs(e.target.value)}>
               <option value="">Sample person (all fields filled)</option>

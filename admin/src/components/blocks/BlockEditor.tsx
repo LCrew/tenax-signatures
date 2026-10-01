@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   AlignVerticalJustifyCenter,
   AlignVerticalJustifyStart,
@@ -41,10 +41,22 @@ interface Props {
   /** Brand colours from Brand and footer, to show token swatches. */
   colors: Record<string, string>;
   kind: 'new' | 'reply';
+  /** Settings › Signature options › Job title language. */
+  language?: 'lv' | 'en' | 'bilingual';
 }
 
 /** Visual signature designer: layout + text defaults + ordered blocks with per-block styles. */
-export function BlockEditor({ doc, onChange, colors, kind }: Props) {
+export function BlockEditor({ doc, onChange, colors, kind, language }: Props) {
+  return (
+    <LanguageCtx.Provider value={language}>
+      <BlockEditorInner doc={doc} onChange={onChange} colors={colors} kind={kind} />
+    </LanguageCtx.Provider>
+  );
+}
+
+const LanguageCtx = createContext<Props['language']>(undefined);
+
+function BlockEditorInner({ doc, onChange, colors, kind }: Omit<Props, 'language'>) {
   const [open, setOpen] = useState<string | null>(null);
   const set = (patch: Partial<BlockDoc>) => onChange({ ...doc, ...patch });
   const families = useAsync(() => api.get<{ family: string; weights: number[] }[]>('/api/admin/fonts/families').catch(() => [])).data ?? [];
@@ -358,6 +370,7 @@ function BlockRow({
 
 function BlockSettings({ block: b, doc, colors, onChange }: { block: Block; doc: BlockDoc; colors: Record<string, string>; onChange: (b: Block) => void }) {
   const info = BLOCK_INFO[b.type];
+  const language = useContext(LanguageCtx);
   const setStyle = (patch: Partial<BlockStyle>) => {
     if (!hasStyle(b)) return;
     const style = { ...b.style, ...patch };
@@ -373,6 +386,13 @@ function BlockSettings({ block: b, doc, colors, onChange }: { block: Block; doc:
         {info.source === 'Person' && '. Left out for people who don’t have it.'}
         {info.source === 'Brand' && '. Left out when it’s empty.'}
       </p>
+      {b.type === 'jobTitleEn' && language && language !== 'bilingual' && (
+        <p className="callout warn xs" role="note">
+          {language === 'lv'
+            ? 'Not shown: this design uses Latvian job titles only. Change “Job titles in this design” above the preview.'
+            : 'Stays empty: this design uses English job titles, shown in the Job title (LV) line. Change “Job titles in this design” above the preview.'}
+        </p>
+      )}
 
       {b.type === 'text' && (
         <Ctl label="Text">

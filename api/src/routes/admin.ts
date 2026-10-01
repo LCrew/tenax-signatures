@@ -414,6 +414,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
       sort: Math.max(0, ...existing.map((d) => d.sort)) + 1,
       metaOverrides: { ...source.metaOverrides },
       format: 'html',
+      language: source.language ?? null,
       createdAt: new Date().toISOString(),
     };
     ctx.repo.upsertDesign(design);
@@ -431,7 +432,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     const before = ctx.repo.getDesign((req.params as any).id);
     if (!before || !access.can(before.company)) return reply.code(404).send({ error: 'Design not found' });
     const body = z
-      .object({ name: designNameSchema.optional(), selectable: z.boolean().optional(), isDefault: z.literal(true).optional(), metaOverrides: metaOverridesSchema.optional(), format: z.enum(['html', 'image']).optional() })
+      .object({ name: designNameSchema.optional(), selectable: z.boolean().optional(), isDefault: z.literal(true).optional(), metaOverrides: metaOverridesSchema.optional(), format: z.enum(['html', 'image']).optional(), language: z.enum(['lv', 'en', 'bilingual']).nullable().optional() })
       .strict()
       .parse(req.body);
     const next: Design = { ...before, ...body, isDefault: before.isDefault || !!body.isDefault };
@@ -450,7 +451,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     }
     ctx.repo.upsertDesign(next);
     if (body.metaOverrides) versionWording(before, body.metaOverrides, actorOf(admin));
-    audit(admin, 'design.update', `design:${before.id}`, { name: before.name, selectable: before.selectable, isDefault: before.isDefault, metaOverrides: before.metaOverrides }, body);
+    audit(admin, 'design.update', `design:${before.id}`, { name: before.name, selectable: before.selectable, isDefault: before.isDefault, metaOverrides: before.metaOverrides, language: before.language ?? null }, body);
     return ctx.repo.getDesign(before.id);
   }));
 
@@ -623,6 +624,9 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
       })),
     })),
   ));
+
+  /** The job title language (Settings › Signature options), so the designer can explain a missing English title. */
+  app.get('/api/admin/templates/language', staff(async () => ({ language: ctx.settings.get().language })));
 
   /** Visual design → its HTML (without the design data), for switching a design to hand-written HTML. */
   app.post('/api/admin/templates/compile', staff(async (req, reply) => {

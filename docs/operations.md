@@ -96,6 +96,15 @@ arbitrary text. Images in sent emails never change.
 company licenses (e.g. **Arial Nova Light** for Vareno) in **Settings › Fonts** (IT only). They're stored on the
 server's data volume and never published. Until a font is uploaded, the editor warns and a similar font is used.
 
+## Job title language (Latvian / English)
+
+**Settings › Signature options › Job title language** is the default for every design: *Latvian and English*,
+*Latvian only* (English titles are left out everywhere) or *English only* (the English title replaces the Latvian
+one when set). Each design can choose its own in **Designs › Job titles in this design** (above the preview), e.g.
+an "English" design for foreign clients while Standard stays Latvian. Company editors can change it for their own
+company's designs. English titles aren't in Entra: set them per person in **People** (or people set their own in
+**My signature** when self-service allows it).
+
 ## Roll back a design
 
 **Designs › Versions** lists every saved change to the selected design, newest first: *New message*, *Reply*,

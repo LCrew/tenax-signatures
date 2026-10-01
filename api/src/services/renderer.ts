@@ -190,7 +190,7 @@ export class Renderer {
     data: SignatureData;
     settings: Settings;
     /** Which design (default design when omitted); its wording overrides apply on top of the company brand. */
-    design?: Pick<Design, 'id' | 'metaOverrides'> & Partial<Pick<Design, 'name' | 'format'>>;
+    design?: Pick<Design, 'id' | 'metaOverrides'> & Partial<Pick<Design, 'name' | 'format' | 'language'>>;
     draft?: { template?: string; meta?: string; metaOverrides?: MetaOverrides };
   }): string {
     const kind = opts.type === 'newMail' ? 'new' : 'reply';
@@ -202,11 +202,13 @@ export class Renderer {
     const meta = validateMeta(metaSrc);
     // A personal closing line replaces the company/design one ('' hides it).
     if (opts.data.greeting != null) meta.greeting = opts.data.greeting;
+    // A design can choose its own job title language (e.g. an English design for foreign clients).
+    const language = opts.design?.language ?? opts.settings.language;
 
     // Image designs: one rendered PNG for new messages and replies alike (Vareno's SVG signature).
     if (opts.design?.format === 'image' && opts.draft?.template == null) {
       if (!this.images) throw new TemplateError('Image designs are not available here');
-      const { greeting: _g, ...d } = applyLanguage(opts.data, opts.settings.language);
+      const { greeting: _g, ...d } = applyLanguage(opts.data, language);
       return this.images.html({
         company: opts.company,
         design: { id: opts.design.id, name: opts.design.name ?? opts.design.id },
@@ -234,7 +236,7 @@ export class Renderer {
       url: toUrl(w.url || w.label),
     }));
     const context = {
-      user: applyLanguage(opts.data, opts.settings.language),
+      user: applyLanguage(opts.data, language),
       company: {
         key: opts.company.key,
         displayName: opts.company.displayName,
