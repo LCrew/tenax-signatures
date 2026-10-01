@@ -315,6 +315,8 @@ export function Designs() {
                     doc={blockDrafts[tab]!}
                     kind={tab}
                     language={activeDesign?.language ?? globalLanguage}
+                    company={active.company.key}
+                    defaultBanner={(wording.banner !== undefined ? wording.banner : meta?.banner)?.file ?? null}
                     colors={meta?.colors ?? {}}
                     onChange={(d) => setBlockDrafts((b) => ({ ...b, [tab]: d }))}
                   />

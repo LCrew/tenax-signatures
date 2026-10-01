@@ -22,9 +22,18 @@ export type Block =
   | { id: string; hidden?: boolean; type: 'text'; text: string; style: BlockStyle }
   | { id: string; hidden?: boolean; type: 'spacer'; height: number }
   | { id: string; hidden?: boolean; type: 'divider'; color: BlockColor; thickness: number; spaceAfter: number }
-  | { id: string; hidden?: boolean; type: 'banner'; spaceAfter: number }
+  | { id: string; hidden?: boolean; type: 'banner'; spaceAfter: number; image?: BannerImage }
   | { id: string; hidden?: boolean; type: 'confidential'; style: BlockStyle };
 export type BlockType = Block['type'];
+
+/** A banner picked for this layout (e.g. the EN or LT promo); without it the design's/company's banner is used. */
+export interface BannerImage {
+  file: string;
+  width: number;
+  height: number;
+  link?: string;
+  alt?: string;
+}
 
 export interface BlockDoc {
   version: 1;
@@ -97,7 +106,7 @@ export const BLOCK_INFO: Record<BlockType, BlockInfo> = {
   text: { label: 'Text', hint: 'Any fixed text you type', repeatable: true, zones: ['main', 'footer'] },
   spacer: { label: 'Space', hint: 'Empty vertical space', repeatable: true, zones: ['main', 'footer'] },
   divider: { label: 'Line', hint: 'Horizontal line', repeatable: true, zones: ['main', 'footer'] },
-  banner: { label: 'Promo banner', hint: 'Chosen in Brand and footer', zones: ['footer'], source: 'Brand' },
+  banner: { label: 'Promo banner', hint: 'Image under the signature, picked below or from this design’s Wording', zones: ['footer'], source: 'Brand' },
   confidential: { label: 'Confidentiality notice', hint: 'Small print from Brand and footer', zones: ['main', 'footer'], source: 'Brand' },
 };
 

@@ -108,3 +108,26 @@ describe('uploaded fonts in visual designs', () => {
     }
   });
 });
+
+describe('banner chosen per layout (language versions)', async () => {
+  const { app } = await makeApp();
+  const IT = { ...mock('test.tenax@tenaxgrupa.lv'), origin: 'https://sig.tenax.lv' };
+  const LT = 'banner-lt-tenapors-e-pasta-banneris-dp-akcija-lt.jpg';
+  const withBanner = (image: object) => doc({ footer: [{ id: 'b', type: 'banner', spaceAfter: 10, image } as any] });
+
+  it('uses the banner picked on the block, with its own link and alt text', async () => {
+    const save = await app.inject({ method: 'POST', url: '/api/admin/templates/tenapors/new', headers: IT, payload: { blocks: withBanner({ file: LT, width: 600, height: 200, link: 'https://www.tenapors.lt', alt: 'Akcija' }) } });
+    expect(save.statusCode).toBe(200);
+    const sig = (await app.inject({ url: '/api/signature?type=newMail', headers: mock('test.lv@tenaxgrupa.lv') })).body;
+    expect(sig).toContain(`<a href="https://www.tenapors.lt" style="text-decoration:none;"><img src="https://sig.tenax.lv/assets/tenapors/${LT}" width="600" height="200" alt="Akcija"`);
+  });
+
+  it('refuses banners that aren’t uploaded for the company, other files, and non-https links', async () => {
+    const post = (image: object) => app.inject({ method: 'POST', url: '/api/admin/templates/tenapors/new', headers: IT, payload: { blocks: withBanner(image) } });
+    expect((await post({ file: 'banner-missing.png', width: 600, height: 200 })).statusCode).toBe(400);
+    expect((await post({ file: 'logo.png', width: 600, height: 200 })).statusCode).toBe(400);
+    expect((await post({ file: '../x/banner-a.png', width: 600, height: 200 })).statusCode).toBe(400);
+    expect((await post({ file: LT, width: 600, height: 200, link: 'javascript:alert(1)' })).statusCode).toBe(400);
+    expect((await post({ file: LT, width: '600;position:fixed', height: 200 })).statusCode).toBe(400);
+  });
+});

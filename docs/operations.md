@@ -105,6 +105,19 @@ an "English" design for foreign clients while Standard stays Latvian. Company ed
 company's designs. English titles aren't in Entra: set them per person in **People** (or people set their own in
 **My signature** when self-service allows it).
 
+## Language versions (LV / EN / LT / EE)
+
+Make one design per language in **Designs › New design** (copy from Standard), e.g. *Standard EN*, *Standard LT*:
+
+- **Wording** tab: that language's closing line, company line and confidentiality notice.
+- **Promo banner** block (in New message and Reply): pick the banner in that language, with its own link and text.
+  Upload the banner images in **Brand and footer** first. "This design's banner" uses the Wording/Brand banner.
+- **Job titles in this design** (above the preview): e.g. English for EN/LT/EE versions.
+- Set each person's default version on their page in **People** (lock it if they shouldn't change it). People can
+  switch for a single email with the **Signatures** button in Outlook.
+
+Layout changes (sizes, fonts, order) are per design, so repeat them in each language version.
+
 ## Roll back a design
 
 **Designs › Versions** lists every saved change to the selected design, newest first: *New message*, *Reply*,

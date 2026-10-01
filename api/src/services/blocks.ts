@@ -87,7 +87,28 @@ const dividerBlock = z.object({
   thickness: z.number().int().min(1).max(6).default(1),
   spaceAfter: z.number().int().min(0).max(48).default(6),
 });
-const bannerBlock = z.object({ id, hidden, type: z.literal('banner'), spaceAfter: z.number().int().min(0).max(48).default(10) });
+const httpsLink = z
+  .string()
+  .max(500)
+  .refine((v) => {
+    try {
+      const u = new URL(v);
+      return u.protocol === 'https:' && !u.username && !u.password;
+    } catch {
+      return false;
+    }
+  }, 'Links must be full https:// addresses');
+/** A banner chosen for this layout (e.g. the LT or EE promo); without it the design/company banner is used. */
+const bannerImage = z
+  .object({
+    file: z.string().regex(/^banner-[a-z0-9._-]{1,64}\.(png|jpe?g|gif)$/i, 'Choose one of the uploaded banners'),
+    width: z.number().int().min(1).max(1200),
+    height: z.number().int().min(1).max(1200),
+    link: z.union([httpsLink, z.literal('')]).optional(),
+    alt: z.string().max(200).optional(),
+  })
+  .strict();
+const bannerBlock = z.object({ id, hidden, type: z.literal('banner'), spaceAfter: z.number().int().min(0).max(48).default(10), image: bannerImage.optional() });
 const confidentialBlock = z.object({ id, hidden, type: z.literal('confidential'), style: styleSchema.default({}) });
 
 export const blockSchema = z.discriminatedUnion('type', [
@@ -262,6 +283,12 @@ function blockRow(doc: BlockDoc, b: Block): string {
   }
   if (b.type === 'divider') {
     return `<tr><td style="padding:0 0 ${b.spaceAfter}px 0;"><table cellpadding="0" cellspacing="0" border="0" role="presentation" width="100%" style="border-collapse:collapse;"><tr><td style="border-top:${b.thickness}px solid ${color(b.color, 'rule')};height:1px;line-height:1px;font-size:1px;">&nbsp;</td></tr></table></td></tr>`;
+  }
+  if (b.type === 'banner' && b.image) {
+    const im = b.image;
+    const img = `<img src="{{@root.meta.assetBase}}${encodeURIComponent(im.file)}" width="${im.width}" height="${im.height}" alt="${literal(im.alt ?? '')}" style="display:block;border:0;width:${im.width}px;max-width:100%;height:auto;">`;
+    const linked = im.link ? `<a href="${literal(im.link)}" style="text-decoration:none;">${img}</a>` : img;
+    return `<tr><td style="padding:0 0 ${b.spaceAfter}px 0;">${linked}</td></tr>`;
   }
   if (b.type === 'banner') {
     return `{{#if meta.bannerUrl}}<tr><td style="padding:0 0 ${b.spaceAfter}px 0;">{{#if meta.banner.link}}<a href="{{meta.banner.link}}" style="text-decoration:none;">{{/if}}<img src="{{meta.bannerUrl}}" width="{{meta.banner.width}}" height="{{meta.banner.height}}" alt="{{meta.banner.alt}}" style="display:block;border:0;width:{{meta.banner.width}}px;max-width:100%;height:auto;">{{#if meta.banner.link}}</a>{{/if}}</td></tr>{{/if}}`;

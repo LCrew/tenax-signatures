@@ -326,7 +326,7 @@ export function WordingForm({
           {value.banner && (
             <input type="url" placeholder="Link when clicked (https://…)" value={value.banner.link ?? ''} onChange={(e) => setTop('banner', { ...value.banner!, link: e.target.value })} />
           )}
-          <span className="xs muted">Upload banners in Brand and footer.</span>
+          <span className="xs muted">Used by Promo banner blocks set to “This design’s banner”. You can also pick a banner on the block itself in New message / Reply. Upload banners in Brand and footer.</span>
         </div>,
         companyMeta?.banner?.file ? companyMeta.banner.file.replace(/^banner-/, '') : '',
       )}

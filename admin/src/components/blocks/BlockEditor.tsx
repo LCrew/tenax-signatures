@@ -43,20 +43,26 @@ interface Props {
   kind: 'new' | 'reply';
   /** Settings › Signature options › Job title language. */
   language?: 'lv' | 'en' | 'bilingual';
+  /** For the banner picker: the company's uploaded banners, and the banner this design uses by default. */
+  company?: string;
+  defaultBanner?: string | null;
 }
 
 /** Visual signature designer: layout + text defaults + ordered blocks with per-block styles. */
-export function BlockEditor({ doc, onChange, colors, kind, language }: Props) {
+export function BlockEditor({ doc, onChange, colors, kind, language, company, defaultBanner }: Props) {
   return (
     <LanguageCtx.Provider value={language}>
+      <BannerCtx.Provider value={{ company, defaultBanner }}>
       <BlockEditorInner doc={doc} onChange={onChange} colors={colors} kind={kind} />
+      </BannerCtx.Provider>
     </LanguageCtx.Provider>
   );
 }
 
 const LanguageCtx = createContext<Props['language']>(undefined);
+const BannerCtx = createContext<Pick<Props, 'company' | 'defaultBanner'>>({});
 
-function BlockEditorInner({ doc, onChange, colors, kind }: Omit<Props, 'language'>) {
+function BlockEditorInner({ doc, onChange, colors, kind }: Omit<Props, 'language' | 'company' | 'defaultBanner'>) {
   const [open, setOpen] = useState<string | null>(null);
   const set = (patch: Partial<BlockDoc>) => onChange({ ...doc, ...patch });
   const families = useAsync(() => api.get<{ family: string; weights: number[] }[]>('/api/admin/fonts/families').catch(() => [])).data ?? [];
@@ -442,9 +448,12 @@ function BlockSettings({ block: b, doc, colors, onChange }: { block: Block; doc:
         </div>
       )}
       {b.type === 'banner' && (
-        <Ctl label="Space after">
-          <Stepper value={b.spaceAfter} min={0} max={48} unit="px" onChange={(v) => onChange({ ...b, spaceAfter: v ?? 0 })} />
-        </Ctl>
+        <>
+          <BannerPicker block={b} onChange={onChange} />
+          <Ctl label="Space after">
+            <Stepper value={b.spaceAfter} min={0} max={48} unit="px" onChange={(v) => onChange({ ...b, spaceAfter: v ?? 0 })} />
+          </Ctl>
+        </>
       )}
 
       {hasStyle(b) && (
@@ -475,6 +484,58 @@ function BlockSettings({ block: b, doc, colors, onChange }: { block: Block; doc:
           </Ctl>
         </>
       )}
+    </div>
+  );
+}
+
+function BannerPicker({ block: b, onChange }: { block: Extract<Block, { type: 'banner' }>; onChange: (b: Block) => void }) {
+  const { company, defaultBanner } = useContext(BannerCtx);
+  const assets = useAsync(
+    () => (company ? api.get<{ name: string; localUrl: string }[]>(`/api/admin/assets/${company}`) : Promise.resolve([])),
+    [company],
+  );
+  const banners = (assets.data ?? []).filter((a) => a.name.startsWith('banner-'));
+  const label = (file: string) => file.replace(/^banner-/, '');
+  const pick = (file: string) => {
+    if (!file) {
+      const { image: _i, ...rest } = b;
+      return onChange(rest);
+    }
+    const img = new Image();
+    img.onload = () => {
+      const width = Math.min(600, img.naturalWidth);
+      const height = Math.max(1, Math.round((img.naturalHeight * width) / img.naturalWidth));
+      onChange({ ...b, image: { link: b.image?.link ?? '', alt: b.image?.alt ?? '', file, width, height } });
+    };
+    img.src = banners.find((x) => x.name === file)?.localUrl ?? '';
+  };
+  const thumb = banners.find((x) => x.name === (b.image?.file ?? defaultBanner))?.localUrl;
+  return (
+    <div className="stack tight">
+      <Ctl label="Banner image" wide>
+        <select value={b.image?.file ?? ''} onChange={(e) => pick(e.target.value)}>
+          <option value="">{defaultBanner ? `This design’s banner (${label(defaultBanner)})` : 'This design’s banner (none set)'}</option>
+          {banners.map((x) => (
+            <option key={x.name} value={x.name}>
+              {label(x.name)}
+            </option>
+          ))}
+        </select>
+      </Ctl>
+      {thumb && <img src={thumb} alt="" style={{ maxWidth: '100%', maxHeight: 90, objectFit: 'contain', alignSelf: 'flex-start', border: '1px solid var(--line)', borderRadius: 4 }} />}
+      {b.image && (
+        <div className="ctl-grid">
+          <Ctl label="Link when clicked">
+            <input type="url" placeholder="https://…" value={b.image.link ?? ''} maxLength={500} onChange={(e) => onChange({ ...b, image: { ...b.image!, link: e.target.value } })} />
+          </Ctl>
+          <Ctl label="Text if images are blocked">
+            <input type="text" value={b.image.alt ?? ''} maxLength={200} onChange={(e) => onChange({ ...b, image: { ...b.image!, alt: e.target.value } })} />
+          </Ctl>
+        </div>
+      )}
+      <p className="xs muted">
+        Pick the banner in this layout’s language, e.g. the English promo in the EN design. Upload banners in Brand and footer.
+      </p>
     </div>
   );
 }

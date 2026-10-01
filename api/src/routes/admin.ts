@@ -610,6 +610,10 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
   /** Latest version plus its visual design (null = hand-written HTML). */
   const withBlocks = (t: ReturnType<typeof ctx.repo.latestTemplate>) => (t ? { ...t, blocks: t.kind === 'meta' ? null : extractBlocks(t.content) } : t);
 
+  const uploadsDir = (company: string) => path.join(ctx.env.dataDir, 'assets', company);
+  const companyAsset = (company: string, file: string) =>
+    !/[\\/]/.test(file) && [path.join(ctx.env.assetsDir, company), uploadsDir(company)].some((d) => fs.existsSync(path.join(d, file)));
+
   app.get('/api/admin/templates', staff(async (_req, _reply, _admin, access) =>
     ctx.repo.listCompanies().filter((c) => access.can(c.key)).map((c) => ({
       company: access.global ? c : { key: c.key, displayName: c.displayName, legalName: c.legalName, priority: c.priority },
@@ -674,7 +678,14 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     if (kind !== 'meta' && raw.content && !access.global) {
       return reply.code(403).send({ error: 'Signature editors can only save visual designs. Ask IT for hand-written HTML changes.' });
     }
-    const body = { note: raw.note, content: raw.blocks ? compileBlocks(blockDocSchema.parse(raw.blocks), kind as 'new' | 'reply') : raw.content! };
+    const doc = raw.blocks ? blockDocSchema.parse(raw.blocks) : null;
+    // A banner chosen on a layout must be one of this company's uploaded/bundled images.
+    for (const blk of doc ? [...doc.main, ...doc.footer] : []) {
+      if (blk.type === 'banner' && blk.image && !companyAsset(company, blk.image.file)) {
+        return reply.code(400).send({ error: `The banner “${blk.image.file.replace(/^banner-/, '')}” isn’t uploaded for this company` });
+      }
+    }
+    const body = { note: raw.note, content: doc ? compileBlocks(doc, kind as 'new' | 'reply') : raw.content! };
     const companyMeta = ctx.repo.latestTemplate(company, 'meta')?.content ?? '{}';
     if (kind === 'meta') {
       validateMeta(body.content);
@@ -814,7 +825,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
 
   // ───────────────────────────── Logo / image assets ─────────────────────────────
 
-  const uploadsDir = (company: string) => path.join(ctx.env.dataDir, 'assets', company);
+
   const safeName = z.string().regex(/^[a-z0-9][a-z0-9._-]{0,63}\.(png|jpe?g|gif)$/i, 'File name: letters, digits, dot, dash; .png/.jpg/.gif');
 
   app.get('/api/admin/assets/:company', staff(async (req, reply, _admin, access) => {

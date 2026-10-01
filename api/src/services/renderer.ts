@@ -255,6 +255,8 @@ export class Renderer {
           websiteUrl: websites[0]?.url ?? '',
         },
         bannerUrl: meta.banner ? asset(meta.banner.file) : '',
+        // For banners chosen per layout (block designer): <assetBase><file>.
+        assetBase: `${base}/assets/${encodeURIComponent(opts.company.key)}/`,
       },
       type: opts.type,
     };
@@ -276,7 +278,7 @@ export function trialRender(template: string, metaSrc: string, kind: 'new' | 're
     fn({
       user: { displayName: 'A', jobTitleLv: 'B', jobTitleEn: 'C', mobilePhone: '+371 20 000 000', officePhone: '+371 60 000 000', email: 'a@example.com', department: 'D' },
       company: { key: 'x', displayName: 'X', legalName: 'X' },
-      meta: { ...meta, colors: { primary: '#000000', ...meta.colors }, logoUrl: 'https://x/a.png', logoWidth: 1, logoHeight: 1, logoAlt: 'X', websites: [{ label: 'x', url: 'https://x' }], footer: { ...meta.footer, websiteUrl: 'https://x' }, bannerUrl: '' },
+      meta: { ...meta, colors: { primary: '#000000', ...meta.colors }, logoUrl: 'https://x/a.png', logoWidth: 1, logoHeight: 1, logoAlt: 'X', websites: [{ label: 'x', url: 'https://x' }], footer: { ...meta.footer, websiteUrl: 'https://x' }, bannerUrl: '', assetBase: 'https://x/assets/x/' },
       type: kind === 'new' ? 'newMail' : 'reply',
     });
   } catch (e: any) {
