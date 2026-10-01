@@ -188,7 +188,8 @@ In **Entra ID → Groups → New group**, create any of these that don't exist y
 | `SG-Signature-TenaxInstall` | SIA "Tenax Install" template | `companies[tenaxinstall].groupId` |
 | `SG-Signature-Vareno` | SIA "Vareno Group" template | `companies[vareno].groupId` |
 | `SG-Signature-Pilot` | Add-in assignment during the pilot | `groups.pilot.groupId` |
-| `SG-Signature-Admins` | Access to the admin UI | `groups.admins.groupId` |
+| `SG-Signature-Admins` | **IT administrators**: full access to the admin console | `groups.admins.groupId` |
+| `SG-Signature-<Company>-Editors` (one per company, e.g. `SG-Signature-Tenapors-Editors`) | **Signature editors** for that company only: its design, brand details and its people's signature data. No other companies, no settings | `companies[<key>].editorGroupId` (or Companies and groups in the console) |
 
 1. Open each group and copy its **Object ID** from Overview. The API matches on **object ID**, never on display name, so renaming a group later is safe.
 2. Nested groups work: the API reads **transitive** memberships (`/users/{id}/transitiveMemberOf`), so an existing department group can be a member of `SG-Signature-Tenax`.

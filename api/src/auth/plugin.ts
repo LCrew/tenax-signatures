@@ -138,3 +138,34 @@ export async function requireAdmin(req: FastifyRequest, reply: FastifyReply, ctx
   }
   return id;
 }
+
+/**
+ * Who may use the admin console, and for which companies.
+ * - global: IT administrators (admins group, or a local break-glass account): everything.
+ * - company editors: members of a company's editors group: that company's people and designs only.
+ */
+export interface Access {
+  identity: Identity;
+  global: boolean;
+  companies: ReadonlySet<string>;
+  can(company: string): boolean;
+}
+
+export async function requireStaff(req: FastifyRequest, reply: FastifyReply, ctx: AppContext): Promise<Access | null> {
+  const id = req.identity;
+  if (!id) {
+    const err = req.authError ?? new AuthError('Sign-in required');
+    reply.code(err.statusCode).send({ error: err.message });
+    return null;
+  }
+  if (id.kind === 'local') return { identity: id, global: true, companies: new Set(), can: () => true };
+  const user = await requireUser(req, reply, ctx);
+  if (!user) return null;
+  if (user.isAdmin) return { identity: id, global: true, companies: new Set(), can: () => true };
+  if (user.editorOf.length) {
+    const companies = new Set(user.editorOf);
+    return { identity: id, global: false, companies, can: (c) => companies.has(c) };
+  }
+  reply.code(403).send({ error: 'You need to be in the IT administrators group or a company’s signature editors group' });
+  return null;
+}

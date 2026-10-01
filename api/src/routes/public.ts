@@ -69,10 +69,11 @@ export function publicRoutes(app: FastifyInstance, ctx: AppContext) {
   app.get('/api/auth/session', async (req, reply) => {
     const id = req.identity;
     if (!id) return reply.code(401).send({ error: req.authError?.message ?? 'Not signed in' });
-    if (id.kind === 'local') return { kind: 'local', name: id.username, isAdmin: true };
+    if (id.kind === 'local') return { kind: 'local', name: id.username, isAdmin: true, editorOf: [] };
     const user = await ctx.resolver.resolve(id.kind === 'entra' ? id.oid : id.upn);
     if (!user) return reply.code(404).send({ error: 'User not found in directory' });
-    return { kind: id.kind, name: user.fields.displayName ?? user.upn, upn: user.upn, isAdmin: user.isAdmin };
+    // isAdmin = IT (everything); editorOf = companies whose people and designs this person may edit.
+    return { kind: id.kind, name: user.fields.displayName ?? user.upn, upn: user.upn, isAdmin: user.isAdmin, editorOf: user.isAdmin ? [] : user.editorOf };
   });
 
   // ─── First launch ───

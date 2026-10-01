@@ -24,6 +24,9 @@ export interface Company {
   groupName: string;
   groupId: string;
   priority: number;
+  /** Members may edit this company's designs and its people's signature data, nothing else. */
+  editorGroupName?: string;
+  editorGroupId?: string;
 }
 
 export interface SharedMailbox {
@@ -87,7 +90,10 @@ export interface ResolvedUser {
   entra: DirectoryUser;
   overrides: Overrides | null;
   missing: string[];
+  /** IT administrators: full access. */
   isAdmin: boolean;
+  /** Company keys this person may manage as a signature editor. */
+  editorOf: string[];
   isPilot: boolean;
 }
 

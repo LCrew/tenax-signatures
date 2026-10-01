@@ -63,7 +63,10 @@ $GraphAppId     = '00000003-0000-0000-c000-000000000000'
 # "Microsoft Office" first-party client: pre-authorises Office on every platform for legacy Office SSO.
 $OfficeClientId = 'ea5a67f6-b6f3-4338-b240-c655ddc3cc8e'
 $GroupNames     = @('SG-Signature-Tenax', 'SG-Signature-Tenapors', 'SG-Signature-TenaxPanel', 'SG-Signature-TenaxInstall',
-                    'SG-Signature-Vareno', 'SG-Signature-Pilot', 'SG-Signature-Admins')
+                    'SG-Signature-Vareno', 'SG-Signature-Pilot', 'SG-Signature-Admins',
+                    # Per-company signature editors: may edit only that company's design and people.
+                    'SG-Signature-Tenax-Editors', 'SG-Signature-Tenapors-Editors', 'SG-Signature-TenaxPanel-Editors',
+                    'SG-Signature-TenaxInstall-Editors', 'SG-Signature-Vareno-Editors')
 $RedirectUris   = @("brk-multihub://$PublicHost", "https://$PublicHost/", 'http://localhost:8085/')
 
 # --- Modules and sign-in -----------------------------------------------------------------------------------

@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Activity, Building2, Gauge, Inbox, LogOut, Menu, PenLine, Settings, UserRound, Users } from 'lucide-react';
 import { api, setMockUser } from '../lib/api';
 import { entraAccount, signOutMicrosoft } from '../lib/auth';
-import { useApp } from '../lib/hooks';
+import { useApp, useCompanies } from '../lib/hooks';
 
 export function Mark({ size = 28 }: { size?: number }) {
   return (
@@ -23,6 +23,8 @@ export async function signOut() {
 
 export function Layout() {
   const { session, config } = useApp();
+  const { companies } = useCompanies();
+  const nameOf = (key: string) => companies.find((c) => c.key === key)?.displayName ?? key;
   const [open, setOpen] = useState(false);
   const loc = useLocation();
   useEffect(() => setOpen(false), [loc.pathname]);
@@ -52,6 +54,8 @@ export function Layout() {
               <UserRound size={17} /> My signature
             </NavLink>
           )}
+          {session?.isAdmin && (
+            <>
           <div className="nav-group-label">Setup</div>
           <NavLink to="/companies">
             <Building2 size={17} /> Companies & groups
@@ -65,9 +69,16 @@ export function Layout() {
           <NavLink to="/activity">
             <Activity size={17} /> Activity
           </NavLink>
+            </>
+          )}
         </nav>
         <div className="sidebar-foot">
           {config.directoryMode === 'mock' && <span className="tag warn">Demo directory</span>}
+          {!session?.isAdmin && (session?.editorOf?.length ?? 0) > 0 && (
+            <span className="tag action" title="You can edit these companies' designs and their people's signature details">
+              Editor: {session!.editorOf!.map(nameOf).join(', ')}
+            </span>
+          )}
           <div>
             <div style={{ color: 'var(--ink)', fontWeight: 600 }}>{session?.name}</div>
             <div className="xs">{session?.kind === 'local' ? 'Local account' : session?.upn}</div>

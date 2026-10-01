@@ -31,6 +31,9 @@ const MIGRATIONS: string[] = [
    CREATE TABLE telemetry (
      id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, upn TEXT, event TEXT NOT NULL, stage TEXT,
      message TEXT, host TEXT, platform TEXT);`,
+  // v2: per-company signature editors (a security group that may edit only that company).
+  `ALTER TABLE companies ADD COLUMN editor_group_name TEXT NOT NULL DEFAULT '';
+   ALTER TABLE companies ADD COLUMN editor_group_id TEXT NOT NULL DEFAULT '';`,
 ];
 
 const now = () => new Date().toISOString();
@@ -78,16 +81,20 @@ export class SqliteRepository implements Repository {
       groupName: r.group_name,
       groupId: r.group_id,
       priority: r.priority,
+      editorGroupName: r.editor_group_name ?? '',
+      editorGroupId: r.editor_group_id ?? '',
     }));
   }
   upsertCompany(c: Company) {
     this.db
       .prepare(
-        `INSERT INTO companies(key, display_name, legal_name, group_name, group_id, priority) VALUES(@key, @displayName, @legalName, @groupName, @groupId, @priority)
+        `INSERT INTO companies(key, display_name, legal_name, group_name, group_id, priority, editor_group_name, editor_group_id)
+         VALUES(@key, @displayName, @legalName, @groupName, @groupId, @priority, @editorGroupName, @editorGroupId)
          ON CONFLICT(key) DO UPDATE SET display_name=excluded.display_name, legal_name=excluded.legal_name,
-           group_name=excluded.group_name, group_id=excluded.group_id, priority=excluded.priority`,
+           group_name=excluded.group_name, group_id=excluded.group_id, priority=excluded.priority,
+           editor_group_name=excluded.editor_group_name, editor_group_id=excluded.editor_group_id`,
       )
-      .run(c);
+      .run({ editorGroupName: '', editorGroupId: '', ...c });
   }
   deleteCompany(key: string) {
     this.db.prepare('DELETE FROM companies WHERE key = ?').run(key);

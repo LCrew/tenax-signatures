@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Undo2 } from 'lucide-react';
 import { api } from '../lib/api';
-import { useAsync, useCompanies, useDebounced, useToast } from '../lib/hooks';
+import { useApp, useAsync, useCompanies, useDebounced, useToast } from '../lib/hooks';
 import { FIELD_LABELS, type ComposeType, type Overrides, type UserDetail } from '../lib/types';
 import { CompanyName, ErrorNote, Loading, PageHead, timeAgo } from '../components/ui';
 import { LetterPreview } from '../components/LetterPreview';
@@ -23,6 +23,7 @@ function entraValue(u: UserDetail, f: TextField): string | null {
 
 export function Person() {
   const { upn = '' } = useParams();
+  const { session } = useApp();
   const toast = useToast();
   const user = useAsync(() => api.get<UserDetail>(`/api/admin/users/${encodeURIComponent(upn)}`), [upn]);
   const { companies } = useCompanies();
@@ -122,7 +123,7 @@ export function Person() {
                 {u.entra.mail ?? u.upn} <span className="xs muted">· always from Entra</span>
               </div>
             </div>
-            <div className="field-row">
+            {session?.isAdmin && <div className="field-row">
               <label className="k" htmlFor="f-company">Company</label>
               <div>
                 <select id="f-company" value={draft.company ?? ''} onChange={(e) => set('company', e.target.value || null)}>
@@ -141,7 +142,7 @@ export function Person() {
                       : 'Set by an admin because they are in no company group.'}
                 </div>
               </div>
-            </div>
+            </div>}
             <div className="field-row">
               <span className="k">Privacy</span>
               <label className="check" style={{ paddingTop: 8 }}>

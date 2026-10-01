@@ -1,15 +1,17 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Download, RefreshCw } from 'lucide-react';
 import { api, download } from '../lib/api';
-import { useAsync, useCompanies, useToast } from '../lib/hooks';
+import { useApp, useAsync, useCompanies, useToast } from '../lib/hooks';
 import { FIELD_LABELS, type Report, type TelemetryEvent } from '../lib/types';
 import { CompanyName, ErrorNote, Loading, PageHead, timeAgo } from '../components/ui';
 
 export function Overview() {
   const toast = useToast();
+  const { session } = useApp();
+  const it = !!session?.isAdmin;
   const nav = useNavigate();
   const report = useAsync(() => api.get<Report>('/api/admin/report'));
-  const telemetry = useAsync(() => api.get<TelemetryEvent[]>('/api/admin/telemetry'));
+  const telemetry = useAsync(() => (it ? api.get<TelemetryEvent[]>('/api/admin/telemetry') : Promise.resolve([] as TelemetryEvent[])), [it]);
   const { companies } = useCompanies();
   const colorOf = (k: string) => companies.find((c) => c.key === k)?.color;
 
@@ -24,7 +26,7 @@ export function Overview() {
         lead="How complete everyone's signature data is. Fix gaps in on-premises AD where you can; corrections here are a stopgap."
         actions={
           <>
-            <button
+            {it && <button
               className="btn"
               onClick={async () => {
                 await api.post('/api/admin/cache/clear');
@@ -33,7 +35,7 @@ export function Overview() {
               }}
             >
               <RefreshCw size={14} /> Refresh from directory
-            </button>
+            </button>}
             <button className="btn primary" onClick={() => download('/api/admin/report.csv', 'signature-report.csv').catch((e) => toast(e.message, 'error'))}>
               <Download size={14} /> Download CSV
             </button>
@@ -151,7 +153,7 @@ export function Overview() {
             </div>
           </section>
 
-          <section>
+          {it && <section>
             <div className="section-title">
               <h2>Outlook add-in errors</h2>
               <p>Last 24 hours</p>
@@ -179,7 +181,7 @@ export function Overview() {
                 </div>
               )}
             </div>
-          </section>
+          </section>}
         </div>
       )}
     </>

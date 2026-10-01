@@ -5,7 +5,7 @@ import { html as htmlLang } from '@codemirror/lang-html';
 import { json as jsonLang } from '@codemirror/lang-json';
 import { FolderSync, History, Plus, RotateCcw, Trash2, Upload } from 'lucide-react';
 import { api } from '../lib/api';
-import { useAsync, useDebounced, useToast } from '../lib/hooks';
+import { useApp, useAsync, useDebounced, useToast } from '../lib/hooks';
 import type { Company, ComposeType, TemplateKind, TemplateVersion, UserSummary } from '../lib/types';
 import { ErrorNote, Field, Loading, Modal, PageHead, Segmented, timeAgo } from '../components/ui';
 import { BlockEditor } from '../components/blocks/BlockEditor';
@@ -57,6 +57,7 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 
 export function Designs() {
   const { company: companyParam } = useParams();
+  const { session } = useApp();
   const nav = useNavigate();
   const toast = useToast();
   const rows = useAsync(() => api.get<Row[]>('/api/admin/templates'));
@@ -168,7 +169,7 @@ export function Designs() {
             <button className="btn" onClick={() => setHistoryOpen(true)}>
               <History size={14} /> Versions
             </button>
-            <button
+            {session?.isAdmin && <button
               className="btn"
               title="Import templates/<company>/* from the server's disk as new versions"
               onClick={async () => {
@@ -178,7 +179,7 @@ export function Designs() {
               }}
             >
               <FolderSync size={14} /> Reload from disk
-            </button>
+            </button>}
           </>
         }
       />

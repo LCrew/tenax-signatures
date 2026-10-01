@@ -146,6 +146,7 @@ export class UserResolver {
       overrides,
       missing,
       isAdmin: !!settings.adminGroupId && lowered.has(settings.adminGroupId.toLowerCase()),
+      editorOf: companies.filter((co) => co.editorGroupId && lowered.has(co.editorGroupId.toLowerCase())).map((co) => co.key),
       isPilot: !!settings.pilotGroupId && lowered.has(settings.pilotGroupId.toLowerCase()),
     };
   }
@@ -161,7 +162,7 @@ export class UserResolver {
     if (!map) {
       map = new Map();
       const groupIds = [
-        ...this.repo.listCompanies().map((c) => c.groupId),
+        ...this.repo.listCompanies().flatMap((c) => [c.groupId, c.editorGroupId ?? '']),
         settings.adminGroupId,
         settings.pilotGroupId,
       ].filter(Boolean);

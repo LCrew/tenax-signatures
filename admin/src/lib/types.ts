@@ -13,7 +13,10 @@ export interface SessionInfo {
   kind: 'local' | 'entra' | 'mock';
   name: string;
   upn?: string;
+  /** IT administrator: everything. */
   isAdmin: boolean;
+  /** Company keys this person may edit as a signature editor. */
+  editorOf?: string[];
 }
 
 export interface Company {
@@ -23,6 +26,8 @@ export interface Company {
   groupName: string;
   groupId: string;
   priority: number;
+  editorGroupName?: string;
+  editorGroupId?: string;
 }
 
 export interface Settings {

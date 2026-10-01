@@ -4,7 +4,7 @@ import path from 'node:path';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { AppContext } from '../context.js';
-import { actorOf, requireAdmin, type Identity } from '../auth/plugin.js';
+import { actorOf, requireStaff, type Access, type Identity } from '../auth/plugin.js';
 import { hashPassword, passwordProblems } from '../auth/local.js';
 import { GraphDiagnosticError, certThumbprintSha256, splitPem } from '../services/directory.js';
 import {
@@ -21,6 +21,7 @@ import { overridePatchSchema } from './signature.js';
 import { renderManifest } from './addin.js';
 
 type Handler = (req: FastifyRequest, reply: FastifyReply, admin: Identity) => Promise<unknown>;
+type StaffHandler = (req: FastifyRequest, reply: FastifyReply, admin: Identity, access: Access) => Promise<unknown>;
 
 const typeSchema = z.enum(['newMail', 'reply', 'forward']).default('newMail');
 const kindSchema = z.enum(['new', 'reply', 'meta']);
@@ -52,17 +53,29 @@ function csvCell(v: unknown): string {
 }
 
 export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
-  const guard = (h: Handler) => async (req: FastifyRequest, reply: FastifyReply) => {
-    const admin = await requireAdmin(req, reply, ctx);
-    if (!admin) return reply;
+  const handleErrors = async (reply: FastifyReply, run: () => Promise<unknown>) => {
     try {
-      return await h(req, reply, admin);
+      return await run();
     } catch (e) {
       if (e instanceof TemplateError) return reply.code(422).send({ error: e.message, line: e.line });
       if (e instanceof z.ZodError) return reply.code(400).send({ error: e.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ') });
       throw e;
     }
   };
+  /** IT administrators only. The default for every admin route. */
+  const guard = (h: Handler) => async (req: FastifyRequest, reply: FastifyReply) => {
+    const access = await requireStaff(req, reply, ctx);
+    if (!access) return reply;
+    if (!access.global) return reply.code(403).send({ error: 'Only IT administrators can do this' });
+    return handleErrors(reply, () => h(req, reply, access.identity));
+  };
+  /** IT administrators and company editors. The handler MUST check access.can(company) for anything it touches. */
+  const staff = (h: StaffHandler) => async (req: FastifyRequest, reply: FastifyReply) => {
+    const access = await requireStaff(req, reply, ctx);
+    if (!access) return reply;
+    return handleErrors(reply, () => h(req, reply, access.identity, access));
+  };
+  const forbidden = (reply: FastifyReply) => reply.code(403).send({ error: 'That company is outside your signature editor rights' });
   const audit = (admin: Identity, action: string, target: string, before: unknown, after: unknown) =>
     ctx.repo.audit(actorOf(admin), action, target, before, after);
 
@@ -79,19 +92,26 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
 
   // ───────────────────────────── Users ─────────────────────────────
 
-  app.get('/api/admin/users', guard(async (req) => {
+  /** A person an editor may see: one whose signature comes from a company they edit. Out of scope = "not found". */
+  async function scopedUser(access: Access, upn: string) {
+    const user = await ctx.resolver.resolve(upn);
+    return user && access.can(user.company) ? user : null;
+  }
+
+  app.get('/api/admin/users', staff(async (req, _reply, _admin, access) => {
     const q = String((req.query as any).search ?? '').trim().toLowerCase();
     const companies = ctx.repo.listCompanies();
     const users = await ctx.resolver.resolveAll();
     return users
+      .filter((u) => access.can(u.company))
       .filter((u) => !q || u.upn.includes(q) || (u.fields.displayName ?? '').toLowerCase().includes(q))
       .sort((a, b) => (a.fields.displayName ?? a.upn).localeCompare(b.fields.displayName ?? b.upn, 'lv'))
       .map((u) => summary(u, companies));
   }));
 
-  app.get('/api/admin/users/:upn', guard(async (req, reply) => {
+  app.get('/api/admin/users/:upn', staff(async (req, reply, _admin, access) => {
     const { upn } = req.params as { upn: string };
-    const user = await ctx.resolver.resolve(upn);
+    const user = await scopedUser(access, upn);
     if (!user) return reply.code(404).send({ error: 'User not found in directory' });
     return {
       ...summary(user, ctx.repo.listCompanies()),
@@ -104,31 +124,34 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     };
   }));
 
-  app.get('/api/admin/users/:upn/preview', guard(async (req, reply) => {
+  app.get('/api/admin/users/:upn/preview', staff(async (req, reply, _admin, access) => {
     const { upn } = req.params as { upn: string };
     const type = typeSchema.parse((req.query as any).type);
-    const user = await ctx.resolver.resolve(upn);
+    const user = await scopedUser(access, upn);
     if (!user) return reply.code(404).send({ error: 'User not found in directory' });
     return reply.type('text/html; charset=utf-8').send(renderFor(req, user, type));
   }));
 
   /** Preview with unsaved corrections applied (Person page). Nothing is stored. */
-  app.post('/api/admin/users/:upn/preview-draft', guard(async (req, reply) => {
+  app.post('/api/admin/users/:upn/preview-draft', staff(async (req, reply, _admin, access) => {
     const { upn } = req.params as { upn: string };
     const body = z.object({ type: typeSchema, overrides: overridePatchSchema.default({}) }).parse(req.body);
-    const user = await ctx.resolver.resolve(upn);
+    const user = await scopedUser(access, upn);
     if (!user) return reply.code(404).send({ error: 'User not found in directory' });
+    if (!access.global && body.overrides.company !== undefined) return reply.code(403).send({ error: 'Only IT administrators can change which company a person belongs to' });
     const merged = { ...(user.overrides ?? { upn: user.upn }), ...body.overrides, upn: user.upn };
     const groupIds = await ctx.resolver.groupIds(user.oid);
     const draftUser = ctx.resolver.build(user.entra, groupIds, merged);
     return reply.type('text/html; charset=utf-8').send(renderFor(req, draftUser, body.type));
   }));
 
-  app.put('/api/admin/users/:upn/overrides', guard(async (req, reply, admin) => {
+  app.put('/api/admin/users/:upn/overrides', staff(async (req, reply, admin, access) => {
     const { upn } = req.params as { upn: string };
     const patch = overridePatchSchema.parse(req.body);
+    // Moving someone to another company would take them out of (or into) an editor's scope: IT only.
+    if (!access.global && patch.company !== undefined) return reply.code(403).send({ error: 'Only IT administrators can change which company a person belongs to' });
     if (patch.company && !findCompany(patch.company)) return reply.code(400).send({ error: `Unknown company ${patch.company}` });
-    const user = await ctx.resolver.resolve(upn);
+    const user = await scopedUser(access, upn);
     if (!user) return reply.code(404).send({ error: 'User not found in directory' });
     const before = ctx.repo.getOverrides(user.upn);
     const next = { ...(before ?? { upn: user.upn }), ...patch, upn: user.upn, updatedBy: actorOf(admin), updatedAt: new Date().toISOString() };
@@ -139,13 +162,13 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
 
   // ───────────────────────────── Report ─────────────────────────────
 
-  async function reportRows() {
+  async function reportRows(access: Access) {
     const companies = ctx.repo.listCompanies();
-    return (await ctx.resolver.resolveAll()).map((u) => summary(u, companies));
+    return (await ctx.resolver.resolveAll()).filter((u) => access.can(u.company)).map((u) => summary(u, companies));
   }
 
-  app.get('/api/admin/report', guard(async () => {
-    const rows = await reportRows();
+  app.get('/api/admin/report', staff(async (_req, _reply, _admin, access) => {
+    const rows = await reportRows(access);
     const byCompany: Record<string, number> = {};
     for (const r of rows) byCompany[r.company] = (byCompany[r.company] ?? 0) + 1;
     const missingByField: Record<string, number> = {};
@@ -162,8 +185,8 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     };
   }));
 
-  app.get('/api/admin/report.csv', guard(async (_req, reply) => {
-    const rows = await reportRows();
+  app.get('/api/admin/report.csv', staff(async (_req, reply, _admin, access) => {
+    const rows = await reportRows(access);
     const header = ['upn', 'displayName', 'company', 'companySource', 'multiGroupConflict', 'conflictingCompanies', 'missingFields', 'overriddenFields'];
     const lines = [header.join(',')];
     for (const r of rows) {
@@ -187,9 +210,14 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     groupName: z.string().trim().min(1).max(256),
     groupId: optionalGuid,
     priority: z.number().int().min(1).max(999),
+    editorGroupName: z.string().trim().max(256).default(''),
+    editorGroupId: optionalGuid.default(''),
   });
 
-  app.get('/api/admin/companies', guard(async () => ctx.repo.listCompanies()));
+  // Editors see only their companies (names for the console); IT sees all, including group mappings.
+  app.get('/api/admin/companies', staff(async (_req, _reply, _admin, access) =>
+    access.global ? ctx.repo.listCompanies() : ctx.repo.listCompanies().filter((c) => access.can(c.key)).map(({ key, displayName, legalName, priority }) => ({ key, displayName, legalName, priority })),
+  ));
 
   app.put('/api/admin/companies/:key', guard(async (req, reply, admin) => {
     const { key } = req.params as { key: string };
@@ -198,6 +226,10 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     const body = companySchema.parse(req.body);
     const clash = ctx.repo.listCompanies().find((c) => c.key !== key && body.groupId && c.groupId.toLowerCase() === body.groupId.toLowerCase());
     if (clash) return reply.code(409).send({ error: `That group is already mapped to ${clash.displayName}` });
+    const s = ctx.settings.get();
+    if (body.editorGroupId && [s.adminGroupId, body.groupId].filter(Boolean).some((g) => g.toLowerCase() === body.editorGroupId.toLowerCase())) {
+      return reply.code(409).send({ error: 'Use a separate group for signature editors, not the company or IT admins group' });
+    }
     const next: Company = { ...before, ...body };
     ctx.repo.upsertCompany(next);
     ctx.resolver.clearCache();
@@ -270,9 +302,9 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
   /** Latest version plus its visual design (null = hand-written HTML). */
   const withBlocks = (t: ReturnType<typeof ctx.repo.latestTemplate>) => (t ? { ...t, blocks: t.kind === 'meta' ? null : extractBlocks(t.content) } : t);
 
-  app.get('/api/admin/templates', guard(async () =>
-    ctx.repo.listCompanies().map((c) => ({
-      company: c,
+  app.get('/api/admin/templates', staff(async (_req, _reply, _admin, access) =>
+    ctx.repo.listCompanies().filter((c) => access.can(c.key)).map((c) => ({
+      company: access.global ? c : { key: c.key, displayName: c.displayName, legalName: c.legalName, priority: c.priority },
       new: withBlocks(ctx.repo.latestTemplate(c.key, 'new')),
       reply: withBlocks(ctx.repo.latestTemplate(c.key, 'reply')),
       meta: ctx.repo.latestTemplate(c.key, 'meta'),
@@ -280,34 +312,36 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
   ));
 
   /** Visual design → its HTML (without the design data), for switching a design to hand-written HTML. */
-  app.post('/api/admin/templates/compile', guard(async (req, reply) => {
+  app.post('/api/admin/templates/compile', staff(async (req, reply) => {
     const body = z.object({ kind: z.enum(['new', 'reply']), blocks: z.unknown() }).parse(req.body);
     return reply.type('text/plain; charset=utf-8').send(stripBlocksHeader(compileBlocks(blockDocSchema.parse(body.blocks), body.kind)));
   }));
 
   /** Starting points for the visual editor. */
-  app.get('/api/admin/templates/presets', guard(async () => ({
+  app.get('/api/admin/templates/presets', staff(async () => ({
     side: presetDoc('side'),
     stacked: presetDoc('stacked'),
     textOnly: presetDoc('textOnly'),
     reply: presetDoc('reply'),
   })));
 
-  app.get('/api/admin/templates/:company/history', guard(async (req) => {
+  app.get('/api/admin/templates/:company/history', staff(async (req, reply, _admin, access) => {
     const { company } = req.params as { company: string };
+    if (!access.can(company)) return forbidden(reply);
     const kind = (req.query as any).kind ? kindSchema.parse((req.query as any).kind) : undefined;
     return ctx.repo.listTemplateVersions(company, kind).map(({ content: _c, ...rest }) => rest);
   }));
 
-  app.get('/api/admin/templates/version/:id', guard(async (req, reply) => {
+  app.get('/api/admin/templates/version/:id', staff(async (req, reply, _admin, access) => {
     const t = ctx.repo.getTemplateVersion(Number((req.params as any).id));
-    return t ?? reply.code(404).send({ error: 'Version not found' });
+    return t && access.can(t.company) ? t : reply.code(404).send({ error: 'Version not found' });
   }));
 
-  app.post('/api/admin/templates/:company/:kind', guard(async (req, reply, admin) => {
+  app.post('/api/admin/templates/:company/:kind', staff(async (req, reply, admin, access) => {
     const { company, kind: rawKind } = req.params as { company: string; kind: string };
     const kind = kindSchema.parse(rawKind);
     if (!findCompany(company)) return reply.code(404).send({ error: 'Unknown company' });
+    if (!access.can(company)) return forbidden(reply);
     const raw = z
       .object({ content: z.string().min(1).max(100_000).optional(), blocks: z.unknown().optional(), note: z.string().max(200).optional() })
       .refine((b) => b.content || b.blocks, 'Send content or blocks')
@@ -324,9 +358,9 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     return saved;
   }));
 
-  app.post('/api/admin/templates/restore/:id', guard(async (req, reply, admin) => {
+  app.post('/api/admin/templates/restore/:id', staff(async (req, reply, admin, access) => {
     const old = ctx.repo.getTemplateVersion(Number((req.params as any).id));
-    if (!old) return reply.code(404).send({ error: 'Version not found' });
+    if (!old || !access.can(old.company)) return reply.code(404).send({ error: 'Version not found' });
     const saved = ctx.repo.addTemplateVersion({ company: old.company, kind: old.kind, content: old.content, note: `Restored from v${old.version}`, createdBy: actorOf(admin) });
     audit(admin, 'template.restore', `template:${old.company}/${old.kind}`, { version: old.version }, { version: saved.version });
     return saved;
@@ -348,13 +382,15 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     blocks: z.unknown().optional(),
     meta: z.string().max(20_000).optional(),
   });
-  app.post('/api/admin/templates/preview', guard(async (req, reply) => {
+  app.post('/api/admin/templates/preview', staff(async (req, reply, _admin, access) => {
     const body = previewSchema.parse(req.body);
     const company = findCompany(body.company);
     if (!company) return reply.code(404).send({ error: 'Unknown company' });
+    if (!access.can(company.key)) return forbidden(reply);
     let data: SignatureData = SAMPLE_PERSON;
     if (body.upn) {
-      const user = await ctx.resolver.resolve(body.upn);
+      // Editors can preview as people of their own companies only (it shows that person's details).
+      const user = await scopedUser(access, body.upn);
       if (!user) return reply.code(404).send({ error: 'User not found in directory' });
       data = signatureDataFor(user);
     }
@@ -368,8 +404,10 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
   const uploadsDir = (company: string) => path.join(ctx.env.dataDir, 'assets', company);
   const safeName = z.string().regex(/^[a-z0-9][a-z0-9._-]{0,63}\.(png|jpe?g|gif)$/i, 'File name: letters, digits, dot, dash; .png/.jpg/.gif');
 
-  app.get('/api/admin/assets/:company', guard(async (req) => {
+  app.get('/api/admin/assets/:company', staff(async (req, reply, _admin, access) => {
     const { company } = req.params as { company: string };
+    if (!findCompany(company)) return reply.code(404).send({ error: 'Unknown company' }); // also blocks ../ in the path below
+    if (!access.can(company)) return forbidden(reply);
     const names = new Set<string>();
     for (const dir of [path.join(ctx.env.assetsDir, company), uploadsDir(company)]) {
       if (fs.existsSync(dir)) for (const f of fs.readdirSync(dir)) if (safeName.safeParse(f).success) names.add(f);
@@ -378,9 +416,10 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     return [...names].sort().map((name) => ({ name, url: `${base}/assets/${company}/${name}`, localUrl: `/assets/${company}/${name}` }));
   }));
 
-  app.post('/api/admin/assets/:company', { bodyLimit: 1_000_000 }, guard(async (req, reply, admin) => {
+  app.post('/api/admin/assets/:company', { bodyLimit: 1_000_000 }, staff(async (req, reply, admin, access) => {
     const { company } = req.params as { company: string };
     if (!findCompany(company)) return reply.code(404).send({ error: 'Unknown company' });
+    if (!access.can(company)) return forbidden(reply);
     const body = z.object({ name: safeName, dataBase64: z.string().max(900_000) }).parse(req.body);
     const buf = Buffer.from(body.dataBase64, 'base64');
     const isPng = buf.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));

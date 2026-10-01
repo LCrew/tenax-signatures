@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactElement } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { api } from './lib/api';
 import { initEntra } from './lib/auth';
@@ -46,7 +46,9 @@ export function App() {
   if (!config) return <Loading what="Starting" />;
 
   const signedIn = !!session;
-  const admin = session?.isAdmin;
+  const admin = session?.isAdmin; // IT administrators
+  const staff = !!admin || (session?.editorOf?.length ?? 0) > 0; // IT or company signature editors
+  const itOnly = (el: ReactElement) => (admin ? el : <Navigate to="/" replace />);
   // First launch: the wizard runs until an admin marks setup finished.
   const inSetup = config.needsFirstAdmin || (signedIn && admin && !config.setupComplete);
 
@@ -58,7 +60,7 @@ export function App() {
             <Route path="/setup/*" element={inSetup ? <Setup /> : <Navigate to="/" replace />} />
             <Route
               path="/login"
-              element={config.needsFirstAdmin ? <Navigate to="/setup" replace /> : signedIn ? <Navigate to={admin ? '/' : '/me'} replace /> : <Login />}
+              element={config.needsFirstAdmin ? <Navigate to="/setup" replace /> : signedIn ? <Navigate to={staff ? '/' : '/me'} replace /> : <Login />}
             />
             {/* Self-service: anyone signed in with Microsoft. Admins also see it inside the console. */}
             <Route
@@ -67,7 +69,7 @@ export function App() {
             />
             <Route
               element={
-                inSetup ? <Navigate to="/setup" replace /> : !signedIn ? <Navigate to="/login" replace /> : !admin ? <Navigate to="/me" replace /> : <Layout />
+                inSetup ? <Navigate to="/setup" replace /> : !signedIn ? <Navigate to="/login" replace /> : !staff ? <Navigate to="/me" replace /> : <Layout />
               }
             >
               <Route index element={<Overview />} />
@@ -75,10 +77,10 @@ export function App() {
               <Route path="people/:upn" element={<Person />} />
               <Route path="designs" element={<Designs />} />
               <Route path="designs/:company" element={<Designs />} />
-              <Route path="companies" element={<Companies />} />
-              <Route path="mailboxes" element={<Mailboxes />} />
-              <Route path="settings" element={<SettingsPage />} />
-              <Route path="activity" element={<ActivityPage />} />
+              <Route path="companies" element={itOnly(<Companies />)} />
+              <Route path="mailboxes" element={itOnly(<Mailboxes />)} />
+              <Route path="settings" element={itOnly(<SettingsPage />)} />
+              <Route path="activity" element={itOnly(<ActivityPage />)} />
               <Route path="my-signature" element={<MySignature embedded />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

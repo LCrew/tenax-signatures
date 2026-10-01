@@ -71,10 +71,36 @@ mailbox's signature with the chosen company design.
 2. **Settings › Entra ID connection** › choose both PEM files › **Test connection** › **Save connection**.
 3. Remove the old certificate from the app registration. **Settings** shows the stored certificate's expiry date.
 
-## Admin access
+## Who can do what
 
-- Microsoft accounts: members of the admins group (Companies and groups › Access groups).
-- Local accounts: **Settings › Local accounts**. Keep at least one as a break-glass login. Sessions last 8 hours.
+| Role | How someone gets it | Can do |
+|---|---|---|
+| **IT administrator** | Member of the IT admins group (Companies and groups › Access groups), or a local account (Settings › Local accounts) | Everything |
+| **Signature editor** for a company | Member of that company's *Signature editors* group (Companies and groups, one per company, e.g. `SG-Signature-Tenapors-Editors`) | That company only: Overview, People (view and correct its people's signature details), Designs (layout, brand and footer, logos and banners, versions) |
+| Everyone else | Signs in with Microsoft | *My signature*: view their own, and edit the fields allowed in Settings › Signature options |
+
+Signature editors **cannot**:
+- see or change other companies or their people;
+- move a person to another company;
+- change companies, groups, shared mailboxes or settings;
+- reload designs from disk, view the activity log or download the add-in manifest.
+
+Every change is recorded under Activity with who made it.
+
+To give a team their company's design: create the group in Entra (the setup script with `-CreateGroups` creates
+`SG-Signature-<Company>-Editors`), add the people, then in **Companies and groups** use **Find** next to *Signature
+editors* and save. New members can edit after their next sign-in (group memberships are cached for up to 30 minutes).
+
+## Remove a company
+
+**Companies and groups** › trash icon on the company › type its name › **Remove company**. Its people get the default
+company's signature until they're in another company group. The default company can't be removed (pick another default
+first), and neither can a company that shared mailboxes still use. Its design versions stay in the database.
+
+## Local accounts
+
+Settings › Local accounts. Local accounts are always IT administrators. Keep at least one as a break-glass login.
+Sessions last 8 hours.
 
 ## Add-in problems
 

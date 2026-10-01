@@ -95,6 +95,8 @@ export function seedIfEmpty(repo: Repository, env: Env, settings: SettingsServic
         groupName: c.groupName,
         groupId: c.groupId,
         priority: c.priority,
+        editorGroupName: c.editorGroupName ?? '',
+        editorGroupId: c.editorGroupId ?? '',
       } satisfies Company);
     }
     settings.update({
@@ -128,6 +130,8 @@ export function seedIfEmpty(repo: Repository, env: Env, settings: SettingsServic
         groupName: c.groupName,
         groupId: c.groupId,
         priority: Math.max(0, ...existing.map((e) => e.priority)) + 1,
+        editorGroupName: c.editorGroupName ?? '',
+        editorGroupId: c.editorGroupId ?? '',
       });
       seeded.add(c.key);
       log(`Added company "${c.key}" from ${env.configDir}/companies.json`);

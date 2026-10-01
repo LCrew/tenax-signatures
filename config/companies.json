@@ -1,5 +1,5 @@
 {
-  "$comment": "Seed values only. On first launch these are imported into the database; afterwards companies and group mappings are edited in the admin UI (Settings → Companies). groupId values are PLACEHOLDERS until the admin fills in the real Entra object IDs.",
+  "$comment": "Seed values only. On first launch these are imported into the database; afterwards companies and group mappings are edited in the admin UI (Settings → Companies). groupId values are PLACEHOLDERS until the admin fills in the real Entra object IDs. editorGroupName/editorGroupId: members may edit only that company's designs and people (set in Companies and groups).",
   "defaultCompany": "tenax",
   "companies": [
     {
@@ -8,7 +8,9 @@
       "legalName": "SIA \"Tenax\"",
       "groupName": "SG-Signature-Tenax",
       "groupId": "00000000-0000-0000-0000-00000000a001",
-      "priority": 1
+      "priority": 1,
+      "editorGroupName": "SG-Signature-Tenax-Editors",
+      "editorGroupId": ""
     },
     {
       "key": "tenapors",
@@ -16,7 +18,9 @@
       "legalName": "SIA \"Tenapors\"",
       "groupName": "SG-Signature-Tenapors",
       "groupId": "00000000-0000-0000-0000-00000000a002",
-      "priority": 2
+      "priority": 2,
+      "editorGroupName": "SG-Signature-Tenapors-Editors",
+      "editorGroupId": "00000000-0000-0000-0000-00000000c002"
     },
     {
       "key": "tenaxpanel",
@@ -24,7 +28,9 @@
       "legalName": "SIA \"Tenax Panel\"",
       "groupName": "SG-Signature-TenaxPanel",
       "groupId": "00000000-0000-0000-0000-00000000a003",
-      "priority": 3
+      "priority": 3,
+      "editorGroupName": "SG-Signature-TenaxPanel-Editors",
+      "editorGroupId": ""
     },
     {
       "key": "tenaxinstall",
@@ -32,7 +38,9 @@
       "legalName": "SIA \"Tenax Install\"",
       "groupName": "SG-Signature-TenaxInstall",
       "groupId": "00000000-0000-0000-0000-00000000a005",
-      "priority": 4
+      "priority": 4,
+      "editorGroupName": "SG-Signature-TenaxInstall-Editors",
+      "editorGroupId": ""
     },
     {
       "key": "vareno",
@@ -40,7 +48,9 @@
       "legalName": "SIA \"Vareno Group\"",
       "groupName": "SG-Signature-Vareno",
       "groupId": "00000000-0000-0000-0000-00000000a004",
-      "priority": 5
+      "priority": 5,
+      "editorGroupName": "SG-Signature-Vareno-Editors",
+      "editorGroupId": ""
     }
   ],
   "groups": {
