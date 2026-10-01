@@ -159,8 +159,15 @@ cache** (or **Overview › Refresh from directory**).
 
 ## Shared mailboxes
 
-**Shared mailboxes**: when a user switches From to one of these, the add-in (`OnMessageFromChanged`) inserts the
-mailbox's signature with the chosen company design.
+**Shared mailboxes**: when someone sends from one of these addresses (switching From, or replying inside the shared
+mailbox), the add-in inserts, per mailbox:
+
+- **The mailbox's signature**: a team signature with the name, company design and phone set here.
+- **Their own signature, with this address**: the sender's personal signature (name, title, phone, design) with
+  the shared address as the email, so replies go back to e.g. support@.
+- **Their own signature**: exactly the sender's personal signature.
+
+Addresses not listed keep the sender's own signature unchanged.
 
 ## Rotate the Entra certificate
 

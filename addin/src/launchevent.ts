@@ -99,11 +99,12 @@ async function applySignature(run: Run, cfg: SigConfig, useFrom: boolean): Promi
   run.stage = "composeType";
   run.composeType = await resolveComposeType(item);
 
+  // The From address picks a shared mailbox's signature (or the sender's own with that mailbox's address).
+  // On From changes it's required; on a new message/reply (e.g. replying inside the support@ mailbox) it's best effort.
   let from: string | undefined;
-  if (useFrom) {
-    run.stage = "from";
-    from = await resolveFromAddress(item);
-  }
+  run.stage = "from";
+  if (useFrom) from = await resolveFromAddress(item);
+  else if (item.itemType === Office.MailboxEnums.ItemType.Message) from = await resolveFromAddress(item).catch(() => undefined);
 
   run.stage = "token";
   const token = await getToken(cfg);

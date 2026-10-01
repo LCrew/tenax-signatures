@@ -18,6 +18,7 @@ import {
   officeAsync,
   readConfig,
   resolveComposeType,
+  resolveFromAddress,
 } from "./shared";
 
 interface DesignItem {
@@ -79,7 +80,8 @@ async function insert(design: DesignItem, button: HTMLButtonElement): Promise<vo
     status(`Inserting ${design.name}…`);
     const item = currentItem();
     const type = await resolveComposeType(item);
-    const html = await fetchSignature(cfg!, token!, type, undefined, design.id);
+    const from = item?.itemType === Office.MailboxEnums.ItemType.Message ? await resolveFromAddress(item).catch(() => undefined) : undefined;
+    const html = await fetchSignature(cfg!, token!, type, from, design.id);
     if (!html.trim()) {
       status("There’s no signature for this account.", "error");
       return;

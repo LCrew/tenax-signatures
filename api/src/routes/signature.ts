@@ -35,10 +35,13 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
     // OnMessageFromChanged: only switch identity for configured shared mailboxes; anything else
     // falls back to the caller's own signature.
     const from = q.from?.trim().toLowerCase();
+    let mailboxEmail: string | null = null;
     if (from && from !== user.upn && from !== user.entra.mail?.toLowerCase()) {
       const mailbox = ctx.repo.getSharedMailbox(from);
       const company = mailbox && companies.find((c) => c.key === mailbox.company);
-      if (mailbox && company) {
+      // Personal signature from a shared address (e.g. answering from support@ as yourself).
+      if (mailbox?.signature === 'senderWithMailboxEmail') mailboxEmail = mailbox.email;
+      if (mailbox && company && (mailbox.signature ?? 'mailbox') === 'mailbox') {
         const html = ctx.renderer.render({ company, type: type.data as ComposeType, data: signatureDataForMailbox(mailbox), settings, design: mailboxDesign(mailbox) });
         return reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-store').send(html);
       }
@@ -49,7 +52,8 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
     const company = companies.find((c) => c.key === user.company);
     if (!company) return reply.code(500).send({ error: `Company "${user.company}" is not configured` });
     try {
-      const html = ctx.renderer.render({ company, type: type.data as ComposeType, data: signatureDataFor(user), settings, design: designFor(user, q.design) });
+      const data = { ...signatureDataFor(user), ...(mailboxEmail ? { email: mailboxEmail } : {}) };
+      const html = ctx.renderer.render({ company, type: type.data as ComposeType, data, settings, design: designFor(user, q.design) });
       return reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-store').send(html);
     } catch (e) {
       // A broken design must never break composing: insert nothing (204) and leave a trace for IT.

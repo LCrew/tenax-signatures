@@ -37,7 +37,17 @@ export interface SharedMailbox {
   officePhone: string | null;
   /** Design to use (e.g. the company's Service design); null = service design if any, else default. */
   design?: string | null;
+  /**
+   * What people sending from this address get:
+   * mailbox: the mailbox's own signature (name above, company, design);
+   * sender: the sender's personal signature, unchanged;
+   * senderWithMailboxEmail: the sender's personal signature with this mailbox's address as the email line.
+   */
+  signature?: MailboxSignature;
 }
+
+export const MAILBOX_SIGNATURES = ['mailbox', 'sender', 'senderWithMailboxEmail'] as const;
+export type MailboxSignature = (typeof MAILBOX_SIGNATURES)[number];
 
 /** Per-design wording that may differ from the company's brand settings (e.g. an English version). */
 export interface MetaOverrides {

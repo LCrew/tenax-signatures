@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Company, Design, Overrides, SharedMailbox, TemplateKind } from '../types.js';
+import { MAILBOX_SIGNATURES, type Company, type Design, type Overrides, type SharedMailbox, type TemplateKind } from '../types.js';
 import type { AuditEntry, Exclusion, LocalAdmin, RenderedImage, Repository, Session, TelemetryEvent, TemplateVersion } from './repository.js';
 
 export const MIGRATIONS: string[] = [
@@ -69,6 +69,9 @@ export const MIGRATIONS: string[] = [
   `ALTER TABLE signature_overrides ADD COLUMN greeting TEXT;`,
   // v7: per-design job title language ('lv' | 'en' | 'bilingual'). NULL = Settings › Signature options.
   `ALTER TABLE designs ADD COLUMN language TEXT;`,
+  // v8: what people sending from a shared mailbox get: the mailbox's signature, their own, or their own with the
+  // mailbox's address. NULL = 'mailbox' (the behaviour before v8).
+  `ALTER TABLE shared_mailboxes ADD COLUMN signature TEXT;`,
 ];
 
 const now = () => new Date().toISOString();
@@ -183,11 +186,12 @@ export class SqliteRepository implements Repository {
   upsertSharedMailbox(m: SharedMailbox) {
     this.db
       .prepare(
-        `INSERT INTO shared_mailboxes(email, company, display_name, office_phone, design) VALUES(@email, @company, @displayName, @officePhone, @design)
+        `INSERT INTO shared_mailboxes(email, company, display_name, office_phone, design, signature)
+         VALUES(@email, @company, @displayName, @officePhone, @design, @signature)
          ON CONFLICT(email) DO UPDATE SET company=excluded.company, display_name=excluded.display_name, office_phone=excluded.office_phone,
-           design=excluded.design`,
+           design=excluded.design, signature=excluded.signature`,
       )
-      .run({ design: null, ...m });
+      .run({ design: null, ...m, signature: m.signature ?? 'mailbox' });
   }
   deleteSharedMailbox(email: string) {
     this.db.prepare('DELETE FROM shared_mailboxes WHERE email = ?').run(email);
@@ -385,7 +389,7 @@ export class SqliteRepository implements Repository {
 }
 
 function mapMailbox(r: any): SharedMailbox {
-  return { email: r.email, company: r.company, displayName: r.display_name, officePhone: r.office_phone, design: r.design ?? null };
+  return { email: r.email, company: r.company, displayName: r.display_name, officePhone: r.office_phone, design: r.design ?? null, signature: MAILBOX_SIGNATURES.includes(r.signature) ? r.signature : 'mailbox' };
 }
 function mapDesign(r: any): Design {
   let metaOverrides = {};

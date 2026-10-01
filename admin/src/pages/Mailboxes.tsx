@@ -7,6 +7,17 @@ import { CompanyName, ErrorNote, Field, Loading, Modal, PageHead } from '../comp
 
 const EMPTY: SharedMailbox = { email: '', company: '', displayName: '', officePhone: '' };
 
+type Mode = NonNullable<SharedMailbox['signature']>;
+const SIGNATURE_MODES: Record<Mode, { label: string; short: string; hint: string }> = {
+  mailbox: { label: 'The mailbox’s signature', short: 'Mailbox', hint: 'A team signature: the name below, the company’s design and this address.' },
+  senderWithMailboxEmail: {
+    label: 'Their own signature, with this address',
+    short: 'Sender’s own, with this address',
+    hint: 'Their name, title and phone, with {email} as the email, so replies come back to the shared mailbox.',
+  },
+  sender: { label: 'Their own signature', short: 'Sender’s own', hint: 'Exactly their personal signature, including their own email address.' },
+};
+
 export function Mailboxes() {
   const toast = useToast();
   const list = useAsync(() => api.get<SharedMailbox[]>('/api/admin/shared-mailboxes'));
@@ -31,7 +42,7 @@ export function Mailboxes() {
     <>
       <PageHead
         title="Shared mailboxes"
-        lead="When someone switches the From address to one of these mailboxes, Outlook swaps in the mailbox's own signature."
+        lead="Choose what people get when they send from one of these addresses: a team signature, or their own (optionally with the shared address). Addresses not listed here keep the sender's own signature."
         actions={
           <button
             className="btn primary"
@@ -56,7 +67,7 @@ export function Mailboxes() {
               <tr>
                 <th>Mailbox</th>
                 <th>Name in signature</th>
-                <th>Company design</th>
+                <th>Signature</th>
                 <th>Phone</th>
                 <th />
               </tr>
@@ -67,9 +78,13 @@ export function Mailboxes() {
                 return (
                   <tr key={m.email} className="clickable" onClick={() => { setIsNew(false); setEditing({ ...m, officePhone: m.officePhone ?? '' }); }}>
                     <td className="name">{m.email}</td>
-                    <td>{m.displayName}</td>
+                    <td>{(m.signature ?? 'mailbox') === 'mailbox' ? m.displayName : <span className="muted">Sender’s own name</span>}</td>
                     <td>
-                      <CompanyName name={c?.displayName ?? m.company} color={c?.color} />
+                      {(m.signature ?? 'mailbox') === 'mailbox' ? (
+                        <CompanyName name={c?.displayName ?? m.company} color={c?.color} />
+                      ) : (
+                        <span className="small">{SIGNATURE_MODES[m.signature!].short}</span>
+                      )}
                     </td>
                     <td>{m.officePhone ?? <span className="muted">none</span>}</td>
                     <td style={{ textAlign: 'right' }}>
@@ -91,6 +106,21 @@ export function Mailboxes() {
             <Field label="Mailbox address">
               <input type="email" value={editing.email} disabled={!isNew} onChange={(e) => setEditing({ ...editing, email: e.target.value })} />
             </Field>
+            <fieldset className="stack tight" style={{ border: 0, padding: 0, margin: 0 }}>
+              <legend className="small" style={{ fontWeight: 600, marginBottom: 6 }}>When someone sends from this address</legend>
+              {(Object.keys(SIGNATURE_MODES) as Mode[]).map((k) => (
+                <label key={k} className="check">
+                  <input type="radio" name="mbx-sig" checked={(editing.signature ?? 'mailbox') === k} onChange={() => setEditing({ ...editing, signature: k })} />
+                  <span>
+                    <strong>{SIGNATURE_MODES[k].label}</strong>
+                    <br />
+                    <span className="muted xs">{SIGNATURE_MODES[k].hint.replace('{email}', editing.email || 'this address')}</span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+            {(editing.signature ?? 'mailbox') === 'mailbox' && (
+            <>
             <Field label="Name in signature" hint="e.g. Tenax klientu serviss">
               <input type="text" value={editing.displayName} onChange={(e) => setEditing({ ...editing, displayName: e.target.value })} />
             </Field>
@@ -107,11 +137,13 @@ export function Mailboxes() {
             <Field label="Phone" hint="Optional">
               <input type="text" value={editing.officePhone ?? ''} onChange={(e) => setEditing({ ...editing, officePhone: e.target.value })} />
             </Field>
+            </>
+            )}
             <div className="row end">
               <button className="btn ghost" onClick={() => setEditing(null)}>
                 Cancel
               </button>
-              <button className="btn primary" onClick={save} disabled={!editing.email || !editing.displayName}>
+              <button className="btn primary" onClick={save} disabled={!editing.email || ((editing.signature ?? 'mailbox') === 'mailbox' && !editing.displayName)}>
                 {isNew ? 'Add mailbox' : 'Save mailbox'}
               </button>
             </div>

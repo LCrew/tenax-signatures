@@ -176,6 +176,8 @@ export interface SharedMailbox {
   displayName: string;
   officePhone: string | null;
   design?: string | null;
+  /** mailbox: the mailbox's own signature; sender: the sender's own; senderWithMailboxEmail: the sender's own with this address. */
+  signature?: 'mailbox' | 'sender' | 'senderWithMailboxEmail';
 }
 
 export interface TelemetryEvent {

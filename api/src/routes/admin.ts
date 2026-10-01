@@ -22,6 +22,7 @@ import { resolveCompany } from '../services/resolver.js';
 import { MAX_SVG_BYTES, PLACEHOLDERS, imageConfigSchema, listTextFields, missingFonts, renderSignaturePng, sanitizeSvg, suggestCrop, type ImageConfig } from '../services/svgsig.js';
 import type { TemplateVersion } from '../db/repository.js';
 import type { Company, ComposeType, Design, MetaOverrides, Overrides, ResolvedUser, TemplateKind } from '../types.js';
+import { MAILBOX_SIGNATURES } from '../types.js';
 import { greetingSchema, overridePatchSchema } from './signature.js';
 import { renderManifest } from './addin.js';
 
@@ -336,10 +337,11 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
   const mailboxSchema = z.object({
     email: z.string().trim().toLowerCase().email(),
     company: z.string(),
-    displayName: z.string().trim().min(1).max(120),
+    displayName: z.string().trim().max(120).default(''),
     officePhone: z.string().trim().max(40).nullable().optional().transform((v) => v || null),
     design: z.string().max(80).nullable().optional().transform((v) => v || null),
-  });
+    signature: z.enum(MAILBOX_SIGNATURES).default('mailbox'),
+  }).refine((m) => m.signature !== 'mailbox' || m.displayName.length > 0, { message: 'Enter the name shown in the mailbox’s signature', path: ['displayName'] });
 
   app.get('/api/admin/shared-mailboxes', guard(async () => ctx.repo.listSharedMailboxes()));
   app.put('/api/admin/shared-mailboxes/:email', guard(async (req, reply, admin) => {

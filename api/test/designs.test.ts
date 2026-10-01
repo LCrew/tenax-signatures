@@ -276,3 +276,36 @@ describe('job title language per design', async () => {
     ctx.settings.update({ language: 'bilingual' });
   });
 });
+
+describe('sending from a shared mailbox as yourself', async () => {
+  const { app } = await makeApp();
+  const MBX = 'support@tenaxgrupa.lv';
+  const put = (payload: object) => app.inject({ method: 'PUT', url: `/api/admin/shared-mailboxes/${MBX}`, headers: IT, payload: { company: 'tenax', ...payload } });
+  const sig = async () => (await app.inject({ url: `/api/signature?type=reply&from=${MBX}`, headers: PANEL })).body;
+  const own = async () => (await app.inject({ url: '/api/signature?type=reply', headers: PANEL })).body;
+
+  it('mailbox (default): the team signature', async () => {
+    expect((await put({ displayName: 'Tenax atbalsts' })).statusCode).toBe(200);
+    const s = await sig();
+    expect(s).toContain('Tenax atbalsts');
+    expect(s).not.toContain('test.panel@tenaxgrupa.lv');
+  });
+
+  it('sender: exactly their own signature', async () => {
+    expect((await put({ signature: 'sender' })).statusCode).toBe(200);
+    expect(await sig()).toBe(await own());
+  });
+
+  it('senderWithMailboxEmail: their own signature with the shared address', async () => {
+    expect((await put({ signature: 'senderWithMailboxEmail' })).statusCode).toBe(200);
+    const s = await sig();
+    expect(s).toContain(`mailto:${MBX}`);
+    expect(s).not.toContain('test.panel@tenaxgrupa.lv');
+    expect(s).toBe((await own()).replaceAll('test.panel@tenaxgrupa.lv', MBX));
+  });
+
+  it('a team signature needs a name; unknown modes are refused', async () => {
+    expect((await put({ signature: 'mailbox', displayName: '' })).statusCode).toBe(400);
+    expect((await put({ signature: 'someoneElse', displayName: 'X' })).statusCode).toBe(400);
+  });
+});
