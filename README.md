@@ -22,8 +22,9 @@ docker compose up -d --build
 docker compose logs signature | grep "Setup code"
 ```
 
-Open http://localhost:8085, enter the code and follow the wizard. The full walkthrough, including HTTPS and the Entra
-app registration, is in **[docs/setup-guide.md](docs/setup-guide.md)**.
+Open http://localhost:8085, enter the code and follow the wizard. The full walkthrough, including the Linux host,
+Cloudflare Tunnel (`docker compose --profile tunnel up -d`) and the Entra app registration, is in
+**[docs/setup-guide.md](docs/setup-guide.md)**.
 
 ## Development
 

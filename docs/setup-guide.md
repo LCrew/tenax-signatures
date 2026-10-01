@@ -43,6 +43,7 @@ The service listens on **port 8085** (container and host). Change `HOST_PORT` in
 Plain `http://<server-ip>:8085` is fine for the setup wizard with the local admin account, but "Sign in with Microsoft"
 won't work there. Before employees use it, put TLS in front:
 
+- **Cloudflare Zero Trust tunnel** (recommended here): see [Cloudflare Tunnel](#cloudflare-tunnel) below.
 - **Existing reverse proxy** (nginx, Traefik, a load balancer): proxy `https://sig.tenaxgrupa.lv` → `http://<host>:8085`,
   and set `TRUST_PROXY=true` in `.env`.
 - **Built-in Caddy** (`--profile tls`): needs ports 80 and 443 free on the host, plus public DNS for `TLS_HOST`.
@@ -51,7 +52,51 @@ For a quick test from your own computer before DNS/TLS exist, tunnel the port so
 `ssh -L 8085:127.0.0.1:8085 user@server`, then open http://localhost:8085. The redirect URI `http://localhost:8085/`
 must be registered on the app (see entra-setup.md step 2).
 
-Updating later: `git pull && docker compose up -d --build`. Data stays in the `sig-data` volume.
+Updating later: `git pull && docker compose up -d --build` (add `--profile tunnel` if you use it). Data stays in the
+`sig-data` volume.
+
+### Cloudflare Tunnel
+
+The tunnel is outbound-only: no inbound ports, no certificates on the host. Cloudflare terminates HTTPS for
+`sig.tenaxgrupa.lv`.
+
+1. **Zero Trust › Networks › Tunnels › Create a tunnel** (type *Cloudflared*), name it e.g. `tenax-signatures`.
+   Copy the token from the install command (the long string after `--token`).
+2. **Public hostname** on that tunnel: subdomain `sig`, domain `tenaxgrupa.lv`, path empty,
+   service **HTTP** `signature:8085`. Use `localhost:8085` instead if you run cloudflared on the host
+   rather than with this compose file.
+3. In `.env` on the server:
+   ```
+   TUNNEL_TOKEN=<token>
+   TRUST_PROXY=true
+   HOST_BIND=127.0.0.1     # optional: only the tunnel (and the host itself) can reach the app
+   PUBLIC_URL=https://sig.tenaxgrupa.lv
+   ```
+4. `docker compose --profile tunnel up -d --build`, then open `https://sig.tenaxgrupa.lv`.
+
+**Cloudflare Access: don't put the whole hostname behind a login.** Outlook clients and **everyone who receives
+your emails** must reach some paths anonymously. Recipients' mail apps download the logos and banners. Outlook loads the
+add-in and calls the API with its own Microsoft token, and can't complete a Cloudflare login. The app already enforces
+its own sign-in (Microsoft / local admin) on everything else.
+
+If you do add an Access application for `sig.tenaxgrupa.lv`, add **Bypass** (Everyone) policies, or separate
+path-scoped Access applications with a Bypass action, for:
+
+| Path | Who calls it |
+|---|---|
+| `/assets/*` | Every email recipient (logos, banners) |
+| `/addin/*` | Outlook (add-in runtime and manifest) |
+| `/.well-known/*` | Classic Outlook (add-in allow-list) |
+| `/api/signature`, `/api/telemetry` | Outlook add-in |
+| `/api/public/config`, `/api/auth/*`, `/api/me*` | Web console sign-in |
+| `/healthz` | Monitoring |
+
+Restricting only the admin pages (`/`, `/people`, `/designs`, …) with Access is possible but adds little, since they
+already require an admins-group Microsoft account or a local admin. A simpler setup is no Access policy on this
+hostname. Optionally, under **Security › WAF**, rate-limit `/api/auth/login`.
+
+Also check that Cloudflare doesn't cache API responses. The app sends `Cache-Control: no-store` on signatures, and the
+default Cloudflare cache rules respect it, so nothing extra is usually needed.
 
 ## 2. Get the setup code
 

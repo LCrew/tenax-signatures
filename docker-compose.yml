@@ -1,5 +1,6 @@
-# Quick start:   cp .env.example .env && docker compose up -d --build && docker compose logs signature
-# With HTTPS:    docker compose --profile tls up -d --build    (needs DNS for TLS_HOST and ports 80/443)
+# Quick start:        cp .env.example .env && docker compose up -d --build && docker compose logs signature
+# Cloudflare Tunnel:  docker compose --profile tunnel up -d --build   (set TUNNEL_TOKEN, see docs/setup-guide.md)
+# Built-in HTTPS:     docker compose --profile tls up -d --build      (needs DNS for TLS_HOST and ports 80/443)
 services:
   signature:
     build: .
@@ -10,9 +11,21 @@ services:
       NODE_ENV: production
       DATA_DIR: /data
     ports:
-      - "${HOST_PORT:-8085}:8085"
+      # HOST_BIND=127.0.0.1 keeps the port off the network when a tunnel/proxy on this host is the only way in.
+      - "${HOST_BIND:-0.0.0.0}:${HOST_PORT:-8085}:8085"
     volumes:
       - sig-data:/data
+
+  # Optional: Cloudflare Zero Trust tunnel. Outbound-only, so no open inbound ports are needed.
+  # In the Zero Trust dashboard, point the public hostname at  http://signature:8085
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    depends_on: [signature]
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}  # Zero Trust › Networks › Tunnels › your tunnel › install command token
 
   # Optional: automatic HTTPS in front of the service. Set TRUST_PROXY=true in .env when using it.
   caddy:
