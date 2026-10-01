@@ -1,34 +1,27 @@
+<!-- sig-blocks:v1:eyJ2ZXJzaW9uIjoxLCJsYXlvdXQiOiJzaWRlIiwibG9nbyI6eyJ2YWxpZ24iOiJ0b3AiLCJnYXAiOjEyfSwiZGl2aWRlciI6eyJzaG93IjpmYWxzZSwiY29sb3IiOiJwcmltYXJ5IiwidGhpY2tuZXNzIjoxfSwiYmFzZSI6eyJmb250IjoiY2FsaWJyaSIsInNpemUiOjksImxpbmVIZWlnaHQiOjEuNTUsImNvbG9yIjoidGV4dCJ9LCJtYXhXaWR0aCI6NTAwLCJncmVldGluZyI6eyJzaG93Ijp0cnVlLCJzdHlsZSI6eyJzaXplIjoxMSwic3BhY2VBZnRlciI6MTJ9fSwibWFpbiI6W3siaWQiOiJuYW1lIiwidHlwZSI6Im5hbWUiLCJzdHlsZSI6eyJzaXplIjoxMiwiYm9sZCI6dHJ1ZSwiY29sb3IiOiJuYW1lIn19LHsiaWQiOiJqb2JUaXRsZUx2IiwidHlwZSI6ImpvYlRpdGxlTHYiLCJzdHlsZSI6eyJzaXplIjoxMSwiY29sb3IiOiJ0aXRsZSJ9fSx7ImlkIjoiam9iVGl0bGVFbiIsInR5cGUiOiJqb2JUaXRsZUVuIiwic3R5bGUiOnsic2l6ZSI6MTAsImNvbG9yIjoibXV0ZWQifX0seyJpZCI6InNwYWNlciIsInR5cGUiOiJzcGFjZXIiLCJoZWlnaHQiOjZ9LHsiaWQiOiJtb2JpbGUiLCJ0eXBlIjoibW9iaWxlIiwibGFiZWwiOiJNOiIsInN0eWxlIjp7fX0seyJpZCI6Im9mZmljZVBob25lIiwidHlwZSI6Im9mZmljZVBob25lIiwibGFiZWwiOiJUOiIsInN0eWxlIjp7fX0seyJpZCI6ImVtYWlsIiwidHlwZSI6ImVtYWlsIiwic3R5bGUiOnsiY29sb3IiOiJwcmltYXJ5In19LHsiaWQiOiJ3ZWJzaXRlcyIsInR5cGUiOiJ3ZWJzaXRlcyIsImFycmFuZ2VtZW50Ijoic3RhY2siLCJzZXBhcmF0b3IiOiIgfCAiLCJzdHlsZSI6eyJjb2xvciI6InByaW1hcnkifX0seyJpZCI6ImNvbXBhbnlMaW5lIiwidHlwZSI6ImNvbXBhbnlMaW5lIiwic3R5bGUiOnt9fSx7ImlkIjoicmVnaXN0cmF0aW9uIiwidHlwZSI6InJlZ2lzdHJhdGlvbiIsImxhYmVsIjoiUmXEoy4gbnIuIiwic3R5bGUiOnt9fSx7ImlkIjoiYWRkcmVzcyIsInR5cGUiOiJhZGRyZXNzIiwic3R5bGUiOnt9fV0sImZvb3RlciI6W3siaWQiOiJiYW5uZXIiLCJ0eXBlIjoiYmFubmVyIiwic3BhY2VBZnRlciI6MTB9LHsiaWQiOiJjb25maWRlbnRpYWwiLCJ0eXBlIjoiY29uZmlkZW50aWFsIiwic3R5bGUiOnsic2l6ZSI6NywiaXRhbGljIjp0cnVlLCJjb2xvciI6Im11dGVkIn19XX0= -->
 <!-- signature:{{company.key}}:new -->
-{{#if meta.greeting}}<p style="margin:0 0 12px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:11pt;color:{{meta.colors.text}};">{{meta.greeting}}</p>{{/if}}
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:{{meta.colors.text}};">
+{{#if meta.greeting}}<p style="margin:0 0 12px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:11pt;line-height:17.1pt;color:{{@root.meta.colors.text}};font-weight:normal">{{meta.greeting}}</p>{{/if}}
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
     <td style="padding:0 12px 0 0;vertical-align:top;"><img src="{{meta.logoUrl}}" width="{{meta.logoWidth}}" height="{{meta.logoHeight}}" alt="{{meta.logoAlt}}" style="display:block;border:0;width:{{meta.logoWidth}}px;height:{{meta.logoHeight}}px;"></td>
-    <td style="padding:0;vertical-align:top;font-size:9pt;line-height:14pt;color:{{meta.colors.text}};">
-            <span style="font-size:12pt;line-height:16pt;font-weight:bold;color:{{meta.colors.name}};">{{user.displayName}}</span><br>
-            {{#if user.jobTitleLv}}<span style="font-size:11pt;line-height:15pt;color:{{meta.colors.title}};">{{user.jobTitleLv}}</span><br>{{/if}}
-            {{#if user.jobTitleEn}}<span style="font-size:10pt;color:{{meta.colors.muted}};">{{user.jobTitleEn}}</span><br>{{/if}}
-            <span style="display:block;height:6px;line-height:6px;font-size:1px;">&nbsp;</span>
-            {{#if user.mobilePhone}}M: <a href="tel:{{tel user.mobilePhone}}" style="color:{{meta.colors.text}};text-decoration:none;">{{user.mobilePhone}}</a><br>{{/if}}
-            {{#if user.officePhone}}T: <a href="tel:{{tel user.officePhone}}" style="color:{{meta.colors.text}};text-decoration:none;">{{user.officePhone}}</a><br>{{/if}}
-            {{#if user.email}}<a href="mailto:{{user.email}}" style="color:{{meta.colors.primary}};text-decoration:none;">{{user.email}}</a><br>{{/if}}
-            {{#each meta.websites}}<a href="{{url}}" style="color:{{@root.meta.colors.primary}};text-decoration:none;">{{label}}</a><br>{{/each}}
-            {{#if meta.footer.companyLine}}<span style="font-size:9pt;">{{meta.footer.companyLine}}</span><br>{{/if}}
-            {{#if meta.footer.registrationNumber}}<span style="font-size:9pt;">Reģ. nr. {{meta.footer.registrationNumber}}</span><br>{{/if}}
-            {{#if meta.footer.address}}<span style="font-size:9pt;">{{meta.footer.address}}</span>{{/if}}
+    <td style="padding:0;vertical-align:top;">
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      {{#if user.displayName}}<tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:12pt;line-height:18.6pt;color:{{@root.meta.colors.name}};font-weight:bold">{{user.displayName}}</td></tr>{{/if}}
+      {{#if user.jobTitleLv}}<tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:11pt;line-height:17.1pt;color:{{@root.meta.colors.title}};font-weight:normal">{{user.jobTitleLv}}</td></tr>{{/if}}
+      {{#if user.jobTitleEn}}<tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:15.5pt;color:{{@root.meta.colors.muted}};font-weight:normal">{{user.jobTitleEn}}</td></tr>{{/if}}
+      <tr><td style="height:6px;line-height:6px;font-size:1px;">&nbsp;</td></tr>
+      {{#if user.mobilePhone}}<tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:9pt;line-height:14pt;color:{{@root.meta.colors.text}};font-weight:normal">M: <a href="tel:{{tel user.mobilePhone}}" style="color:{{@root.meta.colors.text}};text-decoration:none;">{{user.mobilePhone}}</a></td></tr>{{/if}}
+      {{#if user.officePhone}}<tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:9pt;line-height:14pt;color:{{@root.meta.colors.text}};font-weight:normal">T: <a href="tel:{{tel user.officePhone}}" style="color:{{@root.meta.colors.text}};text-decoration:none;">{{user.officePhone}}</a></td></tr>{{/if}}
+      {{#if user.email}}<tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:9pt;line-height:14pt;color:{{@root.meta.colors.primary}};font-weight:normal"><a href="mailto:{{user.email}}" style="color:{{@root.meta.colors.primary}};text-decoration:none;">{{user.email}}</a></td></tr>{{/if}}
+      {{#if meta.websites}}<tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:9pt;line-height:14pt;color:{{@root.meta.colors.primary}};font-weight:normal">{{#each meta.websites}}<a href="{{url}}" style="color:{{@root.meta.colors.primary}};text-decoration:none;">{{label}}</a>{{#unless @last}}<br>{{/unless}}{{/each}}</td></tr>{{/if}}
+      {{#if meta.footer.companyLine}}<tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:9pt;line-height:14pt;color:{{@root.meta.colors.text}};font-weight:normal">{{meta.footer.companyLine}}</td></tr>{{/if}}
+      {{#if meta.footer.registrationNumber}}<tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:9pt;line-height:14pt;color:{{@root.meta.colors.text}};font-weight:normal">Reģ. nr. {{meta.footer.registrationNumber}}</td></tr>{{/if}}
+      {{#if meta.footer.address}}<tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:9pt;line-height:14pt;color:{{@root.meta.colors.text}};font-weight:normal">{{meta.footer.address}}</td></tr>{{/if}}
+    </table>
     </td>
   </tr>
 </table>
-{{#if meta.bannerUrl}}
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;margin-top:10px;">
-  <tr>
-    <td style="padding:10px 0 0 0;">{{#if meta.banner.link}}<a href="{{meta.banner.link}}" style="text-decoration:none;">{{/if}}<img src="{{meta.bannerUrl}}" width="{{meta.banner.width}}" height="{{meta.banner.height}}" alt="{{meta.banner.alt}}" style="display:block;border:0;width:{{meta.banner.width}}px;max-width:100%;height:auto;">{{#if meta.banner.link}}</a>{{/if}}</td>
-  </tr>
-</table>
-{{/if}}
-{{#if meta.footer.confidential}}
 <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;width:100%;max-width:600px;margin-top:10px;">
-  <tr>
-    <td style="padding:5px;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:7pt;line-height:9pt;font-style:italic;color:{{meta.colors.muted}};text-align:justify;">{{meta.footer.confidential}}</td>
-  </tr>
+      {{#if meta.bannerUrl}}<tr><td style="padding:0 0 10px 0;">{{#if meta.banner.link}}<a href="{{meta.banner.link}}" style="text-decoration:none;">{{/if}}<img src="{{meta.bannerUrl}}" width="{{meta.banner.width}}" height="{{meta.banner.height}}" alt="{{meta.banner.alt}}" style="display:block;border:0;width:{{meta.banner.width}}px;max-width:100%;height:auto;">{{#if meta.banner.link}}</a>{{/if}}</td></tr>{{/if}}
+      {{#if meta.footer.confidential}}<tr><td style="padding:0 0 0px 0;text-align:justify;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:7pt;line-height:10.9pt;color:{{@root.meta.colors.muted}};font-weight:normal;font-style:italic">{{meta.footer.confidential}}</td></tr>{{/if}}
 </table>
-{{/if}}

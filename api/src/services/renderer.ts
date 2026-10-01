@@ -2,6 +2,7 @@ import Handlebars from 'handlebars';
 import type { Repository } from '../db/repository.js';
 import type { Company, ComposeType, ResolvedUser, Settings, SharedMailbox } from '../types.js';
 import { telHref } from './phone.js';
+import { stripBlocksHeader } from './blocks.js';
 
 export interface TemplateMeta {
   version?: number;
@@ -94,7 +95,7 @@ export class Renderer {
   private compile(id: number, src: string): Compiled {
     let fn = this.compiled.get(id);
     if (!fn) {
-      fn = hb.compile(src, { noEscape: false, strict: false });
+      fn = hb.compile(stripBlocksHeader(src), { noEscape: false, strict: false });
       this.compiled.set(id, fn);
     }
     return fn;
@@ -117,7 +118,7 @@ export class Renderer {
     let fn: Compiled;
     if (opts.draft?.template != null) {
       validateTemplateSource(opts.draft.template);
-      fn = hb.compile(opts.draft.template);
+      fn = hb.compile(stripBlocksHeader(opts.draft.template));
     } else {
       if (!stored) throw new TemplateError(`No ${kind} template for company ${opts.company.key}`);
       fn = this.compile(stored.id, stored.content);

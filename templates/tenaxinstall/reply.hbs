@@ -1,11 +1,16 @@
+<!-- sig-blocks:v1:eyJ2ZXJzaW9uIjoxLCJsYXlvdXQiOiJ0ZXh0T25seSIsImxvZ28iOnsidmFsaWduIjoidG9wIiwiZ2FwIjo4fSwiZGl2aWRlciI6eyJzaG93Ijp0cnVlLCJjb2xvciI6InByaW1hcnkiLCJ0aGlja25lc3MiOjJ9LCJiYXNlIjp7ImZvbnQiOiJjYWxpYnJpIiwic2l6ZSI6MTAsImxpbmVIZWlnaHQiOjEuMywiY29sb3IiOiJ0ZXh0In0sIm1heFdpZHRoIjo1MDAsImdyZWV0aW5nIjp7InNob3ciOnRydWUsInN0eWxlIjp7fX0sIm1haW4iOlt7ImlkIjoibmFtZS0xMyIsInR5cGUiOiJuYW1lIiwic3R5bGUiOnsic2l6ZSI6MTB9fSx7ImlkIjoiam9iVGl0bGVMdi0xNCIsInR5cGUiOiJqb2JUaXRsZUx2Iiwic3R5bGUiOnsic2l6ZSI6MTAsImNvbG9yIjoibXV0ZWQifX0seyJpZCI6ImNvbXBhbnlMaW5lLTE1IiwidHlwZSI6ImNvbXBhbnlMaW5lIiwic3R5bGUiOnt9fSx7ImlkIjoibW9iaWxlLTE2IiwidHlwZSI6Im1vYmlsZSIsImxhYmVsIjoiTToiLCJzdHlsZSI6e319LHsiaWQiOiJlbWFpbC0xNyIsInR5cGUiOiJlbWFpbCIsInN0eWxlIjp7fX1dLCJmb290ZXIiOltdfQ== -->
 <!-- signature:{{company.key}}:reply -->
-{{#if meta.greeting}}<p style="margin:0 0 12px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:11pt;color:{{meta.colors.text}};">{{meta.greeting}}</p>{{/if}}
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:{{meta.colors.text}};">
+{{#if meta.greeting}}<p style="margin:0 0 12px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:11pt;line-height:14.3pt;color:{{@root.meta.colors.text}};font-weight:normal">{{meta.greeting}}</p>{{/if}}
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
-    <td style="padding:0 0 0 8px;border-left:2px solid {{meta.colors.primary}};">
-      <span style="font-weight:bold;color:{{meta.colors.name}};">{{user.displayName}}</span>{{#if user.jobTitleLv}} <span style="color:{{meta.colors.muted}};">| {{user.jobTitleLv}}</span>{{/if}}<br>
-      {{#if meta.footer.companyLine}}{{meta.footer.companyLine}}{{else}}{{company.displayName}}{{/if}}{{#if user.mobilePhone}} <span style="color:{{meta.colors.muted}};">| M:</span> <a href="tel:{{tel user.mobilePhone}}" style="color:{{meta.colors.text}};text-decoration:none;">{{user.mobilePhone}}</a>{{/if}}<br>
-      {{#if user.email}}<a href="mailto:{{user.email}}" style="color:{{meta.colors.primary}};text-decoration:none;">{{user.email}}</a>{{/if}}
+    <td style="padding:0 0 0 8px;border-left:2px solid {{@root.meta.colors.primary}};">
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      {{#if user.displayName}}<tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:{{@root.meta.colors.name}};font-weight:bold">{{user.displayName}}</td></tr>{{/if}}
+      {{#if user.jobTitleLv}}<tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:{{@root.meta.colors.muted}};font-weight:normal">{{user.jobTitleLv}}</td></tr>{{/if}}
+      {{#if meta.footer.companyLine}}<tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:{{@root.meta.colors.text}};font-weight:normal">{{meta.footer.companyLine}}</td></tr>{{/if}}
+      {{#if user.mobilePhone}}<tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:{{@root.meta.colors.text}};font-weight:normal">M: <a href="tel:{{tel user.mobilePhone}}" style="color:{{@root.meta.colors.text}};text-decoration:none;">{{user.mobilePhone}}</a></td></tr>{{/if}}
+      {{#if user.email}}<tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:{{@root.meta.colors.primary}};font-weight:normal"><a href="mailto:{{user.email}}" style="color:{{@root.meta.colors.primary}};text-decoration:none;">{{user.email}}</a></td></tr>{{/if}}
+    </table>
     </td>
   </tr>
 </table>

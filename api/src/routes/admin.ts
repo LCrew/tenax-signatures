@@ -15,6 +15,7 @@ import {
   type SignatureData,
 } from '../services/renderer.js';
 import { importTemplatesFromDisk } from '../services/settings.js';
+import { blockDocSchema, compileBlocks, extractBlocks, presetDoc, stripBlocksHeader } from '../services/blocks.js';
 import type { Company, ComposeType, ResolvedUser, TemplateKind } from '../types.js';
 import { overridePatchSchema } from './signature.js';
 import { renderManifest } from './addin.js';
@@ -266,14 +267,31 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
 
   // ───────────────────────────── Templates ─────────────────────────────
 
+  /** Latest version plus its visual design (null = hand-written HTML). */
+  const withBlocks = (t: ReturnType<typeof ctx.repo.latestTemplate>) => (t ? { ...t, blocks: t.kind === 'meta' ? null : extractBlocks(t.content) } : t);
+
   app.get('/api/admin/templates', guard(async () =>
     ctx.repo.listCompanies().map((c) => ({
       company: c,
-      new: ctx.repo.latestTemplate(c.key, 'new'),
-      reply: ctx.repo.latestTemplate(c.key, 'reply'),
+      new: withBlocks(ctx.repo.latestTemplate(c.key, 'new')),
+      reply: withBlocks(ctx.repo.latestTemplate(c.key, 'reply')),
       meta: ctx.repo.latestTemplate(c.key, 'meta'),
     })),
   ));
+
+  /** Visual design → its HTML (without the design data), for switching a design to hand-written HTML. */
+  app.post('/api/admin/templates/compile', guard(async (req, reply) => {
+    const body = z.object({ kind: z.enum(['new', 'reply']), blocks: z.unknown() }).parse(req.body);
+    return reply.type('text/plain; charset=utf-8').send(stripBlocksHeader(compileBlocks(blockDocSchema.parse(body.blocks), body.kind)));
+  }));
+
+  /** Starting points for the visual editor. */
+  app.get('/api/admin/templates/presets', guard(async () => ({
+    side: presetDoc('side'),
+    stacked: presetDoc('stacked'),
+    textOnly: presetDoc('textOnly'),
+    reply: presetDoc('reply'),
+  })));
 
   app.get('/api/admin/templates/:company/history', guard(async (req) => {
     const { company } = req.params as { company: string };
@@ -290,7 +308,13 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     const { company, kind: rawKind } = req.params as { company: string; kind: string };
     const kind = kindSchema.parse(rawKind);
     if (!findCompany(company)) return reply.code(404).send({ error: 'Unknown company' });
-    const body = z.object({ content: z.string().min(1).max(100_000), note: z.string().max(200).optional() }).parse(req.body);
+    const raw = z
+      .object({ content: z.string().min(1).max(100_000).optional(), blocks: z.unknown().optional(), note: z.string().max(200).optional() })
+      .refine((b) => b.content || b.blocks, 'Send content or blocks')
+      .parse(req.body);
+    // Visual designs are compiled here, so the stored template is always server-generated, email-safe HTML.
+    if (raw.blocks && kind === 'meta') return reply.code(400).send({ error: 'Brand settings have no visual layout' });
+    const body = { note: raw.note, content: raw.blocks ? compileBlocks(blockDocSchema.parse(raw.blocks), kind as 'new' | 'reply') : raw.content! };
     if (kind === 'meta') validateMeta(body.content);
     else validateTemplateSource(body.content);
     const before = ctx.repo.latestTemplate(company, kind);
@@ -321,6 +345,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     type: typeSchema,
     upn: z.string().optional(),
     template: z.string().max(100_000).optional(),
+    blocks: z.unknown().optional(),
     meta: z.string().max(20_000).optional(),
   });
   app.post('/api/admin/templates/preview', guard(async (req, reply) => {
@@ -333,7 +358,8 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
       if (!user) return reply.code(404).send({ error: 'User not found in directory' });
       data = signatureDataFor(user);
     }
-    const html = ctx.renderer.render({ company, type: body.type, data, settings: previewSettings(req), draft: { template: body.template, meta: body.meta } });
+    const template = body.blocks ? compileBlocks(blockDocSchema.parse(body.blocks), body.type === 'newMail' ? 'new' : 'reply') : body.template;
+    const html = ctx.renderer.render({ company, type: body.type, data, settings: previewSettings(req), draft: { template, meta: body.meta } });
     return reply.type('text/html; charset=utf-8').send(html);
   }));
 

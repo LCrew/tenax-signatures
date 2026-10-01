@@ -7,17 +7,22 @@ import { FolderSync, History, Plus, RotateCcw, Trash2, Upload } from 'lucide-rea
 import { api } from '../lib/api';
 import { useAsync, useDebounced, useToast } from '../lib/hooks';
 import type { Company, ComposeType, TemplateKind, TemplateVersion, UserSummary } from '../lib/types';
-import { ErrorNote, Field, Loading, Modal, PageHead, timeAgo } from '../components/ui';
+import { ErrorNote, Field, Loading, Modal, PageHead, Segmented, timeAgo } from '../components/ui';
+import { BlockEditor } from '../components/blocks/BlockEditor';
+import type { BlockDoc } from '../components/blocks/model';
 import { LetterPreview } from '../components/LetterPreview';
 
 interface Row {
   company: Company;
-  new?: TemplateVersion;
-  reply?: TemplateVersion;
+  new?: TemplateVersion & { blocks?: BlockDoc | null };
+  reply?: TemplateVersion & { blocks?: BlockDoc | null };
   meta?: TemplateVersion;
 }
 type Drafts = Record<TemplateKind, string>;
+type MsgKind = 'new' | 'reply';
+type BlockDrafts = Record<MsgKind, BlockDoc | null>;
 type EditorTab = 'brand' | 'new' | 'reply';
+type Presets = Record<'side' | 'stacked' | 'textOnly' | 'reply', BlockDoc>;
 
 const VARIABLES: [string, string][] = [
   ['{{user.displayName}}', 'Name'],
@@ -48,30 +53,42 @@ const safeParse = (s: string) => {
     return null;
   }
 };
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 export function Designs() {
   const { company: companyParam } = useParams();
   const nav = useNavigate();
   const toast = useToast();
   const rows = useAsync(() => api.get<Row[]>('/api/admin/templates'));
+  const presets = useAsync(() => api.get<Presets>('/api/admin/templates/presets'));
   const users = useAsync(() => api.get<UserSummary[]>('/api/admin/users').catch(() => [] as UserSummary[]));
   const active = rows.data?.find((r) => r.company.key === companyParam) ?? rows.data?.[0];
 
-  const [tab, setTab] = useState<EditorTab>('brand');
+  const [tab, setTab] = useState<EditorTab>('new');
   const [drafts, setDrafts] = useState<Drafts>({ new: '', reply: '', meta: '' });
+  const [blockDrafts, setBlockDrafts] = useState<BlockDrafts>({ new: null, reply: null });
   const [previewType, setPreviewType] = useState<ComposeType>('newMail');
   const [as, setAs] = useState('');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState<string | null>(null);
+  const [toHtml, setToHtml] = useState<MsgKind | null>(null);
+  const [toVisual, setToVisual] = useState<MsgKind | null>(null);
 
   const saved: Drafts = useMemo(
     () => ({ new: active?.new?.content ?? '', reply: active?.reply?.content ?? '', meta: active?.meta?.content ?? '{}' }),
     [active],
   );
-  useEffect(() => setDrafts(saved), [saved]);
-  const dirtyKinds = (Object.keys(drafts) as TemplateKind[]).filter((k) => drafts[k] !== saved[k]);
+  const savedBlocks: BlockDrafts = useMemo(() => ({ new: active?.new?.blocks ?? null, reply: active?.reply?.blocks ?? null }), [active]);
+  useEffect(() => {
+    setDrafts(saved);
+    setBlockDrafts(savedBlocks);
+  }, [saved, savedBlocks]);
+
+  const isDirty = (k: TemplateKind) =>
+    k === 'meta' ? drafts.meta !== saved.meta : blockDrafts[k] ? !same(blockDrafts[k], savedBlocks[k]) : savedBlocks[k] !== null || drafts[k] !== saved[k];
+  const dirtyKinds = (['new', 'reply', 'meta'] as TemplateKind[]).filter(isDirty);
 
   // Keep the preview on the template being edited.
   useEffect(() => {
@@ -79,16 +96,18 @@ export function Designs() {
     if (tab === 'reply') setPreviewType('reply');
   }, [tab]);
 
-  const debounced = useDebounced(drafts, 350);
+  const draftState = useMemo(() => ({ drafts, blockDrafts }), [drafts, blockDrafts]);
+  const debounced = useDebounced(draftState, 300);
+  const previewKind: MsgKind = previewType === 'newMail' ? 'new' : 'reply';
   const preview = useAsync(
     () =>
-      active && debounced.meta // drafts are empty for one render before the saved versions load
+      active && debounced.drafts.meta // drafts are empty for one render before the saved versions load
         ? api.post<string>('/api/admin/templates/preview', {
             company: active.company.key,
             type: previewType,
             upn: as || undefined,
-            template: previewType === 'newMail' ? debounced.new : debounced.reply,
-            meta: debounced.meta,
+            ...(debounced.blockDrafts[previewKind] ? { blocks: debounced.blockDrafts[previewKind] } : { template: debounced.drafts[previewKind] }),
+            meta: debounced.drafts.meta,
           })
         : Promise.resolve(''),
     [active?.company.key, previewType, as, JSON.stringify(debounced)],
@@ -99,12 +118,18 @@ export function Designs() {
     else nav(`/designs/${key}`);
   };
 
+  const discard = () => {
+    setDrafts(saved);
+    setBlockDrafts(savedBlocks);
+  };
+
   async function save() {
     if (!active) return;
     setSaving(true);
     try {
       for (const kind of dirtyKinds) {
-        await api.post(`/api/admin/templates/${active.company.key}/${kind}`, { content: drafts[kind], note: note || undefined });
+        const payload = kind !== 'meta' && blockDrafts[kind] ? { blocks: blockDrafts[kind] } : { content: drafts[kind] };
+        await api.post(`/api/admin/templates/${active.company.key}/${kind}`, { ...payload, note: note || undefined });
       }
       setNote('');
       toast(`Saved. New messages use the ${active.company.displayName} design from now on.`);
@@ -116,11 +141,21 @@ export function Designs() {
     }
   }
 
+  async function convertToHtml(kind: MsgKind) {
+    try {
+      const html = await api.post<string>('/api/admin/templates/compile', { kind, blocks: blockDrafts[kind] });
+      setDrafts((d) => ({ ...d, [kind]: html }));
+      setBlockDrafts((b) => ({ ...b, [kind]: null }));
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    }
+  }
+
   if (rows.error) return <ErrorNote error={rows.error} retry={rows.reload} />;
   if (!rows.data || !active) return <Loading />;
 
   const meta = safeParse(drafts.meta);
-  const tabLabel: Record<EditorTab, string> = { brand: 'Brand and footer', new: 'New message', reply: 'Reply and forward' };
+  const tabLabel: Record<EditorTab, string> = { new: 'New message', reply: 'Reply and forward', brand: 'Brand and footer' };
   const tabKind: Record<EditorTab, TemplateKind> = { brand: 'meta', new: 'new', reply: 'reply' };
 
   return (
@@ -176,46 +211,73 @@ export function Designs() {
               <BrandForm company={active.company} metaText={drafts.meta} meta={meta} onChange={(m) => setDrafts((d) => ({ ...d, meta: m }))} />
             ) : (
               <>
-                <p className="small muted">
-                  {tab === 'new'
-                    ? 'The full signature for new messages and meeting invites.'
-                    : 'A shorter signature for replies and forwards.'}{' '}
-                  Email HTML: tables and inline styles, max 600px wide.
-                </p>
-                <div className="editor">
-                  <CodeMirror
-                    value={drafts[tab]}
-                    height="420px"
-                    extensions={[htmlLang()]}
-                    onChange={(v) => setDrafts((d) => ({ ...d, [tab]: v }))}
-                    basicSetup={{ foldGutter: false, highlightActiveLine: false }}
-                    aria-label={`${tabLabel[tab]} template`}
+                <div className="mode-bar">
+                  <p className="small muted" style={{ flex: '1 1 260px' }}>
+                    {tab === 'new' ? 'The full signature for new messages and meeting invites.' : 'A shorter signature for replies and forwards.'}
+                  </p>
+                  <Segmented<'visual' | 'html'>
+                    label="Editor"
+                    value={blockDrafts[tab] ? 'visual' : 'html'}
+                    options={[
+                      { value: 'visual', label: 'Visual' },
+                      { value: 'html', label: 'HTML' },
+                    ]}
+                    onChange={(m) => {
+                      if (m === 'html' && blockDrafts[tab]) setToHtml(tab);
+                      if (m === 'visual' && !blockDrafts[tab]) {
+                        if (savedBlocks[tab] && drafts[tab] === saved[tab]) setBlockDrafts((b) => ({ ...b, [tab]: savedBlocks[tab] }));
+                        else setToVisual(tab);
+                      }
+                    }}
                   />
                 </div>
-                <details>
-                  <summary className="small" style={{ cursor: 'pointer', fontWeight: 600 }}>
-                    Fields you can use
-                  </summary>
-                  <table className="data" style={{ marginTop: 8 }}>
-                    <tbody>
-                      {VARIABLES.map(([v, label]) => (
-                        <tr key={v}>
-                          <td className="mono xs">{v}</td>
-                          <td className="xs muted">{label}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <p className="xs muted" style={{ marginTop: 8 }}>
-                    Values are always HTML-escaped. Triple braces and scripts are rejected on save.
-                  </p>
-                </details>
+                {blockDrafts[tab] ? (
+                  <BlockEditor
+                    key={`${active.company.key}-${tab}`}
+                    doc={blockDrafts[tab]!}
+                    kind={tab}
+                    colors={meta?.colors ?? {}}
+                    onChange={(d) => setBlockDrafts((b) => ({ ...b, [tab]: d }))}
+                  />
+                ) : (
+                  <>
+                    <p className="xs muted">Email HTML: tables and inline styles, max 600px wide.</p>
+                    <div className="editor">
+                      <CodeMirror
+                        value={drafts[tab]}
+                        height="420px"
+                        extensions={[htmlLang()]}
+                        onChange={(v) => setDrafts((d) => ({ ...d, [tab]: v }))}
+                        basicSetup={{ foldGutter: false, highlightActiveLine: false }}
+                        aria-label={`${tabLabel[tab]} template`}
+                      />
+                    </div>
+                    <details>
+                      <summary className="small" style={{ cursor: 'pointer', fontWeight: 600 }}>
+                        Fields you can use
+                      </summary>
+                      <table className="data" style={{ marginTop: 8 }}>
+                        <tbody>
+                          {VARIABLES.map(([v, label]) => (
+                            <tr key={v}>
+                              <td className="mono xs">{v}</td>
+                              <td className="xs muted">{label}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <p className="xs muted" style={{ marginTop: 8 }}>
+                        Values are always HTML-escaped. Triple braces and scripts are rejected on save.
+                      </p>
+                    </details>
+                  </>
+                )}
               </>
             )}
           </div>
-          <div className="panel-body row" style={{ borderTop: '1px solid var(--line)' }}>
+          <div className="panel-body row save-bar">
             <input type="text" placeholder="What changed? (optional)" value={note} onChange={(e) => setNote(e.target.value)} style={{ flex: '1 1 200px' }} aria-label="Version note" />
-            <button className="btn ghost" disabled={!dirtyKinds.length || saving} onClick={() => setDrafts(saved)}>
+            <button className="btn ghost" disabled={!dirtyKinds.length || saving} onClick={discard}>
               Discard
             </button>
             <button className="btn primary" disabled={!dirtyKinds.length || saving || !!preview.error} onClick={save} title={preview.error ? 'Fix the error shown in the preview first' : undefined}>
@@ -260,6 +322,59 @@ export function Designs() {
             }}
           >
             Discard changes
+          </button>
+        </div>
+      </Modal>
+      <Modal open={!!toHtml} onClose={() => setToHtml(null)} title="Edit this design as HTML?">
+        <p>
+          You'll get the HTML the visual editor produces and can change anything. Once saved as HTML, the visual editor
+          can't read it back; to return, restore an earlier version or start a new visual layout.
+        </p>
+        <div className="row end">
+          <button className="btn ghost" onClick={() => setToHtml(null)}>
+            Stay in Visual
+          </button>
+          <button
+            className="btn primary"
+            onClick={async () => {
+              const k = toHtml!;
+              setToHtml(null);
+              await convertToHtml(k);
+            }}
+          >
+            Edit as HTML
+          </button>
+        </div>
+      </Modal>
+      <Modal open={!!toVisual} onClose={() => setToVisual(null)} title="Start a visual layout">
+        <p>This design is hand-written HTML. Pick a starting layout; it replaces the HTML when you save (the current version stays in Versions).</p>
+        <div className="preset-cards">
+          {(
+            [
+              ['side', 'Logo beside text'],
+              ['stacked', 'Logo above text'],
+              ['textOnly', 'Text only'],
+              ['reply', 'Compact (for replies)'],
+            ] as const
+          ).map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              className="layout-card"
+              disabled={!presets.data}
+              onClick={() => {
+                const kind = toVisual!;
+                setBlockDrafts((b) => ({ ...b, [kind]: structuredClone(presets.data![k]) }));
+                setToVisual(null);
+              }}
+            >
+              <strong style={{ fontSize: 'var(--t-sm)', color: 'var(--ink)' }}>{label}</strong>
+            </button>
+          ))}
+        </div>
+        <div className="row end">
+          <button className="btn ghost" onClick={() => setToVisual(null)}>
+            Keep HTML
           </button>
         </div>
       </Modal>

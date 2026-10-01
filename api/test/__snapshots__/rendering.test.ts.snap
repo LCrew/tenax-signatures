@@ -3,35 +3,45 @@
 exports[`rendered signatures > snapshots > test.install@tenaxgrupa.lv new + reply > new 1`] = `
 "<!-- signature:tenaxinstall:new -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
     <td style="padding:0 12px 0 0;vertical-align:top;"><img src="https://sig.tenax.lv/assets/tenaxinstall/logo.png" width="191" height="142" alt="Tenax Install" style="display:block;border:0;width:191px;height:142px;"></td>
-    <td style="padding:0;vertical-align:top;font-size:9pt;line-height:14pt;color:#002060;">
-            <span style="font-size:12pt;line-height:16pt;font-weight:bold;color:#44546A;">Kārlis Vītols</span><br>
-            <span style="font-size:11pt;line-height:15pt;color:#003366;">Montāžas brigadieris</span><br>
-            
-            <span style="display:block;height:6px;line-height:6px;font-size:1px;">&nbsp;</span>
-            M: <a href="tel:+37126444555" style="color:#002060;text-decoration:none;">+371 26 444 555</a><br>
-            
-            <a href="mailto:test.install@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.install@tenaxgrupa.lv</a><br>
-            <a href="https://www.tenaxinstall.com/" style="color:#002060;text-decoration:none;">www.tenaxinstall.com</a><br>
-            <span style="font-size:9pt;">TENAX INSTALL SIA, TENAX grupa</span><br>
-            
-            <span style="font-size:9pt;">Spodrības iela 1, Dobele, LV-3701, Latvija</span>
+    <td style="padding:0;vertical-align:top;">
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:12pt;line-height:18.6pt;color:#44546A;font-weight:bold">Kārlis Vītols</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:11pt;line-height:17.1pt;color:#003366;font-weight:normal">Montāžas brigadieris</td></tr>
+      
+      <tr><td style="height:6px;line-height:6px;font-size:1px;">&nbsp;</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:9pt;line-height:14pt;color:#002060;font-weight:normal">M: <a href="tel:+37126444555" style="color:#002060;text-decoration:none;">+371 26 444 555</a></td></tr>
+      
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:9pt;line-height:14pt;color:#002060;font-weight:normal"><a href="mailto:test.install@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.install@tenaxgrupa.lv</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:9pt;line-height:14pt;color:#002060;font-weight:normal"><a href="https://www.tenaxinstall.com/" style="color:#002060;text-decoration:none;">www.tenaxinstall.com</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:9pt;line-height:14pt;color:#002060;font-weight:normal">TENAX INSTALL SIA, TENAX grupa</td></tr>
+      
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:9pt;line-height:14pt;color:#002060;font-weight:normal">Spodrības iela 1, Dobele, LV-3701, Latvija</td></tr>
+    </table>
     </td>
   </tr>
+</table>
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;width:100%;max-width:600px;margin-top:10px;">
+      
+      
 </table>"
 `;
 
 exports[`rendered signatures > snapshots > test.install@tenaxgrupa.lv new + reply > reply 1`] = `
 "<!-- signature:tenaxinstall:reply -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
     <td style="padding:0 0 0 8px;border-left:2px solid #002060;">
-      <span style="font-weight:bold;color:#44546A;">Kārlis Vītols</span> <span style="color:#2F5496;">| Montāžas brigadieris</span><br>
-      TENAX INSTALL SIA, TENAX grupa <span style="color:#2F5496;">| M:</span> <a href="tel:+37126444555" style="color:#002060;text-decoration:none;">+371 26 444 555</a><br>
-      <a href="mailto:test.install@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.install@tenaxgrupa.lv</a>
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#44546A;font-weight:bold">Kārlis Vītols</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#2F5496;font-weight:normal">Montāžas brigadieris</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">TENAX INSTALL SIA, TENAX grupa</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">M: <a href="tel:+37126444555" style="color:#002060;text-decoration:none;">+371 26 444 555</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="mailto:test.install@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.install@tenaxgrupa.lv</a></td></tr>
+    </table>
     </td>
   </tr>
 </table>"
@@ -40,35 +50,45 @@ exports[`rendered signatures > snapshots > test.install@tenaxgrupa.lv new + repl
 exports[`rendered signatures > snapshots > test.lv@tenaxgrupa.lv new + reply > new 1`] = `
 "<!-- signature:tenapors:new -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
-    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenapors/logo.png" width="120" height="60" alt="Tenapors" style="display:block;border:0;width:120px;height:60px;"></td>
-    <td style="padding:1px 1px 1px 10px;vertical-align:middle;border-left:1px solid #002060;font-size:10pt;line-height:13pt;color:#002060;">
-            <span style="font-size:12pt;line-height:15pt;font-weight:bold;color:#002060;">Ņikita Āboliņš-Ēķīšūžļģč</span><br>
-            <span style="font-size:11pt;color:#002060;">Kvalitātes speciālists</span><br>
-            
-            <span style="display:block;height:6px;line-height:6px;font-size:1px;">&nbsp;</span>
-            M: <a href="tel:+37122333444" style="color:#002060;text-decoration:none;">+371 22 333 444</a><br>
-            T: <a href="tel:+37167444555" style="color:#002060;text-decoration:none;">+371 67 444 555</a><br>
-            <a href="mailto:test.lv@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.lv@tenaxgrupa.lv</a><br>
-            <a href="https://www.tenapors.lv" style="color:#002060;text-decoration:none;">www.tenapors.lv</a><br>
-            <span style="font-size:10pt;">SIA “TENAPORS”</span><br>
-            
-            <span style="font-size:10pt;">Spodrības iela 1, Dobele, LV-3701, Latvija</span>
+    <td style="padding:0 10px 0 0;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenapors/logo.png" width="120" height="60" alt="Tenapors" style="display:block;border:0;width:120px;height:60px;"></td>
+    <td style="padding:0 0 0 10px;vertical-align:middle;border-left:1px solid #002060;">
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:12pt;line-height:15.6pt;color:#002060;font-weight:bold">Ņikita Āboliņš-Ēķīšūžļģč</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:11pt;line-height:14.3pt;color:#002060;font-weight:normal">Kvalitātes speciālists</td></tr>
+      
+      <tr><td style="height:6px;line-height:6px;font-size:1px;">&nbsp;</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">M: <a href="tel:+37122333444" style="color:#002060;text-decoration:none;">+371 22 333 444</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">T: <a href="tel:+37167444555" style="color:#002060;text-decoration:none;">+371 67 444 555</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="mailto:test.lv@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.lv@tenaxgrupa.lv</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="https://www.tenapors.lv" style="color:#002060;text-decoration:none;">www.tenapors.lv</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">SIA “TENAPORS”</td></tr>
+      
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">Spodrības iela 1, Dobele, LV-3701, Latvija</td></tr>
+    </table>
     </td>
   </tr>
+</table>
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;width:100%;max-width:600px;margin-top:10px;">
+      
+      
 </table>"
 `;
 
 exports[`rendered signatures > snapshots > test.lv@tenaxgrupa.lv new + reply > reply 1`] = `
 "<!-- signature:tenapors:reply -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
     <td style="padding:0 0 0 8px;border-left:2px solid #002060;">
-      <span style="font-weight:bold;color:#002060;">Ņikita Āboliņš-Ēķīšūžļģč</span> <span style="color:#2F5496;">| Kvalitātes speciālists</span><br>
-      SIA “TENAPORS” <span style="color:#2F5496;">| M:</span> <a href="tel:+37122333444" style="color:#002060;text-decoration:none;">+371 22 333 444</a><br>
-      <a href="mailto:test.lv@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.lv@tenaxgrupa.lv</a>
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:bold">Ņikita Āboliņš-Ēķīšūžļģč</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#2F5496;font-weight:normal">Kvalitātes speciālists</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">SIA “TENAPORS”</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">M: <a href="tel:+37122333444" style="color:#002060;text-decoration:none;">+371 22 333 444</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="mailto:test.lv@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.lv@tenaxgrupa.lv</a></td></tr>
+    </table>
     </td>
   </tr>
 </table>"
@@ -77,35 +97,45 @@ exports[`rendered signatures > snapshots > test.lv@tenaxgrupa.lv new + reply > r
 exports[`rendered signatures > snapshots > test.multi@tenaxgrupa.lv new + reply > new 1`] = `
 "<!-- signature:tenax:new -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
-    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenax/logo.png" width="183" height="86" alt="Tenax" style="display:block;border:0;width:183px;height:86px;"></td>
-    <td style="padding:1px 1px 1px 10px;vertical-align:middle;border-left:1px solid #002060;font-size:10pt;line-height:13pt;color:#002060;">
-            <span style="font-size:12pt;line-height:15pt;font-weight:bold;color:#002060;">Mārtiņš Liepa</span><br>
-            <span style="font-size:11pt;color:#002060;">Projektu vadītājs</span><br>
-            
-            <span style="display:block;height:6px;line-height:6px;font-size:1px;">&nbsp;</span>
-            M: <a href="tel:+37129888777" style="color:#002060;text-decoration:none;">+371 29 888 777</a><br>
-            T: <a href="tel:+37167999888" style="color:#002060;text-decoration:none;">+371 67 999 888</a><br>
-            <a href="mailto:test.multi@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.multi@tenaxgrupa.lv</a><br>
-            <a href="https://tenaxpanel.lv" style="color:#002060;text-decoration:none;">www.tenaxpanel.lv</a><br><a href="https://tenapors.lv" style="color:#002060;text-decoration:none;">www.tenapors.lv</a><br>
-            <span style="font-size:10pt;">Sabiedrība ar ierobežotu atbildību “TENAX”</span><br>
-            
-            <span style="font-size:10pt;">Spodrības iela 1, Dobele, LV-3701, Latvija</span>
+    <td style="padding:0 10px 0 0;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenax/logo.png" width="183" height="86" alt="Tenax" style="display:block;border:0;width:183px;height:86px;"></td>
+    <td style="padding:0 0 0 10px;vertical-align:middle;border-left:1px solid #002060;">
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:12pt;line-height:15.6pt;color:#002060;font-weight:bold">Mārtiņš Liepa</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:11pt;line-height:14.3pt;color:#002060;font-weight:normal">Projektu vadītājs</td></tr>
+      
+      <tr><td style="height:6px;line-height:6px;font-size:1px;">&nbsp;</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">M: <a href="tel:+37129888777" style="color:#002060;text-decoration:none;">+371 29 888 777</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">T: <a href="tel:+37167999888" style="color:#002060;text-decoration:none;">+371 67 999 888</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="mailto:test.multi@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.multi@tenaxgrupa.lv</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="https://tenaxpanel.lv" style="color:#002060;text-decoration:none;">www.tenaxpanel.lv</a><br><a href="https://tenapors.lv" style="color:#002060;text-decoration:none;">www.tenapors.lv</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">Sabiedrība ar ierobežotu atbildību “TENAX”</td></tr>
+      
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">Spodrības iela 1, Dobele, LV-3701, Latvija</td></tr>
+    </table>
     </td>
   </tr>
+</table>
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;width:100%;max-width:600px;margin-top:10px;">
+      
+      
 </table>"
 `;
 
 exports[`rendered signatures > snapshots > test.multi@tenaxgrupa.lv new + reply > reply 1`] = `
 "<!-- signature:tenax:reply -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
     <td style="padding:0 0 0 8px;border-left:2px solid #002060;">
-      <span style="font-weight:bold;color:#002060;">Mārtiņš Liepa</span> <span style="color:#2F5496;">| Projektu vadītājs</span><br>
-      Sabiedrība ar ierobežotu atbildību “TENAX” <span style="color:#2F5496;">| M:</span> <a href="tel:+37129888777" style="color:#002060;text-decoration:none;">+371 29 888 777</a><br>
-      <a href="mailto:test.multi@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.multi@tenaxgrupa.lv</a>
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:bold">Mārtiņš Liepa</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#2F5496;font-weight:normal">Projektu vadītājs</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">Sabiedrība ar ierobežotu atbildību “TENAX”</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">M: <a href="tel:+37129888777" style="color:#002060;text-decoration:none;">+371 29 888 777</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="mailto:test.multi@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.multi@tenaxgrupa.lv</a></td></tr>
+    </table>
     </td>
   </tr>
 </table>"
@@ -114,35 +144,45 @@ exports[`rendered signatures > snapshots > test.multi@tenaxgrupa.lv new + reply 
 exports[`rendered signatures > snapshots > test.nogroup@tenaxgrupa.lv new + reply > new 1`] = `
 "<!-- signature:tenax:new -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
-    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenax/logo.png" width="183" height="86" alt="Tenax" style="display:block;border:0;width:183px;height:86px;"></td>
-    <td style="padding:1px 1px 1px 10px;vertical-align:middle;border-left:1px solid #002060;font-size:10pt;line-height:13pt;color:#002060;">
-            <span style="font-size:12pt;line-height:15pt;font-weight:bold;color:#002060;">Ilze Priede</span><br>
-            <span style="font-size:11pt;color:#002060;">Asistente</span><br>
-            
-            <span style="display:block;height:6px;line-height:6px;font-size:1px;">&nbsp;</span>
-            M: <a href="tel:+37129000111" style="color:#002060;text-decoration:none;">+371 29 000 111</a><br>
-            T: <a href="tel:+37167000111" style="color:#002060;text-decoration:none;">+371 67 000 111</a><br>
-            <a href="mailto:test.nogroup@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.nogroup@tenaxgrupa.lv</a><br>
-            <a href="https://tenaxpanel.lv" style="color:#002060;text-decoration:none;">www.tenaxpanel.lv</a><br><a href="https://tenapors.lv" style="color:#002060;text-decoration:none;">www.tenapors.lv</a><br>
-            <span style="font-size:10pt;">Sabiedrība ar ierobežotu atbildību “TENAX”</span><br>
-            
-            <span style="font-size:10pt;">Spodrības iela 1, Dobele, LV-3701, Latvija</span>
+    <td style="padding:0 10px 0 0;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenax/logo.png" width="183" height="86" alt="Tenax" style="display:block;border:0;width:183px;height:86px;"></td>
+    <td style="padding:0 0 0 10px;vertical-align:middle;border-left:1px solid #002060;">
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:12pt;line-height:15.6pt;color:#002060;font-weight:bold">Ilze Priede</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:11pt;line-height:14.3pt;color:#002060;font-weight:normal">Asistente</td></tr>
+      
+      <tr><td style="height:6px;line-height:6px;font-size:1px;">&nbsp;</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">M: <a href="tel:+37129000111" style="color:#002060;text-decoration:none;">+371 29 000 111</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">T: <a href="tel:+37167000111" style="color:#002060;text-decoration:none;">+371 67 000 111</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="mailto:test.nogroup@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.nogroup@tenaxgrupa.lv</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="https://tenaxpanel.lv" style="color:#002060;text-decoration:none;">www.tenaxpanel.lv</a><br><a href="https://tenapors.lv" style="color:#002060;text-decoration:none;">www.tenapors.lv</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">Sabiedrība ar ierobežotu atbildību “TENAX”</td></tr>
+      
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">Spodrības iela 1, Dobele, LV-3701, Latvija</td></tr>
+    </table>
     </td>
   </tr>
+</table>
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;width:100%;max-width:600px;margin-top:10px;">
+      
+      
 </table>"
 `;
 
 exports[`rendered signatures > snapshots > test.nogroup@tenaxgrupa.lv new + reply > reply 1`] = `
 "<!-- signature:tenax:reply -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
     <td style="padding:0 0 0 8px;border-left:2px solid #002060;">
-      <span style="font-weight:bold;color:#002060;">Ilze Priede</span> <span style="color:#2F5496;">| Asistente</span><br>
-      Sabiedrība ar ierobežotu atbildību “TENAX” <span style="color:#2F5496;">| M:</span> <a href="tel:+37129000111" style="color:#002060;text-decoration:none;">+371 29 000 111</a><br>
-      <a href="mailto:test.nogroup@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.nogroup@tenaxgrupa.lv</a>
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:bold">Ilze Priede</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#2F5496;font-weight:normal">Asistente</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">Sabiedrība ar ierobežotu atbildību “TENAX”</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">M: <a href="tel:+37129000111" style="color:#002060;text-decoration:none;">+371 29 000 111</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="mailto:test.nogroup@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.nogroup@tenaxgrupa.lv</a></td></tr>
+    </table>
     </td>
   </tr>
 </table>"
@@ -151,35 +191,45 @@ exports[`rendered signatures > snapshots > test.nogroup@tenaxgrupa.lv new + repl
 exports[`rendered signatures > snapshots > test.panel@tenaxgrupa.lv new + reply > new 1`] = `
 "<!-- signature:tenaxpanel:new -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
     <td style="padding:0 12px 0 0;vertical-align:top;"><img src="https://sig.tenax.lv/assets/tenaxpanel/logo.png" width="210" height="142" alt="Tenax Panel" style="display:block;border:0;width:210px;height:142px;"></td>
-    <td style="padding:0;vertical-align:top;font-size:9pt;line-height:14pt;color:#002060;">
-            <span style="font-size:12pt;line-height:16pt;font-weight:bold;color:#002060;">Pēteris Kalniņš</span><br>
-            <span style="font-size:11pt;line-height:15pt;color:#003366;">Tehniskais direktors</span><br>
-            <span style="font-size:10pt;color:#2F5496;">Technical Director</span><br>
-            <span style="display:block;height:6px;line-height:6px;font-size:1px;">&nbsp;</span>
-            M: <a href="tel:+37120111222" style="color:#002060;text-decoration:none;">+371 20 111 222</a><br>
-            
-            <a href="mailto:test.panel@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.panel@tenaxgrupa.lv</a><br>
-            <a href="https://www.tenaxpanel.com/" style="color:#002060;text-decoration:none;">www.tenaxpanel.com</a><br>
-            <span style="font-size:9pt;">TENAX PANEL SIA, TENAX grupa</span><br>
-            
-            <span style="font-size:9pt;">Spodrības iela 1, Dobele, LV-3701, Latvija</span>
+    <td style="padding:0;vertical-align:top;">
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:12pt;line-height:18.6pt;color:#002060;font-weight:bold">Pēteris Kalniņš</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:11pt;line-height:17.1pt;color:#003366;font-weight:normal">Tehniskais direktors</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:15.5pt;color:#2F5496;font-weight:normal">Technical Director</td></tr>
+      <tr><td style="height:6px;line-height:6px;font-size:1px;">&nbsp;</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:9pt;line-height:14pt;color:#002060;font-weight:normal">M: <a href="tel:+37120111222" style="color:#002060;text-decoration:none;">+371 20 111 222</a></td></tr>
+      
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:9pt;line-height:14pt;color:#002060;font-weight:normal"><a href="mailto:test.panel@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.panel@tenaxgrupa.lv</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:9pt;line-height:14pt;color:#002060;font-weight:normal"><a href="https://www.tenaxpanel.com/" style="color:#002060;text-decoration:none;">www.tenaxpanel.com</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:9pt;line-height:14pt;color:#002060;font-weight:normal">TENAX PANEL SIA, TENAX grupa</td></tr>
+      
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:9pt;line-height:14pt;color:#002060;font-weight:normal">Spodrības iela 1, Dobele, LV-3701, Latvija</td></tr>
+    </table>
     </td>
   </tr>
+</table>
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;width:100%;max-width:600px;margin-top:10px;">
+      
+      
 </table>"
 `;
 
 exports[`rendered signatures > snapshots > test.panel@tenaxgrupa.lv new + reply > reply 1`] = `
 "<!-- signature:tenaxpanel:reply -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
     <td style="padding:0 0 0 8px;border-left:2px solid #002060;">
-      <span style="font-weight:bold;color:#002060;">Pēteris Kalniņš</span> <span style="color:#2F5496;">| Tehniskais direktors</span><br>
-      TENAX PANEL SIA, TENAX grupa <span style="color:#2F5496;">| M:</span> <a href="tel:+37120111222" style="color:#002060;text-decoration:none;">+371 20 111 222</a><br>
-      <a href="mailto:test.panel@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.panel@tenaxgrupa.lv</a>
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:bold">Pēteris Kalniņš</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#2F5496;font-weight:normal">Tehniskais direktors</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">TENAX PANEL SIA, TENAX grupa</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">M: <a href="tel:+37120111222" style="color:#002060;text-decoration:none;">+371 20 111 222</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="mailto:test.panel@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.panel@tenaxgrupa.lv</a></td></tr>
+    </table>
     </td>
   </tr>
 </table>"
@@ -188,35 +238,45 @@ exports[`rendered signatures > snapshots > test.panel@tenaxgrupa.lv new + reply 
 exports[`rendered signatures > snapshots > test.tenapors@tenaxgrupa.lv new + reply > new 1`] = `
 "<!-- signature:tenapors:new -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
-    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenapors/logo.png" width="120" height="60" alt="Tenapors" style="display:block;border:0;width:120px;height:60px;"></td>
-    <td style="padding:1px 1px 1px 10px;vertical-align:middle;border-left:1px solid #002060;font-size:10pt;line-height:13pt;color:#002060;">
-            <span style="font-size:12pt;line-height:15pt;font-weight:bold;color:#002060;">Anna Bērziņa</span><br>
-            
-            
-            <span style="display:block;height:6px;line-height:6px;font-size:1px;">&nbsp;</span>
-            M: <a href="tel:+37126555444" style="color:#002060;text-decoration:none;">+371 26 555 444</a><br>
-            T: <a href="tel:+37167000222" style="color:#002060;text-decoration:none;">+371 67 000 222</a><br>
-            <a href="mailto:test.tenapors@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.tenapors@tenaxgrupa.lv</a><br>
-            <a href="https://www.tenapors.lv" style="color:#002060;text-decoration:none;">www.tenapors.lv</a><br>
-            <span style="font-size:10pt;">SIA “TENAPORS”</span><br>
-            
-            <span style="font-size:10pt;">Spodrības iela 1, Dobele, LV-3701, Latvija</span>
+    <td style="padding:0 10px 0 0;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenapors/logo.png" width="120" height="60" alt="Tenapors" style="display:block;border:0;width:120px;height:60px;"></td>
+    <td style="padding:0 0 0 10px;vertical-align:middle;border-left:1px solid #002060;">
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:12pt;line-height:15.6pt;color:#002060;font-weight:bold">Anna Bērziņa</td></tr>
+      
+      
+      <tr><td style="height:6px;line-height:6px;font-size:1px;">&nbsp;</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">M: <a href="tel:+37126555444" style="color:#002060;text-decoration:none;">+371 26 555 444</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">T: <a href="tel:+37167000222" style="color:#002060;text-decoration:none;">+371 67 000 222</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="mailto:test.tenapors@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.tenapors@tenaxgrupa.lv</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="https://www.tenapors.lv" style="color:#002060;text-decoration:none;">www.tenapors.lv</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">SIA “TENAPORS”</td></tr>
+      
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">Spodrības iela 1, Dobele, LV-3701, Latvija</td></tr>
+    </table>
     </td>
   </tr>
+</table>
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;width:100%;max-width:600px;margin-top:10px;">
+      
+      
 </table>"
 `;
 
 exports[`rendered signatures > snapshots > test.tenapors@tenaxgrupa.lv new + reply > reply 1`] = `
 "<!-- signature:tenapors:reply -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
     <td style="padding:0 0 0 8px;border-left:2px solid #002060;">
-      <span style="font-weight:bold;color:#002060;">Anna Bērziņa</span><br>
-      SIA “TENAPORS” <span style="color:#2F5496;">| M:</span> <a href="tel:+37126555444" style="color:#002060;text-decoration:none;">+371 26 555 444</a><br>
-      <a href="mailto:test.tenapors@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.tenapors@tenaxgrupa.lv</a>
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:bold">Anna Bērziņa</td></tr>
+      
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">SIA “TENAPORS”</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">M: <a href="tel:+37126555444" style="color:#002060;text-decoration:none;">+371 26 555 444</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="mailto:test.tenapors@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.tenapors@tenaxgrupa.lv</a></td></tr>
+    </table>
     </td>
   </tr>
 </table>"
@@ -225,35 +285,45 @@ exports[`rendered signatures > snapshots > test.tenapors@tenaxgrupa.lv new + rep
 exports[`rendered signatures > snapshots > test.tenax@tenaxgrupa.lv new + reply > new 1`] = `
 "<!-- signature:tenax:new -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
-    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenax/logo.png" width="183" height="86" alt="Tenax" style="display:block;border:0;width:183px;height:86px;"></td>
-    <td style="padding:1px 1px 1px 10px;vertical-align:middle;border-left:1px solid #002060;font-size:10pt;line-height:13pt;color:#002060;">
-            <span style="font-size:12pt;line-height:15pt;font-weight:bold;color:#002060;">Jānis Testeris</span><br>
-            <span style="font-size:11pt;color:#002060;">Pārdošanas vadītājs</span><br>
-            
-            <span style="display:block;height:6px;line-height:6px;font-size:1px;">&nbsp;</span>
-            M: <a href="tel:+37129123456" style="color:#002060;text-decoration:none;">+371 29 123 456</a><br>
-            T: <a href="tel:+37167123456" style="color:#002060;text-decoration:none;">+371 67 123 456</a><br>
-            <a href="mailto:test.tenax@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.tenax@tenaxgrupa.lv</a><br>
-            <a href="https://tenaxpanel.lv" style="color:#002060;text-decoration:none;">www.tenaxpanel.lv</a><br><a href="https://tenapors.lv" style="color:#002060;text-decoration:none;">www.tenapors.lv</a><br>
-            <span style="font-size:10pt;">Sabiedrība ar ierobežotu atbildību “TENAX”</span><br>
-            
-            <span style="font-size:10pt;">Spodrības iela 1, Dobele, LV-3701, Latvija</span>
+    <td style="padding:0 10px 0 0;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenax/logo.png" width="183" height="86" alt="Tenax" style="display:block;border:0;width:183px;height:86px;"></td>
+    <td style="padding:0 0 0 10px;vertical-align:middle;border-left:1px solid #002060;">
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:12pt;line-height:15.6pt;color:#002060;font-weight:bold">Jānis Testeris</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:11pt;line-height:14.3pt;color:#002060;font-weight:normal">Pārdošanas vadītājs</td></tr>
+      
+      <tr><td style="height:6px;line-height:6px;font-size:1px;">&nbsp;</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">M: <a href="tel:+37129123456" style="color:#002060;text-decoration:none;">+371 29 123 456</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">T: <a href="tel:+37167123456" style="color:#002060;text-decoration:none;">+371 67 123 456</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="mailto:test.tenax@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.tenax@tenaxgrupa.lv</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="https://tenaxpanel.lv" style="color:#002060;text-decoration:none;">www.tenaxpanel.lv</a><br><a href="https://tenapors.lv" style="color:#002060;text-decoration:none;">www.tenapors.lv</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">Sabiedrība ar ierobežotu atbildību “TENAX”</td></tr>
+      
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">Spodrības iela 1, Dobele, LV-3701, Latvija</td></tr>
+    </table>
     </td>
   </tr>
+</table>
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;width:100%;max-width:600px;margin-top:10px;">
+      
+      
 </table>"
 `;
 
 exports[`rendered signatures > snapshots > test.tenax@tenaxgrupa.lv new + reply > reply 1`] = `
 "<!-- signature:tenax:reply -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
     <td style="padding:0 0 0 8px;border-left:2px solid #002060;">
-      <span style="font-weight:bold;color:#002060;">Jānis Testeris</span> <span style="color:#2F5496;">| Pārdošanas vadītājs</span><br>
-      Sabiedrība ar ierobežotu atbildību “TENAX” <span style="color:#2F5496;">| M:</span> <a href="tel:+37129123456" style="color:#002060;text-decoration:none;">+371 29 123 456</a><br>
-      <a href="mailto:test.tenax@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.tenax@tenaxgrupa.lv</a>
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:bold">Jānis Testeris</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#2F5496;font-weight:normal">Pārdošanas vadītājs</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">Sabiedrība ar ierobežotu atbildību “TENAX”</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">M: <a href="tel:+37129123456" style="color:#002060;text-decoration:none;">+371 29 123 456</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="mailto:test.tenax@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.tenax@tenaxgrupa.lv</a></td></tr>
+    </table>
     </td>
   </tr>
 </table>"
@@ -262,35 +332,45 @@ exports[`rendered signatures > snapshots > test.tenax@tenaxgrupa.lv new + reply 
 exports[`rendered signatures > snapshots > test.vareno@tenaxgrupa.lv new + reply > new 1`] = `
 "<!-- signature:vareno:new -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
-    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/vareno/logo.png" width="120" height="40" alt="Vareno Group" style="display:block;border:0;width:120px;height:40px;"></td>
-    <td style="padding:1px 1px 1px 10px;vertical-align:middle;border-left:1px solid #002060;font-size:10pt;line-height:13pt;color:#002060;">
-            <span style="font-size:12pt;line-height:15pt;font-weight:bold;color:#002060;">Laura Ozola</span><br>
-            <span style="font-size:11pt;color:#002060;">Grāmatvede</span><br>
-            
-            <span style="display:block;height:6px;line-height:6px;font-size:1px;">&nbsp;</span>
-            
-            T: <a href="tel:+37167333444" style="color:#002060;text-decoration:none;">+371 67 333 444</a><br>
-            <a href="mailto:test.vareno@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.vareno@tenaxgrupa.lv</a><br>
-            <a href="https://www.tenaxgrupa.lv" style="color:#002060;text-decoration:none;">www.tenaxgrupa.lv</a><br>
-            <span style="font-size:10pt;">SIA “Vareno Group”</span><br>
-            
-            <span style="font-size:10pt;">Spodrības iela 1, Dobele, LV-3701, Latvija</span>
+    <td style="padding:0 10px 0 0;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/vareno/logo.png" width="120" height="40" alt="Vareno Group" style="display:block;border:0;width:120px;height:40px;"></td>
+    <td style="padding:0 0 0 10px;vertical-align:middle;border-left:1px solid #002060;">
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:12pt;line-height:15.6pt;color:#002060;font-weight:bold">Laura Ozola</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:11pt;line-height:14.3pt;color:#002060;font-weight:normal">Grāmatvede</td></tr>
+      
+      <tr><td style="height:6px;line-height:6px;font-size:1px;">&nbsp;</td></tr>
+      
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">T: <a href="tel:+37167333444" style="color:#002060;text-decoration:none;">+371 67 333 444</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="mailto:test.vareno@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.vareno@tenaxgrupa.lv</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="https://www.tenaxgrupa.lv" style="color:#002060;text-decoration:none;">www.tenaxgrupa.lv</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">SIA “Vareno Group”</td></tr>
+      
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">Spodrības iela 1, Dobele, LV-3701, Latvija</td></tr>
+    </table>
     </td>
   </tr>
+</table>
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;width:100%;max-width:600px;margin-top:10px;">
+      
+      
 </table>"
 `;
 
 exports[`rendered signatures > snapshots > test.vareno@tenaxgrupa.lv new + reply > reply 1`] = `
 "<!-- signature:vareno:reply -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
     <td style="padding:0 0 0 8px;border-left:2px solid #002060;">
-      <span style="font-weight:bold;color:#002060;">Laura Ozola</span> <span style="color:#2F5496;">| Grāmatvede</span><br>
-      SIA “Vareno Group”<br>
-      <a href="mailto:test.vareno@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.vareno@tenaxgrupa.lv</a>
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:bold">Laura Ozola</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#2F5496;font-weight:normal">Grāmatvede</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">SIA “Vareno Group”</td></tr>
+      
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="mailto:test.vareno@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.vareno@tenaxgrupa.lv</a></td></tr>
+    </table>
     </td>
   </tr>
 </table>"
@@ -299,35 +379,45 @@ exports[`rendered signatures > snapshots > test.vareno@tenaxgrupa.lv new + reply
 exports[`rendered signatures > snapshots > test.xss@tenaxgrupa.lv new + reply > new 1`] = `
 "<!-- signature:tenax:new -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
-    <td style="padding:1px 10px 1px 1px;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenax/logo.png" width="183" height="86" alt="Tenax" style="display:block;border:0;width:183px;height:86px;"></td>
-    <td style="padding:1px 1px 1px 10px;vertical-align:middle;border-left:1px solid #002060;font-size:10pt;line-height:13pt;color:#002060;">
-            <span style="font-size:12pt;line-height:15pt;font-weight:bold;color:#002060;">&lt;img src&#x3D;x onerror&#x3D;alert(1)&gt;</span><br>
-            <span style="font-size:11pt;color:#002060;">&quot;&gt;&lt;script&gt;alert(2)&lt;/script&gt;</span><br>
-            
-            <span style="display:block;height:6px;line-height:6px;font-size:1px;">&nbsp;</span>
-            M: <a href="tel:+37129000222" style="color:#002060;text-decoration:none;">+371 29 000 222</a><br>
-            
-            <a href="mailto:test.xss@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.xss@tenaxgrupa.lv</a><br>
-            <a href="https://tenaxpanel.lv" style="color:#002060;text-decoration:none;">www.tenaxpanel.lv</a><br><a href="https://tenapors.lv" style="color:#002060;text-decoration:none;">www.tenapors.lv</a><br>
-            <span style="font-size:10pt;">Sabiedrība ar ierobežotu atbildību “TENAX”</span><br>
-            
-            <span style="font-size:10pt;">Spodrības iela 1, Dobele, LV-3701, Latvija</span>
+    <td style="padding:0 10px 0 0;vertical-align:middle;"><img src="https://sig.tenax.lv/assets/tenax/logo.png" width="183" height="86" alt="Tenax" style="display:block;border:0;width:183px;height:86px;"></td>
+    <td style="padding:0 0 0 10px;vertical-align:middle;border-left:1px solid #002060;">
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:12pt;line-height:15.6pt;color:#002060;font-weight:bold">&lt;img src&#x3D;x onerror&#x3D;alert(1)&gt;</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:11pt;line-height:14.3pt;color:#002060;font-weight:normal">&quot;&gt;&lt;script&gt;alert(2)&lt;/script&gt;</td></tr>
+      
+      <tr><td style="height:6px;line-height:6px;font-size:1px;">&nbsp;</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">M: <a href="tel:+37129000222" style="color:#002060;text-decoration:none;">+371 29 000 222</a></td></tr>
+      
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="mailto:test.xss@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.xss@tenaxgrupa.lv</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="https://tenaxpanel.lv" style="color:#002060;text-decoration:none;">www.tenaxpanel.lv</a><br><a href="https://tenapors.lv" style="color:#002060;text-decoration:none;">www.tenapors.lv</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">Sabiedrība ar ierobežotu atbildību “TENAX”</td></tr>
+      
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">Spodrības iela 1, Dobele, LV-3701, Latvija</td></tr>
+    </table>
     </td>
   </tr>
+</table>
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;width:100%;max-width:600px;margin-top:10px;">
+      
+      
 </table>"
 `;
 
 exports[`rendered signatures > snapshots > test.xss@tenaxgrupa.lv new + reply > reply 1`] = `
 "<!-- signature:tenax:reply -->
 
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;max-width:500px;font-family:Calibri, Arial, Helvetica, sans-serif;">
   <tr>
     <td style="padding:0 0 0 8px;border-left:2px solid #002060;">
-      <span style="font-weight:bold;color:#002060;">&lt;img src&#x3D;x onerror&#x3D;alert(1)&gt;</span> <span style="color:#2F5496;">| &quot;&gt;&lt;script&gt;alert(2)&lt;/script&gt;</span><br>
-      Sabiedrība ar ierobežotu atbildību “TENAX” <span style="color:#2F5496;">| M:</span> <a href="tel:+37129000222" style="color:#002060;text-decoration:none;">+371 29 000 222</a><br>
-      <a href="mailto:test.xss@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.xss@tenaxgrupa.lv</a>
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:bold">&lt;img src&#x3D;x onerror&#x3D;alert(1)&gt;</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#2F5496;font-weight:normal">&quot;&gt;&lt;script&gt;alert(2)&lt;/script&gt;</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">Sabiedrība ar ierobežotu atbildību “TENAX”</td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal">M: <a href="tel:+37129000222" style="color:#002060;text-decoration:none;">+371 29 000 222</a></td></tr>
+      <tr><td style="padding:0 0 0px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:10pt;line-height:13pt;color:#002060;font-weight:normal"><a href="mailto:test.xss@tenaxgrupa.lv" style="color:#002060;text-decoration:none;">test.xss@tenaxgrupa.lv</a></td></tr>
+    </table>
     </td>
   </tr>
 </table>"

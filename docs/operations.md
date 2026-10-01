@@ -5,18 +5,30 @@ recorded under **Activity**.
 
 ## Change a signature design
 
-1. **Designs** › pick the company.
-2. **Brand and footer**: logo (upload a PNG at 2× the shown size on a solid background), colours, registration number,
-   address, website. **New message** / **Reply and forward**: the Handlebars HTML.
-3. The preview updates as you type. Use **Preview as** for a real person, and **Dark mode check** for transparent-logo issues.
-4. **Save version** (add a note). The next message people write uses it. Nothing needs redeploying.
+1. **Designs** › pick the company › **New message** or **Reply and forward**.
+2. **Visual** mode (the default for every shipped design):
+   - **Layout:** logo beside text, logo above text, or text only. Also logo alignment, gap, divider line or accent
+     bar, and maximum width.
+   - **Text:** font, base size (pt), line spacing, default colour, and whether to show the closing line.
+   - **Blocks:** drag to reorder (or use the arrows). Click a block for its size, bold, italic, capitals, colour and
+     space after, plus its label (`M:`, `T:`) or its text. The eye icon hides a block without deleting it.
+     **Add block** adds fields, websites, free text, spaces and lines.
+   - **Colours:** the chips follow the company's brand colours from **Brand and footer**, so changing a brand colour
+     updates every block that uses it. **Custom** sets a fixed colour.
+3. **Brand and footer:** logo, brand colours, closing line, company line, address, websites, promo banner and
+   confidentiality notice.
+4. The preview updates as you type. Use **Preview as** to see a real person, and **Dark mode check** for logo problems.
+5. **Save version** (add a note). The next message people write uses it. Nothing needs redeploying.
 
-Rules enforced on save: `{{{ }}}` / `{{& }}` and `<script>` are rejected, and every value is HTML-escaped. Keep to
-email-safe HTML: tables, inline styles, max 600px wide, absolute image URLs (`{{meta.logoUrl}}`).
+Visual designs are compiled on the server into email-safe HTML (tables and inline styles). A field that's empty for
+someone drops its whole line. **HTML** mode is for full control. Switching a visual design to HTML is one-way for that
+version; to go back, restore an earlier version or start a new visual layout.
 
-Editing on disk instead: change `templates/<company>/*.hbs|meta.json` in the repo (or mount the folder), then
-**Designs › Reload from disk**. Files that differ are imported as new versions. At startup, disk files are only
-imported for companies with no versions yet, so UI edits are never overwritten silently.
+Rules enforced on save: `{{{ }}}` / `{{& }}` and `<script>` are rejected, and every value is HTML-escaped. Text typed into
+blocks is always literal.
+
+Editing on disk instead: change `templates/<company>/*`, then **Designs › Reload from disk**. Files that differ are
+imported as new versions. `npx tsx scripts/seed-templates.ts` (in `api/`) regenerates the shipped designs.
 
 ## Roll back a design
 
