@@ -5,7 +5,7 @@ import { FIELD_LABELS, type UserSummary } from '../../lib/types';
 import { Modal } from '../ui';
 
 /** Missing fields an admin can fill in here (email always comes from Entra). */
-export const FIXABLE = ['displayName', 'jobTitleLv', 'mobilePhone'] as const;
+export const FIXABLE = ['displayName', 'jobTitleLv', 'jobTitleEn', 'mobilePhone'] as const;
 type Fixable = (typeof FIXABLE)[number];
 
 export const fixableMissing = (u: UserSummary): Fixable[] => (u.excluded ? [] : FIXABLE.filter((f) => u.missing.includes(f)));
@@ -13,6 +13,7 @@ export const fixableMissing = (u: UserSummary): Fixable[] => (u.excluded ? [] : 
 const PLACEHOLDER: Record<Fixable, string> = {
   displayName: 'Vārds Uzvārds',
   jobTitleLv: 'e.g. Pārdošanas projektu vadītājs',
+  jobTitleEn: 'e.g. Sales Project Manager',
   mobilePhone: '+371 2x xxx xxx',
 };
 

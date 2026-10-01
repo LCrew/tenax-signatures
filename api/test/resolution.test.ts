@@ -78,7 +78,13 @@ describe('fixture users (all brief §8.1 cases)', async () => {
   it('test.tenax: Tenax, all fields', async () => {
     const u = (await r('test.tenax@tenaxgrupa.lv'))!;
     expect(u.company).toBe('tenax');
-    expect(u.missing).toEqual([]);
+    // Everything from Entra is there; the English title is never in Entra, so it's required as a correction.
+    expect(u.missing).toEqual(['jobTitleEn']);
+    ctx.repo.saveOverrides({ upn: u.upn, jobTitleEn: 'Sales Manager' });
+    ctx.resolver.clearCache();
+    expect((await r('test.tenax@tenaxgrupa.lv'))!.missing).toEqual([]);
+    ctx.repo.saveOverrides({ upn: u.upn });
+    ctx.resolver.clearCache();
   });
   it('test.tenapors: missing jobTitle', async () => {
     const u = (await r('test.tenapors@tenaxgrupa.lv'))!;

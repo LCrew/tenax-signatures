@@ -155,7 +155,7 @@ as multi-group conflicts.
 ## Fill in missing details quickly
 
 **People › Fill in missing (N)** walks through everyone in the current list who is missing a name, job title (LV)
-or mobile, one person at a time, showing only their missing fields. Type, **Tab** to the next field, **Enter** to
+job title (EN) or mobile, one person at a time, showing only their missing fields. Type, **Tab** to the next field, **Enter** to
 save and open the next person (Enter does nothing until every shown field is filled). Tick **No mobile phone** for
 people without one; their mobile line is left out and they stop counting as missing. **Skip** moves on without
 saving. Values are saved as corrections, never written to Entra. Filter the list first (e.g. one company) to work

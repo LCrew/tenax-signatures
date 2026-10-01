@@ -18,7 +18,7 @@ const GROUP_TTL = 30 * 60_000;
 
 /** Fields reported as "missing" when neither an override nor Entra supplies them. */
 /** Fields a signature needs. Office phone and department aren't checked: the signatures don't rely on them. */
-const REPORTED_FIELDS = ['displayName', 'jobTitleLv', 'mobilePhone', 'email'] as const;
+const REPORTED_FIELDS = ['displayName', 'jobTitleLv', 'jobTitleEn', 'mobilePhone', 'email'] as const;
 
 export interface CompanyResolution {
   company: string;
