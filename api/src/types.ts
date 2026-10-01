@@ -48,6 +48,8 @@ export interface DirectoryUser {
   department: string | null;
   userType?: string | null;
   accountEnabled?: boolean | null;
+  /** Has an active Exchange Online plan (undefined = unknown, e.g. demo data). */
+  hasMailbox?: boolean;
 }
 
 export interface DirectoryGroup {
@@ -96,6 +98,8 @@ export interface ResolvedUser {
   isAdmin: boolean;
   /** Company keys this person may manage as a signature editor. */
   editorOf: string[];
+  /** Left out of signatures and lists (service accounts etc.): via the exclusion group or by hand. */
+  excluded: null | { by: 'group' } | { by: 'manual'; reason: string | null; excludedBy: string; excludedAt: string };
   isPilot: boolean;
 }
 
@@ -113,6 +117,9 @@ export interface Settings {
   adminGroupName: string;
   pilotGroupId: string;
   pilotGroupName: string;
+  /** Members are left out of signatures and lists (service accounts, test and room mailboxes…). */
+  excludeGroupId: string;
+  excludeGroupName: string;
   selfServiceEnabled: boolean;
   selfServiceFields: OverridableField[];
   language: SignatureLanguage;

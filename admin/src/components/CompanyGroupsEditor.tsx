@@ -30,6 +30,7 @@ export function CompanyGroupsEditor({
   const [defaultCompany, setDefaultCompany] = useState(settings.defaultCompany);
   const [admins, setAdmins] = useState({ name: settings.adminGroupName, id: settings.adminGroupId });
   const [pilot, setPilot] = useState({ name: settings.pilotGroupName, id: settings.pilotGroupId });
+  const [exclude, setExclude] = useState({ name: settings.excludeGroupName ?? 'SG-Signature-Excluded', id: settings.excludeGroupId ?? '' });
   const [busy, setBusy] = useState(false);
   const [removing, setRemoving] = useState<Draft | null>(null);
   const [confirmText, setConfirmText] = useState('');
@@ -62,6 +63,7 @@ export function CompanyGroupsEditor({
     );
     if (valid(prefill[admins.name])) setAdmins((a) => ({ ...a, id: prefill[a.name] }));
     if (valid(prefill[pilot.name])) setPilot((p) => ({ ...p, id: prefill[p.name] }));
+    if (valid(prefill[exclude.name])) setExclude((x) => ({ ...x, id: prefill[x.name] }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefill]);
 
@@ -88,6 +90,8 @@ export function CompanyGroupsEditor({
         adminGroupId: admins.id,
         pilotGroupName: pilot.name,
         pilotGroupId: pilot.id,
+        excludeGroupName: exclude.name,
+        excludeGroupId: exclude.id,
       });
       toast('Companies and groups saved');
       onSaved();
@@ -173,6 +177,11 @@ export function CompanyGroupsEditor({
         <p className="xs muted">Full access to everything: all companies, groups, settings and accounts. Keep this to your IT team.</p>
         <GroupPicker label="Pilot" name={pilot.name} id={pilot.id} onChange={(g) => setPilot(g)} />
         <p className="xs muted">Assign the Outlook add-in to this group first. Everyone else keeps their current signature until you roll out.</p>
+        <GroupPicker label="Excluded accounts" name={exclude.name} id={exclude.id} onChange={(g) => setExclude(g)} />
+        <p className="xs muted">
+          Service accounts, scanners, test and room mailboxes: members get no signature and don’t appear in People or the
+          report. Single accounts can also be excluded from their person page.
+        </p>
       </section>
 
       <div className="row">

@@ -65,6 +65,19 @@ export function Overview() {
               <div className="l">in no company group</div>
             </div>
           </div>
+          {it && (
+            <p className="small muted" style={{ marginTop: -12 }}>
+              Counting people with an Exchange mailbox licence.{' '}
+              {r.excluded ? (
+                <>
+                  {r.excluded} {r.excluded === 1 ? 'account is' : 'accounts are'} excluded (service accounts etc.), see{' '}
+                  <Link to="/people">People › Excluded</Link>.
+                </>
+              ) : (
+                'Exclude service accounts from their person page or with the exclusion group.'
+              )}
+            </p>
+          )}
 
           <div className="two-col">
             <section className="panel">

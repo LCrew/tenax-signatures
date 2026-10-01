@@ -19,6 +19,8 @@ const DEFAULTS: Settings = {
   adminGroupName: 'SG-Signature-Admins',
   pilotGroupId: '',
   pilotGroupName: 'SG-Signature-Pilot',
+  excludeGroupId: '',
+  excludeGroupName: 'SG-Signature-Excluded',
   selfServiceEnabled: false,
   selfServiceFields: ['jobTitleEn', 'hideMobile'],
   language: 'bilingual',

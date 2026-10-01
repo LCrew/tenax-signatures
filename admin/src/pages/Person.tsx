@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Undo2 } from 'lucide-react';
+import { ArrowLeft, Ban, Undo2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useApp, useAsync, useCompanies, useDebounced, useToast } from '../lib/hooks';
 import { FIELD_LABELS, type ComposeType, type Overrides, type UserDetail } from '../lib/types';
-import { CompanyName, ErrorNote, Loading, PageHead, timeAgo } from '../components/ui';
+import { CompanyName, ErrorNote, Field, Loading, Modal, PageHead, timeAgo } from '../components/ui';
 import { LetterPreview } from '../components/LetterPreview';
 
 const TEXT_FIELDS = ['displayName', 'jobTitleLv', 'jobTitleEn', 'mobilePhone', 'officePhone', 'department'] as const;
@@ -78,6 +78,7 @@ export function Person() {
           </span>
         }
       />
+      {session?.isAdmin && <ExclusionBar user={u} onChanged={user.reload} />}
       {u.conflict && (
         <div className="callout warn" style={{ marginBottom: 20 }}>
           In {u.candidates.length} company groups ({u.candidates.join(', ')}). Using {u.companyName} because it's higher in
@@ -215,4 +216,64 @@ function changedFields(before: unknown, after: unknown): string[] {
   return Object.keys(FIELD_LABELS)
     .filter((k) => (b[k] ?? null) !== (a[k] ?? null))
     .map((k) => FIELD_LABELS[k].toLowerCase());
+}
+
+/** IT only: leave an account (service, test, room mailbox…) out of signatures and all lists, or include it again. */
+function ExclusionBar({ user: u, onChanged }: { user: UserDetail; onChanged: () => void }) {
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState('');
+  const set = async (excluded: boolean) => {
+    try {
+      await api.put(`/api/admin/users/${encodeURIComponent(u.upn)}/exclusion`, { excluded, reason: reason || undefined });
+      toast(excluded ? `${u.displayName ?? u.upn} is excluded from signatures` : `${u.displayName ?? u.upn} gets a signature again`);
+      setOpen(false);
+      setReason('');
+      onChanged();
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    }
+  };
+  if (u.excluded) {
+    return (
+      <div className="callout row" style={{ marginBottom: 20 }}>
+        <span style={{ flex: '1 1 260px' }}>
+          {u.excluded.by === 'group'
+            ? 'Excluded from signatures because this account is in the exclusion group. Remove it from that group in Entra to include it again.'
+            : `Excluded from signatures${u.excluded.reason ? ` (${u.excluded.reason})` : ''} by ${u.excluded.excludedBy}, ${timeAgo(u.excluded.excludedAt)}. Outlook inserts nothing for this account.`}
+        </span>
+        {u.excluded.by === 'manual' && (
+          <button className="btn sm" onClick={() => set(false)}>
+            Include again
+          </button>
+        )}
+      </div>
+    );
+  }
+  return (
+    <>
+      <div className="row" style={{ marginBottom: 16, marginTop: -8 }}>
+        <button className="btn ghost sm" onClick={() => setOpen(true)}>
+          <Ban size={14} /> Exclude from signatures
+        </button>
+      </div>
+      <Modal open={open} onClose={() => setOpen(false)} title={`Exclude ${u.displayName ?? u.upn}?`}>
+        <p>
+          For service accounts, scanners, test or room mailboxes. The account disappears from People, the Overview and the
+          report, and Outlook inserts no signature for it. You can include it again from People › Excluded.
+        </p>
+        <Field label="Reason" hint="Optional, shown in People › Excluded">
+          <input type="text" value={reason} maxLength={200} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Scanner mailbox" />
+        </Field>
+        <div className="row end">
+          <button className="btn ghost" onClick={() => setOpen(false)}>
+            Cancel
+          </button>
+          <button className="btn primary" onClick={() => set(true)}>
+            Exclude from signatures
+          </button>
+        </div>
+      </Modal>
+    </>
+  );
 }

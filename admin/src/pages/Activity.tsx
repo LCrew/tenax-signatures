@@ -23,6 +23,8 @@ const ACTIONS: Record<string, string> = {
   'setup.admin.created': 'Created the first admin',
   'setup.complete': 'Finished setup',
   'setup.restart': 'Reopened the setup wizard',
+  'user.exclude': 'Excluded an account from signatures',
+  'user.include': 'Included an account in signatures again',
   'cache.clear': 'Cleared the cache',
   'asset.upload': 'Uploaded an image',
   'account.create': 'Added a local account',

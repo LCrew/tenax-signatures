@@ -31,6 +31,8 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
       }
     }
 
+    // Excluded accounts (service accounts…) get no signature at all.
+    if (user.excluded) return reply.code(204).header('Cache-Control', 'no-store').send();
     const company = companies.find((c) => c.key === user.company);
     if (!company) return reply.code(500).send({ error: `Company "${user.company}" is not configured` });
     try {
@@ -67,6 +69,7 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
         ? Object.fromEntries(s.selfServiceFields.map((f) => [f, (user.overrides as any)[f] ?? null]))
         : {},
       isAdmin: user.isAdmin,
+      excluded: !!user.excluded,
       selfService: { enabled: s.selfServiceEnabled, fields: s.selfServiceFields },
     };
   });

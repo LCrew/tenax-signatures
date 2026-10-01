@@ -43,6 +43,7 @@ function summary(u: ResolvedUser, companies: Company[]) {
     overridden: Object.entries(u.sources).filter(([, s]) => s === 'override').map(([k]) => k),
     isAdmin: u.isAdmin,
     isPilot: u.isPilot,
+    excluded: u.excluded,
   };
 }
 
@@ -96,15 +97,19 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
   /** A person an editor may see: one whose signature comes from a company they edit. Out of scope = "not found". */
   async function scopedUser(access: Access, upn: string) {
     const user = await ctx.resolver.resolve(upn);
-    return user && access.can(user.company) ? user : null;
+    // Excluded accounts (service accounts…) are an IT matter: invisible to company editors.
+    return user && access.can(user.company) && (access.global || !user.excluded) ? user : null;
   }
 
   app.get('/api/admin/users', staff(async (req, _reply, _admin, access) => {
     const q = String((req.query as any).search ?? '').trim().toLowerCase();
     const companies = ctx.repo.listCompanies();
     const users = await ctx.resolver.resolveAll();
+    // ?view=excluded lists the accounts left out of signatures (IT only); everyone else never sees them.
+    const showExcluded = access.global && (req.query as any).view === 'excluded';
     return users
       .filter((u) => access.can(u.company))
+      .filter((u) => (showExcluded ? !!u.excluded : !u.excluded))
       .filter((u) => !q || u.upn.includes(q) || (u.fields.displayName ?? '').toLowerCase().includes(q))
       .sort((a, b) => (a.fields.displayName ?? a.upn).localeCompare(b.fields.displayName ?? b.upn, 'lv'))
       .map((u) => summary(u, companies));
@@ -165,11 +170,28 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
 
   async function reportRows(access: Access) {
     const companies = ctx.repo.listCompanies();
-    return (await ctx.resolver.resolveAll()).filter((u) => access.can(u.company)).map((u) => summary(u, companies));
+    return (await ctx.resolver.resolveAll()).filter((u) => access.can(u.company) && !u.excluded).map((u) => summary(u, companies));
   }
+
+  /** Leave an account out of signatures (service accounts, test/room mailboxes) or include it again. IT only. */
+  app.put('/api/admin/users/:upn/exclusion', guard(async (req, reply, admin) => {
+    const { upn } = req.params as { upn: string };
+    const body = z.object({ excluded: z.boolean(), reason: z.string().trim().max(200).optional() }).parse(req.body);
+    const user = await ctx.resolver.resolve(upn);
+    if (!user) return reply.code(404).send({ error: 'User not found in directory' });
+    if (user.excluded?.by === 'group' && !body.excluded) {
+      return reply.code(409).send({ error: `Excluded through ${ctx.settings.get().excludeGroupName}. Remove them from that group in Entra.` });
+    }
+    const before = ctx.repo.getExclusion(user.upn) ?? null;
+    if (body.excluded) ctx.repo.setExclusion(user.upn, body.reason || null, actorOf(admin));
+    else ctx.repo.removeExclusion(user.upn);
+    audit(admin, body.excluded ? 'user.exclude' : 'user.include', user.upn, before, body.excluded ? { reason: body.reason ?? null } : null);
+    return { ok: true };
+  }));
 
   app.get('/api/admin/report', staff(async (_req, _reply, _admin, access) => {
     const rows = await reportRows(access);
+    const excludedCount = access.global ? (await ctx.resolver.resolveAll()).filter((u) => u.excluded).length : 0;
     const byCompany: Record<string, number> = {};
     for (const r of rows) byCompany[r.company] = (byCompany[r.company] ?? 0) + 1;
     const missingByField: Record<string, number> = {};
@@ -180,6 +202,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
       conflicts: rows.filter((r) => r.conflict).length,
       defaulted: rows.filter((r) => r.companySource === 'default').length,
       overridden: rows.filter((r) => r.overridden.length > 0).length,
+      excluded: excludedCount,
       byCompany,
       missingByField,
       rows,
@@ -477,6 +500,8 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
       adminGroupName: z.string().trim().max(256),
       pilotGroupId: optionalGuid,
       pilotGroupName: z.string().trim().max(256),
+      excludeGroupId: optionalGuid,
+      excludeGroupName: z.string().trim().max(256),
       selfServiceEnabled: z.boolean(),
       selfServiceFields: z.array(z.enum(['jobTitleEn', 'hideMobile', 'mobilePhone', 'jobTitleLv'])),
       language: z.enum(['lv', 'en', 'bilingual']),
@@ -490,7 +515,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     if (patch.defaultCompany && !findCompany(patch.defaultCompany)) return reply.code(400).send({ error: 'Unknown default company' });
     const before = ctx.settings.get();
     ctx.settings.update(patch);
-    if (patch.adminGroupId !== undefined || patch.pilotGroupId !== undefined) ctx.resolver.clearCache();
+    if (patch.adminGroupId !== undefined || patch.pilotGroupId !== undefined || patch.excludeGroupId !== undefined) ctx.resolver.clearCache();
     const changed = Object.keys(patch).filter((k) => k !== 'setupStep');
     if (changed.length) audit(admin, 'settings.update', 'settings', pickKeys(before, changed), pickKeys(patch, changed));
     return publicSettings();

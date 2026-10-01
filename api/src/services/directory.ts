@@ -140,7 +140,7 @@ export class GraphDirectory implements Directory {
 
   async getUserById(idOrUpn: string) {
     try {
-      return await this.get<DirectoryUser>(`/users/${encodeURIComponent(idOrUpn)}?$select=${USER_SELECT}`);
+      return withMailboxFlag(await this.get<GraphUser>(`/users/${encodeURIComponent(idOrUpn)}?$select=${USER_SELECT},assignedPlans`));
     } catch (e: any) {
       if (e.status === 404) return null;
       throw e;
@@ -156,10 +156,13 @@ export class GraphDirectory implements Directory {
 
   async listUsers() {
     // Licensed, enabled members only. Advanced query → needs ConsistencyLevel + $count.
-    return this.getAll<DirectoryUser>(
-      `/users?$select=${USER_SELECT}&$filter=assignedLicenses/$count ne 0 and accountEnabled eq true and userType eq 'Member'&$count=true&$top=999`,
+    // "Licensed" in Entra includes free licences (Power BI, Teams Exploratory, Fabric…), so we also require an
+    // active Exchange Online plan: no mailbox, no signature.
+    const users = await this.getAll<GraphUser>(
+      `/users?$select=${USER_SELECT},assignedPlans&$filter=assignedLicenses/$count ne 0 and accountEnabled eq true and userType eq 'Member'&$count=true&$top=999`,
       { ConsistencyLevel: 'eventual' },
     );
+    return users.map(withMailboxFlag).filter((u) => u.hasMailbox);
   }
 
   async getGroupMemberIds(groupId: string) {
@@ -224,6 +227,17 @@ function decodeJwtPayload(token: string): Record<string, any> {
   } catch {
     return {};
   }
+}
+
+type GraphUser = DirectoryUser & { assignedPlans?: { service?: string; capabilityStatus?: string }[] };
+
+/** Adds hasMailbox (an enabled Exchange plan) and drops the bulky plan list before caching. */
+export function withMailboxFlag(u: GraphUser): DirectoryUser {
+  const { assignedPlans, ...rest } = u;
+  return {
+    ...rest,
+    hasMailbox: (assignedPlans ?? []).some((p) => p.service?.toLowerCase() === 'exchange' && p.capabilityStatus === 'Enabled'),
+  };
 }
 
 export function certThumbprintSha256(certPem: string): string {

@@ -147,6 +147,11 @@ export class UserResolver {
       missing,
       isAdmin: !!settings.adminGroupId && lowered.has(settings.adminGroupId.toLowerCase()),
       editorOf: companies.filter((co) => co.editorGroupId && lowered.has(co.editorGroupId.toLowerCase())).map((co) => co.key),
+      excluded: (() => {
+        if (settings.excludeGroupId && lowered.has(settings.excludeGroupId.toLowerCase())) return { by: 'group' as const };
+        const x = this.repo.getExclusion(entra.userPrincipalName);
+        return x ? { by: 'manual' as const, reason: x.reason, excludedBy: x.excludedBy, excludedAt: x.excludedAt } : null;
+      })(),
       isPilot: !!settings.pilotGroupId && lowered.has(settings.pilotGroupId.toLowerCase()),
     };
   }
@@ -165,6 +170,7 @@ export class UserResolver {
         ...this.repo.listCompanies().flatMap((c) => [c.groupId, c.editorGroupId ?? '']),
         settings.adminGroupId,
         settings.pilotGroupId,
+        settings.excludeGroupId,
       ].filter(Boolean);
       for (const gid of new Set(groupIds)) {
         let members: string[] = [];

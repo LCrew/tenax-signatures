@@ -91,6 +91,21 @@ To give a team their company's design: create the group in Entra (the setup scri
 `SG-Signature-<Company>-Editors`), add the people, then in **Companies and groups** use **Find** next to *Signature
 editors* and save. New members can edit after their next sign-in (group memberships are cached for up to 30 minutes).
 
+## Service accounts and unlicensed accounts
+
+People lists only **enabled member accounts with an active Exchange Online mailbox plan**. Accounts without a licence,
+or with only free licences (Power BI, Teams Exploratory, Fabric…), don't appear and get no signature. After changing
+licences in Microsoft 365, click **Overview › Refresh from directory**.
+
+Service accounts that do have a mailbox licence (noreply@, scanners, test or room mailboxes):
+- **Many accounts:** create the group `SG-Signature-Excluded` (the setup script with `-CreateGroups` can), add the
+  accounts, and select it under **Companies and groups › Excluded accounts**.
+- **One account:** open it in **People** › **Exclude from signatures** (with an optional reason).
+
+Excluded accounts disappear from People, the Overview and the report, and Outlook inserts no signature for them.
+**People › Excluded** lists them; **Include again** reverses a manual exclusion. Group exclusions end when the
+account leaves the group. Only IT administrators can exclude, and company editors never see excluded accounts.
+
 ## Remove a company
 
 **Companies and groups** › trash icon on the company › type its name › **Remove company**. Its people get the default

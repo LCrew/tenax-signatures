@@ -29,6 +29,13 @@ export interface LocalAdmin {
   lastLoginAt: string | null;
 }
 
+export interface Exclusion {
+  upn: string;
+  reason: string | null;
+  excludedBy: string;
+  excludedAt: string;
+}
+
 export interface Session {
   id: string;
   adminId: number;
@@ -82,6 +89,10 @@ export interface Repository {
   getAdminById(id: number): LocalAdmin | undefined;
   listAdmins(): LocalAdmin[];
   createAdmin(username: string, passwordHash: string): LocalAdmin;
+  getExclusion(upn: string): Exclusion | undefined;
+  setExclusion(upn: string, reason: string | null, by: string): void;
+  removeExclusion(upn: string): void;
+
   /** Atomically creates the first admin; null if any admin already exists. */
   createFirstAdmin(username: string, passwordHash: string): LocalAdmin | null;
   deleteSessionsForAdminExcept(adminId: number, keepSessionId: string): void;

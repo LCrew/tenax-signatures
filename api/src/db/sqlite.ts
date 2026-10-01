@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Company, Overrides, SharedMailbox, TemplateKind } from '../types.js';
-import type { AuditEntry, LocalAdmin, Repository, Session, TelemetryEvent, TemplateVersion } from './repository.js';
+import type { AuditEntry, Exclusion, LocalAdmin, Repository, Session, TelemetryEvent, TemplateVersion } from './repository.js';
 
 const MIGRATIONS: string[] = [
   `CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -34,6 +34,9 @@ const MIGRATIONS: string[] = [
   // v2: per-company signature editors (a security group that may edit only that company).
   `ALTER TABLE companies ADD COLUMN editor_group_name TEXT NOT NULL DEFAULT '';
    ALTER TABLE companies ADD COLUMN editor_group_id TEXT NOT NULL DEFAULT '';`,
+  // v3: accounts left out of signatures by hand (service accounts, room/test mailboxes…).
+  `CREATE TABLE excluded_users (
+     upn TEXT PRIMARY KEY COLLATE NOCASE, reason TEXT, excluded_by TEXT NOT NULL, excluded_at TEXT NOT NULL);`,
 ];
 
 const now = () => new Date().toISOString();
@@ -224,6 +227,22 @@ export class SqliteRepository implements Repository {
       .run(username, passwordHash, now());
     return this.getAdminById(Number(info.lastInsertRowid))!;
   }
+  getExclusion(upn: string): Exclusion | undefined {
+    const r = this.db.prepare('SELECT * FROM excluded_users WHERE upn = ?').get(upn) as any;
+    return r ? { upn: r.upn, reason: r.reason, excludedBy: r.excluded_by, excludedAt: r.excluded_at } : undefined;
+  }
+  setExclusion(upn: string, reason: string | null, by: string) {
+    this.db
+      .prepare(
+        `INSERT INTO excluded_users(upn, reason, excluded_by, excluded_at) VALUES(?, ?, ?, ?)
+         ON CONFLICT(upn) DO UPDATE SET reason = excluded.reason, excluded_by = excluded.excluded_by, excluded_at = excluded.excluded_at`,
+      )
+      .run(upn.toLowerCase(), reason, by, now());
+  }
+  removeExclusion(upn: string) {
+    this.db.prepare('DELETE FROM excluded_users WHERE upn = ?').run(upn);
+  }
+
   createFirstAdmin(username: string, passwordHash: string): LocalAdmin | null {
     const info = this.db
       .prepare('INSERT INTO local_admins(username, password_hash, created_at) SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM local_admins)')

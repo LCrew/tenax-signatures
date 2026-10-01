@@ -2,17 +2,19 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { api } from '../lib/api';
-import { useAsync, useCompanies } from '../lib/hooks';
+import { useApp, useAsync, useCompanies } from '../lib/hooks';
 import { FIELD_LABELS, type UserSummary } from '../lib/types';
-import { CompanyName, ErrorNote, Loading, PageHead } from '../components/ui';
+import { CompanyName, ErrorNote, Loading, PageHead, Segmented } from '../components/ui';
 
 type Filter = 'all' | 'issues' | 'overrides' | string;
 
 export function People() {
   const nav = useNavigate();
-  const users = useAsync(() => api.get<UserSummary[]>('/api/admin/users'));
+  const { session } = useApp();
   const { companies } = useCompanies();
   const [q, setQ] = useState('');
+  const [view, setView] = useState<'active' | 'excluded'>('active');
+  const users = useAsync(() => api.get<UserSummary[]>(`/api/admin/users${view === 'excluded' ? '?view=excluded' : ''}`), [view]);
   const [filter, setFilter] = useState<Filter>('all');
   const colorOf = (k: string) => companies.find((c) => c.key === k)?.color;
 
@@ -36,6 +38,20 @@ export function People() {
           <Search size={15} style={{ position: 'absolute', left: 10, top: 11, color: 'var(--faint)' }} />
           <input type="search" placeholder="Search by name, email or title" value={q} onChange={(e) => setQ(e.target.value)} style={{ paddingLeft: 32 }} />
         </label>
+        {session?.isAdmin && (
+          <Segmented<'active' | 'excluded'>
+            label="Which accounts"
+            value={view}
+            onChange={(v) => {
+              setView(v);
+              setFilter('all');
+            }}
+            options={[
+              { value: 'active', label: 'In signatures' },
+              { value: 'excluded', label: 'Excluded' },
+            ]}
+          />
+        )}
         <select value={filter} onChange={(e) => setFilter(e.target.value)} style={{ width: 'auto' }} aria-label="Filter">
           <option value="all">Everyone</option>
           <option value="issues">Needs attention</option>
@@ -55,7 +71,7 @@ export function People() {
       ) : (
         <div className="panel table-wrap">
           {rows.length === 0 ? (
-            <div className="empty">{q ? `No one matches "${q}".` : 'No one in this view.'}</div>
+            <div className="empty">{q ? `No one matches "${q}".` : view === 'excluded' ? 'No accounts are excluded. Exclude service accounts from their person page, or through the exclusion group in Companies and groups.' : 'No one in this view.'}</div>
           ) : (
             <table className="data">
               <thead>
@@ -88,7 +104,8 @@ export function People() {
                           <span key={m} className="tag danger">No {FIELD_LABELS[m]?.toLowerCase() ?? m}</span>
                         ))}
                         {u.overridden.length > 0 && <span className="tag action">{u.overridden.length} corrected</span>}
-                        {u.missing.length === 0 && u.overridden.length === 0 && <span className="tag ok">Complete</span>}
+                        {u.excluded && <span className="tag">{u.excluded.by === 'group' ? 'Excluded by group' : `Excluded${u.excluded.reason ? `: ${u.excluded.reason}` : ''}`}</span>}
+                        {!u.excluded && u.missing.length === 0 && u.overridden.length === 0 && <span className="tag ok">Complete</span>}
                       </div>
                     </td>
                   </tr>

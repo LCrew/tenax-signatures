@@ -43,6 +43,8 @@ export interface Settings {
   adminGroupName: string;
   pilotGroupId: string;
   pilotGroupName: string;
+  excludeGroupId: string;
+  excludeGroupName: string;
   selfServiceEnabled: boolean;
   selfServiceFields: string[];
   language: 'lv' | 'en' | 'bilingual';
@@ -69,6 +71,7 @@ export interface UserSummary {
   overridden: string[];
   isAdmin: boolean;
   isPilot: boolean;
+  excluded?: null | { by: 'group' } | { by: 'manual'; reason: string | null; excludedBy: string; excludedAt: string };
 }
 
 export interface Overrides {
@@ -127,6 +130,7 @@ export interface Report {
   conflicts: number;
   defaulted: number;
   overridden: number;
+  excluded?: number;
   byCompany: Record<string, number>;
   missingByField: Record<string, number>;
   rows: UserSummary[];

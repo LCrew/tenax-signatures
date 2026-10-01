@@ -17,6 +17,7 @@ interface Me {
   entra: { displayName: string | null; jobTitle: string | null; mobilePhone: string | null; officePhone: string | null; department: string | null };
   overrides: Record<string, string | boolean | null>;
   isAdmin: boolean;
+  excluded?: boolean;
   selfService: { enabled: boolean; fields: string[] };
 }
 
@@ -96,7 +97,9 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
     }
   }
 
-  const body = me.error ? (
+  const body = me.data?.excluded ? (
+    <div className="callout">Your account is excluded from company signatures, so Outlook doesn’t add one. Ask IT if that’s a mistake.</div>
+  ) : me.error ? (
     <ErrorNote error={me.error} retry={me.reload} />
   ) : !me.data ? (
     <Loading what="Loading your signature" />
