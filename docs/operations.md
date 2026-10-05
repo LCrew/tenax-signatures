@@ -161,6 +161,10 @@ people without one; their mobile line is left out and they stop counting as miss
 saving. Values are saved as corrections, never written to Entra. Filter the list first (e.g. one company) to work
 through a smaller batch. Office phone and department aren't checked: signatures don't need them.
 
+For many people at once: **People › Import CSV › Download missing list**, fill in the blanks (by hand or with an
+agent; the file format and filling rules are in [csv-import.md](csv-import.md)), then upload it. The console shows
+what each row would change before anything is saved. Only missing fields are filled; values already set are kept.
+
 ## After moving someone between groups
 
 User data is cached for 10 minutes, group memberships for 30. For an immediate change use **Settings › Server › Clear

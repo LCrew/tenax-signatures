@@ -19,6 +19,7 @@ import { importTemplatesFromDisk } from '../services/settings.js';
 import { blockDocSchema, compileBlocks, extractBlocks, presetDoc, stripBlocksHeader } from '../services/blocks.js';
 import { applyOverrides, ensureDefaultDesign, metaOverridesSchema, newDesignId } from '../services/designs.js';
 import { resolveCompany } from '../services/resolver.js';
+import { CsvError, IMPORT_FIELDS, planImport } from '../services/csvimport.js';
 import { MAX_SVG_BYTES, PLACEHOLDERS, imageConfigSchema, listTextFields, missingFonts, renderSignaturePng, sanitizeSvg, suggestCrop, type ImageConfig } from '../services/svgsig.js';
 import type { TemplateVersion } from '../db/repository.js';
 import type { Company, ComposeType, Design, MetaOverrides, Overrides, ResolvedUser, TemplateKind } from '../types.js';
@@ -200,6 +201,49 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     ctx.repo.saveOverrides(next);
     audit(admin, 'overrides.update', user.upn, before, next);
     return { ok: true };
+  }));
+
+  // ───────────────────────────── Missing details import (docs/csv-import.md) ─────────────────────────────
+
+  /** People missing something the import can fill. Prefilled where a value exists; the blanks are what's missing. */
+  app.get('/api/admin/missing.csv', staff(async (_req, reply, _admin, access) => {
+    const users = (await ctx.resolver.resolveAll())
+      .filter((u) => access.can(u.company) && !u.excluded && u.missing.some((m) => (IMPORT_FIELDS as readonly string[]).includes(m)))
+      .sort((a, b) => a.company.localeCompare(b.company) || (a.fields.displayName ?? a.upn).localeCompare(b.fields.displayName ?? b.upn, 'lv'));
+    const header = ['upn', 'company', 'missing', 'department', ...IMPORT_FIELDS, 'noMobile'];
+    const lines = [header.join(',')];
+    for (const u of users) {
+      const missing = u.missing.filter((m) => (IMPORT_FIELDS as readonly string[]).includes(m));
+      lines.push([u.upn, u.company, missing.join(' '), u.fields.department, ...IMPORT_FIELDS.map((f) => u.fields[f]), ''].map(csvCell).join(','));
+    }
+    return reply
+      .type('text/csv; charset=utf-8')
+      .header('Content-Disposition', `attachment; filename="signature-missing-${new Date().toISOString().slice(0, 10)}.csv"`)
+      .send('\uFEFF' + lines.join('\r\n'));
+  }));
+
+  /** Fill missing details from a CSV. dryRun (the default) only reports what would change. */
+  app.post('/api/admin/import/missing', { bodyLimit: 2 * 1024 * 1024 }, staff(async (req, reply, admin, access) => {
+    const body = z.object({ csv: z.string().max(1_500_000), dryRun: z.boolean().default(true) }).parse(req.body);
+    const visible = (await ctx.resolver.resolveAll()).filter((u) => access.can(u.company) && !u.excluded);
+    let plan;
+    try {
+      plan = planImport(body.csv, visible);
+    } catch (e) {
+      if (e instanceof CsvError) return reply.code(400).send({ error: e.message });
+      throw e;
+    }
+    if (!body.dryRun) {
+      const at = new Date().toISOString();
+      for (const row of plan.rows) {
+        if (row.status !== 'update') continue;
+        const before = ctx.repo.getOverrides(row.upn);
+        const next = { ...(before ?? { upn: row.upn }), ...row.changes, upn: row.upn, updatedBy: actorOf(admin), updatedAt: at };
+        ctx.repo.saveOverrides(next);
+        audit(admin, 'overrides.import', row.upn, before, next);
+      }
+    }
+    return { dryRun: body.dryRun, ...plan };
   }));
 
   // ───────────────────────────── Report ─────────────────────────────
