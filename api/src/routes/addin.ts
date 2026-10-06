@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import type { AppContext } from '../context.js';
 import { API_SCOPE } from '../auth/plugin.js';
+import { findAsset, imageContentType } from '../services/assets.js';
 
 const xmlEscape = (s: string) => s.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
@@ -79,22 +80,15 @@ export function addinRoutes(app: FastifyInstance, ctx: AppContext) {
     return reply.type('image/png').header('Cache-Control', 'public, max-age=31536000, immutable').header('Access-Control-Allow-Origin', '*').send(png);
   });
 
-  // Logos: uploaded (DATA_DIR/assets) wins over bundled (assets/).
+  // Logos and banners: uploaded (DATA_DIR/assets) wins over bundled (assets/).
   app.get('/assets/:company/:file', async (req, reply) => {
     const { company, file } = req.params as { company: string; file: string };
-    if (!/^[a-z0-9-]+$/.test(company) || !/^[a-z0-9][a-z0-9._-]*\.(png|jpe?g|gif)$/i.test(file)) {
-      return reply.code(404).send();
-    }
-    for (const base of [path.join(ctx.env.dataDir, 'assets'), ctx.env.assetsDir]) {
-      const full = path.join(base, company, file);
-      if (fs.existsSync(full)) {
-        return reply
-          .type(file.endsWith('.png') ? 'image/png' : file.endsWith('.gif') ? 'image/gif' : 'image/jpeg')
-          .header('Cache-Control', 'public, max-age=3600')
-          .header('Access-Control-Allow-Origin', '*')
-          .send(fs.createReadStream(full));
-      }
-    }
-    return reply.code(404).send();
+    const full = findAsset(ctx.env, company, file);
+    if (!full) return reply.code(404).send();
+    return reply
+      .type(imageContentType(file))
+      .header('Cache-Control', 'public, max-age=3600')
+      .header('Access-Control-Allow-Origin', '*')
+      .send(fs.createReadStream(full));
   });
 }

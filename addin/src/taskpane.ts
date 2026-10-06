@@ -8,12 +8,14 @@
 
 import {
   type SigConfig,
+  canAttachInline,
   currentItem,
   errMessage,
   fetchSignature,
   fetchWithTimeout,
   getPca,
   getToken,
+  insertSignature,
   naaSupported,
   officeAsync,
   readConfig,
@@ -81,15 +83,15 @@ async function insert(design: DesignItem, button: HTMLButtonElement): Promise<vo
     const item = currentItem();
     const type = await resolveComposeType(item);
     const from = item?.itemType === Office.MailboxEnums.ItemType.Message ? await resolveFromAddress(item).catch(() => undefined) : undefined;
-    const html = await fetchSignature(cfg!, token!, type, from, design.id);
-    if (!html.trim()) {
+    const sig = await fetchSignature(cfg!, token!, type, { from, design: design.id, inline: canAttachInline(item) });
+    if (!sig.html.trim()) {
       status("There’s no signature for this account.", "error");
       return;
     }
     if (typeof item.disableClientSignatureAsync === "function") {
       await officeAsync<void>((cb) => item.disableClientSignatureAsync(cb)).catch(() => undefined);
     }
-    await officeAsync<void>((cb) => item.body.setSignatureAsync(html, { coercionType: Office.CoercionType.Html }, cb));
+    await insertSignature(item, sig);
     status(`${design.name} inserted in this email.`, "ok");
   } catch (e) {
     status(`Couldn’t insert it: ${errMessage(e)}`, "error");

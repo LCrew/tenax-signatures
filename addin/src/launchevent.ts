@@ -31,6 +31,7 @@
 import {
   type SigConfig,
   type SignatureType,
+  canAttachInline,
   currentItem,
   delay,
   diagnostics,
@@ -38,6 +39,7 @@ import {
   fetchSignature,
   fetchWithTimeout,
   getToken,
+  insertSignature,
   officeAsync,
   readConfig,
   resolveComposeType,
@@ -110,8 +112,8 @@ async function applySignature(run: Run, cfg: SigConfig, useFrom: boolean): Promi
   const token = await getToken(cfg);
 
   run.stage = "fetch";
-  const html = await fetchSignature(cfg, token, run.composeType, from);
-  if (!html.trim() || run.done) return; // nothing to insert, or the watchdog already gave up
+  const sig = await fetchSignature(cfg, token, run.composeType, { from, inline: canAttachInline(item) });
+  if (!sig.html.trim() || run.done) return; // nothing to insert, or the watchdog already gave up
 
   // Stop Outlook's own client signature so the user doesn't end up with two. Not fatal on its own.
   run.stage = "disableClientSignature";
@@ -125,7 +127,9 @@ async function applySignature(run: Run, cfg: SigConfig, useFrom: boolean): Promi
   if (run.done) return;
 
   run.stage = "setSignature";
-  await officeAsync<void>((cb) => item.body.setSignatureAsync(html, { coercionType: Office.CoercionType.Html }, cb));
+  const { inlineFailed } = await insertSignature(item, sig);
+  // The signature went in with linked images instead; worth knowing which clients can't attach.
+  if (inlineFailed) void sendTelemetry(cfg, run, `non-fatal: inline images: ${inlineFailed}`);
   run.stage = "done";
 }
 

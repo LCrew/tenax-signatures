@@ -245,25 +245,129 @@ export async function resolveFromAddress(item: any): Promise<string> {
 // API call
 // ---------------------------------------------------------------------------------------------
 
+/** An image to attach inline; the signature HTML references it as cid:<name>. */
+export interface InlineImage {
+  name: string;
+  /** The linked image it replaced, used if attaching fails. */
+  url: string;
+  base64: string;
+}
+
+export interface Signature {
+  html: string;
+  images: InlineImage[];
+}
+
 /**
- * Returns the HTML to insert, or "" when the API says there's nothing to insert (204 / empty body).
- * Accepts either text/html or JSON `{ "html": "…" }`.
+ * Returns the signature to insert; html is "" when the API says there's nothing to insert (204 / empty body).
+ * With `inline`, the server sends JSON `{ html, images }` with the logo as an attachment to add; otherwise text/html.
  */
-export async function fetchSignature(cfg: SigConfig, token: string, type: SignatureType, from?: string, design?: string): Promise<string> {
+export async function fetchSignature(
+  cfg: SigConfig,
+  token: string,
+  type: SignatureType,
+  opts: { from?: string; design?: string; inline?: boolean } = {},
+): Promise<Signature> {
   let url = `${cfg.apiBase}/api/signature?type=${encodeURIComponent(type)}`;
-  if (from) url += `&from=${encodeURIComponent(from)}`;
-  if (design) url += `&design=${encodeURIComponent(design)}`;
+  if (opts.from) url += `&from=${encodeURIComponent(opts.from)}`;
+  if (opts.design) url += `&design=${encodeURIComponent(opts.design)}`;
+  if (opts.inline) url += "&inline=1";
   const res = await fetchWithTimeout(
     url,
     { method: "GET", headers: { Authorization: `Bearer ${token}`, Accept: "text/html, application/json" }, cache: "no-store" },
     FETCH_TIMEOUT_MS,
   );
-  if (res.status === 204) return "";
+  if (res.status === 204) return { html: "", images: [] };
   if (!res.ok) throw new Error(`GET /api/signature -> HTTP ${res.status}`);
   const ct = (res.headers.get("content-type") || "").toLowerCase();
   if (ct.indexOf("application/json") !== -1) {
-    const j = (await res.json()) as { html?: unknown };
-    return typeof j.html === "string" ? j.html : "";
+    const j = (await res.json()) as { html?: unknown; images?: unknown };
+    return { html: typeof j.html === "string" ? j.html : "", images: Array.isArray(j.images) ? (j.images as InlineImage[]) : [] };
   }
-  return res.text();
+  return { html: await res.text(), images: [] };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Inserting (inline images)
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Whether this Outlook can attach the signature's images inline. Linked images break when Outlook for Mac quotes them
+ * in a reply ("Image removed by sender"); attached ones travel with the email. Needs Mailbox 1.11: sessionData
+ * remembers which attachments are ours for this draft, so a later signature (From change, Signatures pane) can remove
+ * them. Outlook mobile and older builds keep linked images.
+ */
+export function canAttachInline(item: any): boolean {
+  try {
+    return (
+      typeof item.addFileAttachmentFromBase64Async === "function" &&
+      typeof item.removeAttachmentAsync === "function" &&
+      !!item.sessionData &&
+      Office.context.requirements.isSetSupported("Mailbox", "1.11")
+    );
+  } catch {
+    return false;
+  }
+}
+
+const OWN_IMAGES_KEY = "sigInlineAttachments";
+
+/** Attachment IDs of the images this add-in attached for its previous signature in this draft. */
+async function ownImages(item: any): Promise<string[]> {
+  if (!item.sessionData) return [];
+  try {
+    const v = await officeAsync<string>((cb) => item.sessionData.getAsync(OWN_IMAGES_KEY, cb));
+    const ids = JSON.parse(v || "[]");
+    return Array.isArray(ids) ? ids.filter((x) => typeof x === "string") : [];
+  } catch {
+    return []; // nothing stored yet
+  }
+}
+
+async function rememberOwnImages(item: any, ids: string[]): Promise<void> {
+  if (!item.sessionData) return;
+  await officeAsync<void>((cb) => item.sessionData.setAsync(OWN_IMAGES_KEY, JSON.stringify(ids), cb)).catch(() => undefined);
+}
+
+async function removeAttachments(item: any, ids: string[]): Promise<void> {
+  for (const id of ids) {
+    // Already gone (the user deleted it, or another session's ID) is fine.
+    await officeAsync<void>((cb) => item.removeAttachmentAsync(id, cb)).catch(() => undefined);
+  }
+}
+
+/** The signature with its images linked again. */
+function linkedHtml(sig: Signature): string {
+  return sig.images.reduce((html, img) => html.split(`cid:${img.name}`).join(img.url), sig.html);
+}
+
+/**
+ * Sets the signature. Its images are attached inline first. Once it's in, images attached for an earlier signature in
+ * this draft (From change, Signatures pane) are removed so they don't end up as stray attachments. If attaching
+ * fails, the linked images are used and the reason is returned (non-fatal, for telemetry).
+ */
+export async function insertSignature(item: any, sig: Signature): Promise<{ inlineFailed?: string }> {
+  const previous = await ownImages(item);
+  let html = sig.html;
+  let inlineFailed: string | undefined;
+  const added: string[] = [];
+  try {
+    for (const img of sig.images) {
+      added.push(await officeAsync<string>((cb) => item.addFileAttachmentFromBase64Async(img.base64, img.name, { isInline: true }, cb)));
+    }
+  } catch (e) {
+    inlineFailed = errMessage(e);
+    await removeAttachments(item, added.splice(0));
+    html = linkedHtml(sig);
+  }
+
+  try {
+    await officeAsync<void>((cb) => item.body.setSignatureAsync(html, { coercionType: Office.CoercionType.Html }, cb));
+  } catch (e) {
+    await removeAttachments(item, added);
+    throw e;
+  }
+  await removeAttachments(item, previous);
+  await rememberOwnImages(item, added);
+  return { inlineFailed };
 }

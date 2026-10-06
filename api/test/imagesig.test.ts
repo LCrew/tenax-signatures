@@ -108,6 +108,14 @@ describe('image designs through the API', async () => {
     expect((await app.inject({ url: '/sig-img/../../etc/passwd.png' })).statusCode).toBe(404);
   });
 
+  it('embeds the rendered PNG for the add-in (?inline=1)', async () => {
+    const { html, images } = (await app.inject({ url: '/api/signature?type=reply&inline=1', headers: VARENO })).json();
+    expect(images).toHaveLength(1);
+    expect(images[0].url).toMatch(/^https:\/\/sig\.tenax\.lv\/sig-img\/[a-f0-9]{40}\.png$/);
+    expect(Buffer.from(images[0].base64, 'base64').subarray(1, 4).toString()).toBe('PNG');
+    expect(html).toContain(`<img src="cid:${images[0].name}" width="500"`);
+  });
+
   it('rejects mappings to text that isn’t in the SVG, and non-https links', async () => {
     const bad = await app.inject({ method: 'POST', url: `/api/admin/designs/${id}/image`, headers: IT, payload: { fields: { nope: { lines: ['x'] } }, crop: { x: 0, y: 0, width: 10, height: 10 }, width: 500, link: '' } });
     expect(bad.statusCode).toBe(400);

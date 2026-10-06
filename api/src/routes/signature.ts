@@ -1,7 +1,10 @@
+import fs from 'node:fs';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { AppContext } from '../context.js';
 import { actorOf, requireUser } from '../auth/plugin.js';
+import { findAsset } from '../services/assets.js';
+import { inlineImages, type ImageSource } from '../services/inline.js';
 import { signatureDataFor, signatureDataForMailbox } from '../services/renderer.js';
 import { applyOverrides } from '../services/designs.js';
 import type { ComposeType, Design, Overrides, ResolvedUser, SharedMailbox } from '../types.js';
@@ -21,9 +24,28 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
     return designs.find((d) => d.id === mailbox.design) ?? designs.find((d) => d.purpose === 'service') ?? designs.find((d) => d.isDefault);
   }
 
-  /** Rendered signature for THE CALLER. The only user identity input is the validated token. */
+  /** Image bytes behind our own image URLs, for embedding them in the email. */
+  const imageSource: ImageSource = {
+    asset: (company, file) => {
+      const full = findAsset(ctx.env, company, file);
+      return full ? fs.readFileSync(full) : null;
+    },
+    signatureImage: (hash) => {
+      try {
+        return ctx.images.png(hash);
+      } catch {
+        return null; // stays a linked image
+      }
+    },
+  };
+
+  /**
+   * Rendered signature for THE CALLER. The only user identity input is the validated token.
+   * ?inline=1 (add-in builds that can attach images): JSON { html, images } where the logo / image signature is a
+   * cid: reference to an image the add-in attaches, so replies from Outlook for Mac keep it. Otherwise plain HTML.
+   */
   app.get('/api/signature', async (req, reply) => {
-    const q = req.query as { type?: string; from?: string; design?: string };
+    const q = req.query as { type?: string; from?: string; design?: string; inline?: string };
     const type = typeSchema.safeParse(q.type);
     if (!type.success) return reply.code(400).send({ error: 'type must be newMail, reply or forward' });
 
@@ -31,6 +53,11 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
     if (!user) return;
     const settings = ctx.settings.get();
     const companies = ctx.repo.listCompanies();
+    const send = (html: string) => {
+      reply.header('Cache-Control', 'no-store');
+      if (q.inline === '1') return reply.send(inlineImages(html, settings.publicUrl, imageSource));
+      return reply.type('text/html; charset=utf-8').send(html);
+    };
 
     // OnMessageFromChanged: only switch identity for configured shared mailboxes; anything else
     // falls back to the caller's own signature.
@@ -42,8 +69,7 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
       // Personal signature from a shared address (e.g. answering from support@ as yourself).
       if (mailbox?.signature === 'senderWithMailboxEmail') mailboxEmail = mailbox.email;
       if (mailbox && company && (mailbox.signature ?? 'mailbox') === 'mailbox') {
-        const html = ctx.renderer.render({ company, type: type.data as ComposeType, data: signatureDataForMailbox(mailbox), settings, design: mailboxDesign(mailbox) });
-        return reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-store').send(html);
+        return send(ctx.renderer.render({ company, type: type.data as ComposeType, data: signatureDataForMailbox(mailbox), settings, design: mailboxDesign(mailbox) }));
       }
     }
 
@@ -53,8 +79,7 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
     if (!company) return reply.code(500).send({ error: `Company "${user.company}" is not configured` });
     try {
       const data = { ...signatureDataFor(user), ...(mailboxEmail ? { email: mailboxEmail } : {}) };
-      const html = ctx.renderer.render({ company, type: type.data as ComposeType, data, settings, design: designFor(user, q.design) });
-      return reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-store').send(html);
+      return send(ctx.renderer.render({ company, type: type.data as ComposeType, data, settings, design: designFor(user, q.design) }));
     } catch (e) {
       // A broken design must never break composing: insert nothing (204) and leave a trace for IT.
       req.log.error({ err: e, company: company.key }, 'signature render failed');

@@ -114,7 +114,11 @@ The point of this report is to fix the source data in on-prem AD over time. Over
   - max width 600px
   - web-safe font stack (`Arial, Helvetica, sans-serif`)
 - Images must be **absolute HTTPS URLs** served from `https://sig.tenaxgrupa.lv/assets/<company>/...`.
-  - No base64 and no `cid:` images.
+  - No base64 and no `cid:` images in templates.
+  - Exception, applied at insertion time: the add-in attaches logos and image signatures inline (`cid:`, via
+    `GET /api/signature?inline=1`) where Outlook supports it (Mailbox 1.11). Outlook for Mac replaces quoted
+    *linked* images with an empty `cid:~WRD0000.jpg` ("Image removed by sender") when replying, so linked logos
+    vanished from threads. Promo banners stay linked.
   - Provide PNGs at 2× resolution with explicit `width`/`height` attributes.
 - Dark mode: avoid transparent logos on text-coloured backgrounds; provide a solid-background variant if needed.
 - Templates must be editable **without redeploying code**: reloaded from disk or DB, and versioned. The admin UI shows a live preview.
