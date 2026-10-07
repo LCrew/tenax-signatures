@@ -50,6 +50,7 @@ function summary(u: ResolvedUser, companies: Company[]) {
     isAdmin: u.isAdmin,
     isPilot: u.isPilot,
     excluded: u.excluded,
+    skipped: u.skipped,
     design: u.design,
     designLocked: u.designLocked,
   };
@@ -122,18 +123,25 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     return user && access.can(user.company) && (access.global || !user.excluded) ? user : null;
   }
 
+  /** Is this account's address set up under Shared mailboxes (where its signature is then chosen)? */
+  const sharedMailboxCheck = () => {
+    const emails = new Set(ctx.repo.listSharedMailboxes().map((m) => m.email.toLowerCase()));
+    return (u: ResolvedUser) => emails.has(u.upn) || emails.has(u.entra.mail?.toLowerCase() ?? '');
+  };
+
   app.get('/api/admin/users', staff(async (req, _reply, _admin, access) => {
     const q = String((req.query as any).search ?? '').trim().toLowerCase();
     const companies = ctx.repo.listCompanies();
-    const users = await ctx.resolver.resolveAll();
-    // ?view=excluded lists the accounts left out of signatures (IT only); everyone else never sees them.
-    const showExcluded = access.global && (req.query as any).view === 'excluded';
+    // IT only, everyone else never sees them: ?view=excluded lists the accounts an admin or the exclusion group left
+    // out; ?view=skipped the ones the directory leaves out (sign-in blocked, no licence or mailbox), with why.
+    const view = access.global ? (req.query as any).view : undefined;
+    const isSharedMailbox = sharedMailboxCheck();
+    const users = view === 'skipped' ? await ctx.resolver.resolveSkipped() : (await ctx.resolver.resolveAll()).filter((u) => (view === 'excluded' ? !!u.excluded : !u.excluded));
     return users
       .filter((u) => access.can(u.company))
-      .filter((u) => (showExcluded ? !!u.excluded : !u.excluded))
       .filter((u) => !q || u.upn.includes(q) || (u.fields.displayName ?? '').toLowerCase().includes(q))
       .sort((a, b) => (a.fields.displayName ?? a.upn).localeCompare(b.fields.displayName ?? b.upn, 'lv'))
-      .map((u) => summary(u, companies));
+      .map((u) => (view === 'skipped' ? { ...summary(u, companies), sharedMailbox: isSharedMailbox(u) } : summary(u, companies)));
   }));
 
   app.get('/api/admin/users/:upn', staff(async (req, reply, _admin, access) => {
@@ -142,6 +150,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     if (!user) return reply.code(404).send({ error: 'User not found in directory' });
     return {
       ...summary(user, ctx.repo.listCompanies()),
+      sharedMailbox: sharedMailboxCheck()(user),
       oid: user.oid,
       fields: user.fields,
       sources: user.sources,

@@ -164,6 +164,52 @@
       "groups": [
         "00000000-0000-0000-0000-00000000a005"
       ]
+    },
+    {
+      "id": "11111111-0000-0000-0000-000000000010",
+      "userPrincipalName": "test.blocked@tenaxgrupa.lv",
+      "mail": "test.blocked@tenaxgrupa.lv",
+      "displayName": "Bloķēts Konts",
+      "jobTitle": null,
+      "mobilePhone": null,
+      "businessPhones": [],
+      "department": null,
+      "accountEnabled": false,
+      "licensed": true,
+      "hasMailbox": true,
+      "exchangeStatus": "Enabled",
+      "groups": [
+        "00000000-0000-0000-0000-00000000a002"
+      ]
+    },
+    {
+      "id": "11111111-0000-0000-0000-000000000011",
+      "userPrincipalName": "test.powerbi@tenaxgrupa.lv",
+      "mail": "test.powerbi@tenaxgrupa.lv",
+      "displayName": "Atskaišu Konts",
+      "jobTitle": null,
+      "mobilePhone": null,
+      "businessPhones": [],
+      "department": null,
+      "licensed": true,
+      "hasMailbox": false,
+      "exchangeStatus": null,
+      "groups": []
+    },
+    {
+      "id": "11111111-0000-0000-0000-000000000012",
+      "userPrincipalName": "info@tenaxgrupa.lv",
+      "mail": "info@tenaxgrupa.lv",
+      "displayName": "Tenax klientu serviss",
+      "jobTitle": null,
+      "mobilePhone": null,
+      "businessPhones": [],
+      "department": null,
+      "accountEnabled": false,
+      "licensed": false,
+      "hasMailbox": false,
+      "exchangeStatus": null,
+      "groups": []
     }
   ],
   "overrides": [

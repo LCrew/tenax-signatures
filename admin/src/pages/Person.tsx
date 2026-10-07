@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Ban, Undo2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useApp, useAsync, useCompanies, useDebounced, useToast } from '../lib/hooks';
-import { FIELD_LABELS, type ComposeType, type Design, type Overrides, type UserDetail } from '../lib/types';
+import { FIELD_LABELS, SKIP_REASONS, type ComposeType, type Design, type Overrides, type UserDetail } from '../lib/types';
 import { CompanyName, ErrorNote, Field, Loading, Modal, PageHead, timeAgo } from '../components/ui';
 import { LetterPreview } from '../components/LetterPreview';
 
@@ -78,7 +78,8 @@ export function Person() {
           </span>
         }
       />
-      {session?.isAdmin && <ExclusionBar user={u} onChanged={user.reload} />}
+      {u.skipped.length > 0 && <SkippedNote user={u} />}
+      {session?.isAdmin && (u.skipped.length === 0 || u.excluded) && <ExclusionBar user={u} onChanged={user.reload} />}
       {u.conflict && (
         <div className="callout warn" style={{ marginBottom: 20 }}>
           In {u.candidates.length} company groups ({u.candidates.join(', ')}). Using {u.companyName} because it's higher in
@@ -239,6 +240,31 @@ function changedFields(before: unknown, after: unknown): string[] {
   return Object.keys(FIELD_LABELS)
     .filter((k) => (b[k] ?? null) !== (a[k] ?? null))
     .map((k) => FIELD_LABELS[k].toLowerCase());
+}
+
+/** Accounts Microsoft 365 keeps out of signatures (People › Skipped): why, and what would change that. */
+function SkippedNote({ user: u }: { user: UserDetail }) {
+  if (u.sharedMailbox) {
+    return (
+      <div className="callout" style={{ marginBottom: 20 }}>
+        A shared mailbox, so it's not in People ({u.skipped.map((r) => SKIP_REASONS[r].label.toLowerCase()).join(', ')}). That's expected: the
+        signature people get when sending from it is set under <Link to="/mailboxes">Shared mailboxes</Link>.
+      </div>
+    );
+  }
+  return (
+    <div className="callout warn" style={{ marginBottom: 20 }}>
+      Not in People: Microsoft 365 keeps this account out of signatures.
+      <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+        {u.skipped.map((r) => (
+          <li key={r}>
+            <strong>{SKIP_REASONS[r].label}.</strong> {SKIP_REASONS[r].fix}
+            {r === 'mailboxOff' && u.entra.exchangeStatus && ` Microsoft 365 reports the plan as “${u.entra.exchangeStatus}”.`}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 /** IT only: leave an account (service, test, room mailbox…) out of signatures and all lists, or include it again. */

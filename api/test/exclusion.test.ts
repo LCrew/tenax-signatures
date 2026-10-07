@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { withMailboxFlag } from '../src/services/directory.js';
+import { skipReasons, withMailboxFlag } from '../src/services/directory.js';
 import { makeApp, mock } from './helpers.js';
 
 const IT = mock('test.tenax@tenaxgrupa.lv');
@@ -13,6 +13,52 @@ describe('mailbox licence filter', () => {
     expect(withMailboxFlag({ ...base, assignedPlans: [{ service: 'exchange', capabilityStatus: 'Deleted' }] } as any).hasMailbox).toBe(false);
     expect(withMailboxFlag({ ...base, assignedPlans: [] } as any).hasMailbox).toBe(false);
     expect('assignedPlans' in withMailboxFlag({ ...base, assignedPlans: [] } as any)).toBe(false);
+  });
+
+  it('keeps whether it is licensed and what state its Exchange plan is in', () => {
+    const u = withMailboxFlag({ ...base, assignedLicenses: [{}], assignedPlans: [{ service: 'exchange', capabilityStatus: 'Deleted' }] } as any);
+    expect(u).toMatchObject({ licensed: true, hasMailbox: false, exchangeStatus: 'Deleted' });
+    expect('assignedLicenses' in u).toBe(false);
+    expect(withMailboxFlag({ ...base, assignedLicenses: [], assignedPlans: [] } as any)).toMatchObject({ licensed: false, exchangeStatus: null });
+  });
+
+  it('explains why an account is left out', () => {
+    const ok = { ...base, userType: 'Member', accountEnabled: true, licensed: true, hasMailbox: true, exchangeStatus: 'Enabled' };
+    expect(skipReasons(ok)).toEqual([]);
+    expect(skipReasons({ ...ok, userType: 'Guest' })).toEqual(['guest']);
+    expect(skipReasons({ ...ok, accountEnabled: false })).toEqual(['disabled']);
+    expect(skipReasons({ ...ok, licensed: false, hasMailbox: false, exchangeStatus: null })).toEqual(['unlicensed']);
+    expect(skipReasons({ ...ok, hasMailbox: false, exchangeStatus: null })).toEqual(['noMailbox']);
+    expect(skipReasons({ ...ok, hasMailbox: false, exchangeStatus: 'Suspended' })).toEqual(['mailboxOff']);
+    expect(skipReasons({ ...ok, accountEnabled: false, licensed: false, hasMailbox: false })).toEqual(['disabled', 'unlicensed']);
+    // Demo data without these fields counts as qualifying.
+    expect(skipReasons(base)).toEqual([]);
+  });
+});
+
+describe('accounts the directory leaves out', async () => {
+  const { app } = await makeApp();
+  const list = (h = IT, q = '') => app.inject({ url: `/api/admin/users${q}`, headers: h }).then((r) => r.json());
+
+  it('are listed under Skipped with why, and nowhere else', async () => {
+    const skipped = await list(IT, '?view=skipped');
+    expect(skipped.map((u: any) => [u.upn, u.skipped, u.sharedMailbox])).toEqual([
+      ['test.powerbi@tenaxgrupa.lv', ['noMailbox'], false],
+      ['test.blocked@tenaxgrupa.lv', ['disabled'], false],
+      ['info@tenaxgrupa.lv', ['disabled', 'unlicensed'], true],
+    ]);
+    const shown = [...(await list()), ...(await list(IT, '?view=excluded'))].map((u: any) => u.upn);
+    for (const u of skipped) expect(shown).not.toContain(u.upn);
+    expect((await app.inject({ url: '/api/admin/report', headers: IT })).json().total).toBe(9);
+  });
+
+  it('their person page says why', async () => {
+    const detail = (await app.inject({ url: '/api/admin/users/test.blocked@tenaxgrupa.lv', headers: IT })).json();
+    expect(detail).toMatchObject({ skipped: ['disabled'], sharedMailbox: false });
+  });
+
+  it('only IT sees the list', async () => {
+    expect((await list(EDITOR, '?view=skipped')).map((u: any) => u.upn)).not.toContain('test.blocked@tenaxgrupa.lv');
   });
 });
 

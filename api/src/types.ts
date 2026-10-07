@@ -86,9 +86,19 @@ export interface DirectoryUser {
   department: string | null;
   userType?: string | null;
   accountEnabled?: boolean | null;
+  /** Has any licence, free ones included (undefined = unknown, e.g. demo data). */
+  licensed?: boolean;
   /** Has an active Exchange Online plan (undefined = unknown, e.g. demo data). */
   hasMailbox?: boolean;
+  /** Status of its Exchange Online plan: 'Enabled', else e.g. 'Deleted' (switched off) or 'Suspended'; null = none. */
+  exchangeStatus?: string | null;
 }
+
+/**
+ * Why the directory alone keeps an account out of signatures: guest, sign-in blocked, no licence, licences without
+ * a mailbox (Power BI, Teams Exploratory…), or an Exchange Online plan that isn't active.
+ */
+export type SkipReason = 'guest' | 'disabled' | 'unlicensed' | 'noMailbox' | 'mailboxOff';
 
 export interface DirectoryGroup {
   id: string;
@@ -154,6 +164,8 @@ export interface ResolvedUser {
   designLocked: boolean;
   /** Left out of signatures and lists (service accounts etc.): via the exclusion group or by hand. */
   excluded: null | { by: 'group' } | { by: 'manual'; reason: string | null; excludedBy: string; excludedAt: string };
+  /** Left out by the directory itself (see SkipReason); empty = the account qualifies. */
+  skipped: SkipReason[];
   isPilot: boolean;
 }
 

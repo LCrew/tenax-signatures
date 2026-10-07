@@ -9,7 +9,7 @@ import type {
   ResolvedUser,
   Settings,
 } from '../types.js';
-import type { Directory } from './directory.js';
+import { skipReasons, type Directory } from './directory.js';
 import { normalizePhone } from './phone.js';
 import { ref, resolveDesign } from './designs.js';
 
@@ -163,15 +163,26 @@ export class UserResolver {
         const x = this.repo.getExclusion(entra.userPrincipalName);
         return x ? { by: 'manual' as const, reason: x.reason, excludedBy: x.excludedBy, excludedAt: x.excludedAt } : null;
       })(),
+      skipped: skipReasons(entra),
       isPilot: !!settings.pilotGroupId && lowered.has(settings.pilotGroupId.toLowerCase()),
     };
   }
 
+  /** Everyone who qualifies for a signature (an enabled member with a mailbox), resolved. */
+  async resolveAll(): Promise<ResolvedUser[]> {
+    return (await this.resolveMembers()).filter((u) => u.skipped.length === 0);
+  }
+
+  /** Accounts the directory itself keeps out of signatures (sign-in blocked, no licence or mailbox), with why. */
+  async resolveSkipped(): Promise<ResolvedUser[]> {
+    return (await this.resolveMembers()).filter((u) => u.skipped.length > 0);
+  }
+
   /**
-   * All licensed users, resolved. Group membership is loaded per company group (N calls) rather
+   * Every member account, resolved. Group membership is loaded per company group (N calls) rather
    * than per user, which keeps a full report to a handful of Graph requests.
    */
-  async resolveAll(): Promise<ResolvedUser[]> {
+  private async resolveMembers(): Promise<ResolvedUser[]> {
     const dir = this.getDirectory();
     const settings = this.getSettings();
     let map = this.membership.get('all');
@@ -194,7 +205,7 @@ export class UserResolver {
       }
       this.membership.set('all', map);
     }
-    const users = await dir.listUsers();
+    const users = await dir.listMembers();
     return users.map((u) => this.build(u, map!.get(u.id) ?? []));
   }
 }

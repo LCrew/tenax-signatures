@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { ConfidentialClientApplication } from '@azure/msal-node';
-import type { DirectoryGroup, DirectoryUser } from '../types.js';
+import type { DirectoryGroup, DirectoryUser, SkipReason } from '../types.js';
 
 /** Read-only view of Entra ID. The service never writes to the directory. */
 export interface Directory {
@@ -9,8 +9,8 @@ export interface Directory {
   getUserById(idOrUpn: string): Promise<DirectoryUser | null>;
   /** Transitive group object IDs for a user. */
   getUserGroupIds(userId: string): Promise<string[]>;
-  /** Licensed users (for the admin list / report). */
-  listUsers(): Promise<DirectoryUser[]>;
+  /** Every member account, whether or not it qualifies for a signature (see skipReasons). */
+  listMembers(): Promise<DirectoryUser[]>;
   /** Transitive user members of a group (IDs). Used to resolve companies in bulk. */
   getGroupMemberIds(groupId: string): Promise<string[]>;
   searchGroups(query: string): Promise<DirectoryGroup[]>;
@@ -19,6 +19,8 @@ export interface Directory {
 }
 
 const USER_SELECT = 'id,userPrincipalName,mail,displayName,jobTitle,mobilePhone,businessPhones,department,userType,accountEnabled';
+/** Licences and their service plans: whether the account has a mailbox. Dropped again by withMailboxFlag. */
+const PLAN_SELECT = 'assignedLicenses,assignedPlans';
 
 // ───────────────────────────── Mock (fixtures/users.json) ─────────────────────────────
 
@@ -48,7 +50,7 @@ export class MockDirectory implements Directory {
   async getUserGroupIds(userId: string) {
     return this.data.users.find((u) => u.id === userId)?.groups ?? [];
   }
-  async listUsers() {
+  async listMembers() {
     return this.data.users.map(strip);
   }
   async getGroupMemberIds(groupId: string) {
@@ -140,7 +142,7 @@ export class GraphDirectory implements Directory {
 
   async getUserById(idOrUpn: string) {
     try {
-      return withMailboxFlag(await this.get<GraphUser>(`/users/${encodeURIComponent(idOrUpn)}?$select=${USER_SELECT},assignedPlans`));
+      return withMailboxFlag(await this.get<GraphUser>(`/users/${encodeURIComponent(idOrUpn)}?$select=${USER_SELECT},${PLAN_SELECT}`));
     } catch (e: any) {
       if (e.status === 404) return null;
       throw e;
@@ -154,15 +156,11 @@ export class GraphDirectory implements Directory {
     return groups.map((g) => g.id);
   }
 
-  async listUsers() {
-    // Licensed, enabled members only. Advanced query → needs ConsistencyLevel + $count.
-    // "Licensed" in Entra includes free licences (Power BI, Teams Exploratory, Fabric…), so we also require an
-    // active Exchange Online plan: no mailbox, no signature.
-    const users = await this.getAll<GraphUser>(
-      `/users?$select=${USER_SELECT},assignedPlans&$filter=assignedLicenses/$count ne 0 and accountEnabled eq true and userType eq 'Member'&$count=true&$top=999`,
-      { ConsistencyLevel: 'eventual' },
-    );
-    return users.map(withMailboxFlag).filter((u) => u.hasMailbox);
+  async listMembers() {
+    // All members, filtered here rather than in Graph: People can then say why an account is left out, and a
+    // plain query has no index lag (an advanced $count query can miss a just-licensed account for hours).
+    const users = await this.getAll<GraphUser>(`/users?$select=${USER_SELECT},${PLAN_SELECT}&$filter=userType eq 'Member'&$top=999`);
+    return users.map(withMailboxFlag);
   }
 
   async getGroupMemberIds(groupId: string) {
@@ -229,15 +227,36 @@ function decodeJwtPayload(token: string): Record<string, any> {
   }
 }
 
-type GraphUser = DirectoryUser & { assignedPlans?: { service?: string; capabilityStatus?: string }[] };
+type GraphUser = DirectoryUser & {
+  assignedLicenses?: unknown[];
+  assignedPlans?: { service?: string; capabilityStatus?: string }[];
+};
 
-/** Adds hasMailbox (an enabled Exchange plan) and drops the bulky plan list before caching. */
+/** Adds licensed / hasMailbox (an enabled Exchange plan) / exchangeStatus and drops the bulky lists before caching. */
 export function withMailboxFlag(u: GraphUser): DirectoryUser {
-  const { assignedPlans, ...rest } = u;
+  const { assignedLicenses, assignedPlans, ...rest } = u;
+  const exchange = (assignedPlans ?? []).filter((p) => p.service?.toLowerCase() === 'exchange');
+  const hasMailbox = exchange.some((p) => p.capabilityStatus === 'Enabled');
   return {
     ...rest,
-    hasMailbox: (assignedPlans ?? []).some((p) => p.service?.toLowerCase() === 'exchange' && p.capabilityStatus === 'Enabled'),
+    ...(assignedLicenses && { licensed: assignedLicenses.length > 0 }),
+    hasMailbox,
+    exchangeStatus: hasMailbox ? 'Enabled' : (exchange[0]?.capabilityStatus ?? null),
   };
+}
+
+/**
+ * Why the directory alone keeps an account out of signatures; empty = it qualifies (an enabled member with an active
+ * Exchange Online plan). "Licensed" in Entra includes free licences (Power BI, Teams Exploratory, Fabric…), hence the
+ * Exchange check: no mailbox, no signature. Unknown values (demo data) don't count against an account.
+ */
+export function skipReasons(u: DirectoryUser): SkipReason[] {
+  if (u.userType && u.userType !== 'Member') return ['guest'];
+  const out: SkipReason[] = [];
+  if (u.accountEnabled === false) out.push('disabled');
+  if (u.licensed === false) out.push('unlicensed');
+  else if (u.hasMailbox === false) out.push(u.exchangeStatus ? 'mailboxOff' : 'noMailbox');
+  return out;
 }
 
 export function certThumbprintSha256(certPem: string): string {

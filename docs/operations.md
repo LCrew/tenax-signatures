@@ -226,9 +226,19 @@ It works for every design type, including SVG image designs, where it appears as
 
 ## Service accounts and unlicensed accounts
 
-People lists only **enabled member accounts with an active Exchange Online mailbox plan**. Accounts without a licence,
-or with only free licences (Power BI, Teams Exploratory, Fabric…), don't appear and get no signature. After changing
-licences in Microsoft 365, click **Overview › Refresh from directory**.
+People lists only **enabled member accounts with an active Exchange Online mailbox plan**. Everything else is under
+**People › Skipped** (IT only), with why for each account:
+
+| Reason | Fix in Microsoft 365 |
+|---|---|
+| Sign-in blocked | Unblock sign-in. If people only send from the address, add it under **Shared mailboxes** instead. |
+| No licence | Assign a licence that includes Exchange Online. |
+| No mailbox in its licences | Its licences are free ones (Power BI, Teams Exploratory, Fabric…). Assign one with Exchange Online. |
+| Exchange Online off | The licence has Exchange Online but the plan isn't active: tick it under **Licences and apps**, or check the subscription. |
+
+Shared mailboxes are expected there (blocked, no licence), tagged **Shared mailbox** when they're set up. Opening an
+account from Skipped shows the same explanation on its person page. People reads the directory on every load; a person
+page may take up to 10 minutes to reflect a change (or click **Overview › Refresh from directory**).
 
 Service accounts that do have a mailbox licence (noreply@, scanners, test or room mailboxes):
 - **Many accounts:** create the group `SG-Signature-Excluded` (the setup script with `-CreateGroups` can), add the

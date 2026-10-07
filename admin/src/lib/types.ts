@@ -99,9 +99,33 @@ export interface UserSummary {
   isAdmin: boolean;
   isPilot: boolean;
   excluded?: null | { by: 'group' } | { by: 'manual'; reason: string | null; excludedBy: string; excludedAt: string };
+  /** Left out by the directory itself; empty = the account qualifies. */
+  skipped: SkipReason[];
+  /** Skipped view / person page: the address is set up under Shared mailboxes. */
+  sharedMailbox?: boolean;
   design?: DesignRef & { source: 'locked' | 'chosen' | 'assigned' | 'default' };
   designLocked?: boolean;
 }
+
+export type SkipReason = 'guest' | 'disabled' | 'unlicensed' | 'noMailbox' | 'mailboxOff';
+
+/** Why Microsoft 365 keeps an account out of signatures, and what would change that. */
+export const SKIP_REASONS: Record<SkipReason, { label: string; fix: string }> = {
+  guest: { label: 'Guest account', fix: 'Guests from other organisations never get a signature.' },
+  disabled: {
+    label: 'Sign-in blocked',
+    fix: 'Unblock sign-in for this account in the Microsoft 365 admin center. If people only send from this address, add it under Shared mailboxes instead.',
+  },
+  unlicensed: { label: 'No licence', fix: 'Assign a licence that includes Exchange Online (e.g. Microsoft 365 Business Standard or Premium).' },
+  noMailbox: {
+    label: 'No mailbox in its licences',
+    fix: 'Its licences (Power BI, Teams Exploratory, Fabric…) don’t include Exchange Online. Assign one that does.',
+  },
+  mailboxOff: {
+    label: 'Exchange Online off',
+    fix: 'Its licence includes Exchange Online, but the plan isn’t active: tick Exchange Online under Licences and apps, or check the subscription hasn’t expired.',
+  },
+};
 
 export interface Overrides {
   displayName?: string | null;
@@ -141,6 +165,8 @@ export interface UserDetail extends UserSummary {
     businessPhones: string[];
     department: string | null;
     mail: string | null;
+    /** Status of its Exchange Online plan, e.g. 'Enabled', 'Deleted' (switched off), 'Suspended'; null = none. */
+    exchangeStatus?: string | null;
   };
   overrides: Overrides | null;
   history: AuditEntry[];
