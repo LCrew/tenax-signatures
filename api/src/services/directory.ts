@@ -159,8 +159,10 @@ export class GraphDirectory implements Directory {
   async listMembers() {
     // All members, filtered here rather than in Graph: People can then say why an account is left out, and a
     // plain query has no index lag (an advanced $count query can miss a just-licensed account for hours).
-    const users = await this.getAll<GraphUser>(`/users?$select=${USER_SELECT},${PLAN_SELECT}&$filter=userType eq 'Member'&$top=999`);
-    return users.map(withMailboxFlag);
+    // Not $filter=userType eq 'Member': older accounts can have no userType at all, and that filter drops them
+    // silently, so they'd be in no list. Like sign-in (auth/plugin.ts), only an explicit non-member is a guest.
+    const users = await this.getAll<GraphUser>(`/users?$select=${USER_SELECT},${PLAN_SELECT}&$top=999`);
+    return users.filter((u) => !u.userType || u.userType === 'Member').map(withMailboxFlag);
   }
 
   async getGroupMemberIds(groupId: string) {

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { skipReasons, withMailboxFlag } from '../src/services/directory.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { GraphDirectory, skipReasons, withMailboxFlag } from '../src/services/directory.js';
 import { makeApp, mock } from './helpers.js';
 
 const IT = mock('test.tenax@tenaxgrupa.lv');
@@ -31,8 +31,30 @@ describe('mailbox licence filter', () => {
     expect(skipReasons({ ...ok, hasMailbox: false, exchangeStatus: null })).toEqual(['noMailbox']);
     expect(skipReasons({ ...ok, hasMailbox: false, exchangeStatus: 'Suspended' })).toEqual(['mailboxOff']);
     expect(skipReasons({ ...ok, accountEnabled: false, licensed: false, hasMailbox: false })).toEqual(['disabled', 'unlicensed']);
-    // Demo data without these fields counts as qualifying.
+    // Demo data without these fields counts as qualifying, and so does an older account with no userType.
     expect(skipReasons(base)).toEqual([]);
+    expect(skipReasons({ ...ok, userType: null })).toEqual([]);
+  });
+});
+
+describe('Graph member list', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('keeps accounts without a userType (older accounts) and drops guests', async () => {
+    const plans = { assignedLicenses: [{}], assignedPlans: [{ service: 'exchange', capabilityStatus: 'Enabled' }] };
+    const page = { value: [
+      { id: '1', userPrincipalName: 'member@x', userType: 'Member', ...plans },
+      { id: '2', userPrincipalName: 'old@x', userType: null, ...plans },
+      { id: '3', userPrincipalName: 'partner_ext#EXT#@x', userType: 'Guest', ...plans },
+    ] };
+    const fetch = vi.fn(async () => new Response(JSON.stringify(page), { status: 200 }));
+    vi.stubGlobal('fetch', fetch);
+    const dir = new GraphDirectory({ tenantId: 't', clientId: 'c', clientSecret: 's' });
+    (dir as any).token = async () => 'token';
+    const users = await dir.listMembers();
+    expect(users.map((u) => u.userPrincipalName)).toEqual(['member@x', 'old@x']);
+    expect(users.map(skipReasons)).toEqual([[], []]);
+    expect(String((fetch.mock.calls[0] as any[])[0])).not.toContain('$filter');
   });
 });
 
