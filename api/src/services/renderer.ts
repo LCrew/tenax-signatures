@@ -36,6 +36,8 @@ export interface SignatureData {
   department: string | null;
   /** The person's own closing line (null/undefined = the design's; '' = none). */
   greeting?: string | null;
+  /** The person's own address line (null/undefined = the company's). */
+  address?: string | null;
 }
 
 /**
@@ -202,17 +204,20 @@ export class Renderer {
     const meta = validateMeta(metaSrc);
     // A personal closing line replaces the company/design one ('' hides it).
     if (opts.data.greeting != null) meta.greeting = opts.data.greeting;
+    // A personal address line replaces the company's, wherever the design shows it.
+    if (opts.data.address) meta.footer = { ...meta.footer, address: opts.data.address };
     // A design can choose its own job title language (e.g. an English design for foreign clients).
     const language = opts.design?.language ?? opts.settings.language;
 
     // Image designs: one rendered PNG for new messages and replies alike (Vareno's SVG signature).
     if (opts.design?.format === 'image' && opts.draft?.template == null) {
       if (!this.images) throw new TemplateError('Image designs are not available here');
-      const { greeting: _g, ...d } = applyLanguage(opts.data, language);
+      const { greeting: _g, address: _a, ...d } = applyLanguage(opts.data, language);
       return this.images.html({
         company: opts.company,
         design: { id: opts.design.id, name: opts.design.name ?? opts.design.id },
-        values: { ...d }, // the closing line is HTML above the image, never part of the rendered image
+        // The closing line is HTML above the image, never part of the rendered image. {{address}}: theirs, else the company's.
+        values: { ...d, address: meta.footer?.address || null },
         publicUrl: opts.settings.publicUrl,
         greeting: meta.greeting,
         greetingColor: meta.colors?.text,
@@ -297,7 +302,17 @@ export function signatureDataFor(user: ResolvedUser): SignatureData {
     email: f.email,
     department: f.department,
     greeting: f.greeting,
+    address: f.address,
   };
+}
+
+/** The company's address line (Brand and footer): what a person gets without their own. */
+export function companyAddress(repo: Repository, company: string): string {
+  try {
+    return String(JSON.parse(repo.latestTemplate(company, 'meta')?.content ?? '{}').footer?.address ?? '');
+  } catch {
+    return '';
+  }
 }
 
 export function signatureDataForMailbox(m: SharedMailbox): SignatureData {

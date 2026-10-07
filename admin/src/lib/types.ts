@@ -136,6 +136,8 @@ export interface Overrides {
   department?: string | null;
   company?: string | null;
   hideMobile?: boolean | null;
+  /** Their own address line; null = the company's. */
+  address?: string | null;
   design?: string | null;
   designLocked?: boolean | null;
   chosenDesign?: string | null;
@@ -156,6 +158,8 @@ export interface AuditEntry {
 
 export interface UserDetail extends UserSummary {
   oid: string;
+  /** The company's address line, used unless overrides.address is set. */
+  defaultAddress?: string;
   fields: Record<string, string | boolean | null>;
   sources: Record<string, 'override' | 'entra' | 'none'>;
   entra: {
@@ -234,4 +238,5 @@ export const FIELD_LABELS: Record<string, string> = {
   department: 'Department',
   company: 'Company',
   hideMobile: 'Hide mobile',
+  address: 'Address',
 };

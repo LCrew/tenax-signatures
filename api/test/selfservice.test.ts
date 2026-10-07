@@ -159,3 +159,41 @@ describe('personal closing line', async () => {
     expect(await sig()).toContain('Ar labākajiem vēlējumiem,');
   });
 });
+
+describe('personal address line', async () => {
+  const { app, ctx } = await makeApp();
+  const PANEL = mock('test.panel@tenaxgrupa.lv');
+  const COMPANY = 'Spodrības iela 1, Dobele, LV-3701, Latvija';
+  const sig = () => app.inject({ url: '/api/signature?type=newMail', headers: PANEL }).then((r) => r.body);
+  const setOwn = (address: string | null) => app.inject({ method: 'PUT', url: '/api/me/overrides', headers: PANEL, payload: { address } });
+
+  it('is a self-service field IT turns on', async () => {
+    ctx.settings.update({ selfServiceEnabled: true, selfServiceFields: ['jobTitleEn'] });
+    expect((await setOwn('Rīga')).statusCode).toBe(403);
+    expect((await app.inject({ method: 'PUT', url: '/api/admin/settings', headers: mock('test.tenax@tenaxgrupa.lv'), payload: { selfServiceFields: ['jobTitleEn', 'address'] } })).statusCode).toBe(200);
+    expect((await app.inject({ url: '/api/me', headers: PANEL })).json()).toMatchObject({ defaultAddress: COMPANY, selfService: { fields: ['jobTitleEn', 'address'] } });
+  });
+
+  it('replaces the company address in their signature, one line, and empty brings it back', async () => {
+    expect(await sig()).toContain(COMPANY);
+    expect((await setOwn('  Brīvības iela 100\nRīga, LV-1001 ')).statusCode).toBe(200);
+    const own = await sig();
+    expect(own).toContain('Brīvības iela 100, Rīga, LV-1001');
+    expect(own).not.toContain(COMPANY);
+    expect((await app.inject({ url: '/api/me', headers: PANEL })).json().overrides.address).toBe('Brīvības iela 100, Rīga, LV-1001');
+    // Only their own signature changes.
+    expect((await app.inject({ url: '/api/signature?type=newMail', headers: mock('test.tenax@tenaxgrupa.lv') })).body).toContain(COMPANY);
+
+    await setOwn('');
+    expect(await sig()).toContain(COMPANY);
+  });
+
+  it('is plain text and limited in length; admins can set it on the person page', async () => {
+    await setOwn('<b>Rīga</b>');
+    expect(await sig()).toContain('&lt;b&gt;Rīga&lt;/b&gt;');
+    expect((await setOwn('x'.repeat(201))).statusCode).toBe(400);
+    const res = await app.inject({ method: 'PUT', url: '/api/admin/users/test.panel@tenaxgrupa.lv/overrides', headers: mock('test.tenax@tenaxgrupa.lv'), payload: { address: 'Jelgava' } });
+    expect(res.statusCode).toBe(200);
+    expect(await sig()).toContain('Jelgava');
+  });
+});

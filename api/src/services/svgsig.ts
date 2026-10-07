@@ -53,6 +53,8 @@ export interface PersonValues {
   officePhone: string | null;
   email: string | null;
   department: string | null;
+  /** Their own address line, else the company's. Optional: older stored renders don't have it. */
+  address?: string | null;
 }
 
 export const PLACEHOLDERS: [string, string][] = [
@@ -65,6 +67,7 @@ export const PLACEHOLDERS: [string, string][] = [
   ['{{officePhone}}', 'Office phone'],
   ['{{email}}', 'Email'],
   ['{{department}}', 'Department'],
+  ['{{address}}', 'Address (their own, else the company’s)'],
 ];
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -228,6 +231,7 @@ function fill(template: string, v: PersonValues): { text: string; hadPlaceholder
     officePhone: v.officePhone ?? '',
     email: v.email ?? '',
     department: v.department ?? '',
+    address: v.address ?? '',
   };
   let had = false;
   let anyValue = false;

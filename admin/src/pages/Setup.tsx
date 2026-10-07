@@ -287,6 +287,7 @@ const SELF_FIELDS: { key: string; label: string }[] = [
   { key: 'hideMobile', label: 'Hide mobile number' },
   { key: 'mobilePhone', label: 'Mobile number' },
   { key: 'jobTitleLv', label: 'Latvian job title' },
+  { key: 'address', label: 'Address line (e.g. another office)' },
 ];
 
 export function SignatureOptions({ settings, onSaved, saveLabel = 'Save options' }: { settings: Settings; onSaved: () => void; saveLabel?: string }) {

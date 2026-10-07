@@ -76,6 +76,7 @@ export function resolveFields(entra: DirectoryUser, o: Overrides | null) {
     department: f('department', o?.department, entra.department),
     hideMobile: o?.hideMobile === true,
     greeting: o?.greeting ?? null,
+    address: f('address', o?.address, null),
   };
   sources.hideMobile = o?.hideMobile != null ? 'override' : 'none';
   sources.greeting = o?.greeting != null ? 'override' : 'none';

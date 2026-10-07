@@ -5,7 +5,7 @@ import type { AppContext } from '../context.js';
 import { actorOf, requireUser } from '../auth/plugin.js';
 import { findAsset } from '../services/assets.js';
 import { inlineImages, type ImageSource } from '../services/inline.js';
-import { signatureDataFor, signatureDataForMailbox } from '../services/renderer.js';
+import { companyAddress, signatureDataFor, signatureDataForMailbox } from '../services/renderer.js';
 import { applyOverrides } from '../services/designs.js';
 import type { ComposeType, Design, Overrides, ResolvedUser, SharedMailbox } from '../types.js';
 
@@ -117,6 +117,8 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
       // Closing line: theirs (null = default, '' = none) and the default it falls back to.
       greeting: user.fields.greeting,
       defaultGreeting: defaultGreeting(user),
+      // Address line: the company's, unless they set their own (overrides.address).
+      defaultAddress: companyAddress(ctx.repo, user.company),
       designs: user.allowedDesigns.map((d) => ({ ...d, selected: d.id === user.design.id })),
       selfService: { enabled: s.selfServiceEnabled, fields: s.selfServiceFields },
     };
@@ -294,6 +296,8 @@ export const overridePatchSchema = z
     department: nullableText(120),
     company: nullableText(64),
     hideMobile: z.union([z.boolean(), z.null()]),
+    // One line: a pasted multi-line address becomes "Street 1, City".
+    address: nullableText(200).transform((v) => (v == null ? null : v.replace(/\s*[\r\n]+\s*/g, ', ').replace(/\t+/g, ' '))),
   })
   .partial()
   .strict();

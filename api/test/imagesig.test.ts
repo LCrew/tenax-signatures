@@ -63,6 +63,17 @@ describe('SVG templates', () => {
     expect(out).toMatch(/<tspan x="0" y="10"><tspan style="font-weight:300;font-family:Poppins;fill:#f3f4f5">www\.varenogroup\.lv<\/tspan><\/tspan>/);
   });
 
+  it('fills {{address}} with the address it is given', () => {
+    const cfg = {
+      svg: sanitizeSvg(SVG), crop: { x: 50, y: 100, width: 300, height: 80 }, width: 500, link: '',
+      fields: { contact: { lines: ['{{address}}', 'Mob: {{mobilePhone}}', 'www.varenogroup.lv'], shrinkToFit: false } },
+    };
+    const values = { displayName: 'A', jobTitleLv: null, jobTitleEn: null, mobilePhone: '+371 1', officePhone: null, email: null, department: null };
+    expect(new XMLSerializer().serializeToString(fillSvg(cfg, { ...values, address: 'Brīvības iela 100, Rīga' }))).toContain('Brīvības iela 100, Rīga');
+    // Renders stored before {{address}} existed have no address: the line is dropped, not printed as a placeholder.
+    expect(new XMLSerializer().serializeToString(fillSvg(cfg, values))).not.toContain('{{address}}');
+  });
+
   it('reads font names and weights', () => {
     expect(readFontNames(fs.readFileSync(path.join(root, 'assets/fonts/Poppins-Light.ttf')))).toMatchObject({ family: 'Poppins', weight: 300 });
   });

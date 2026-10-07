@@ -14,9 +14,10 @@ export const OVERRIDABLE_FIELDS = [
   'department',
   'company',
   'hideMobile',
+  'address',
 ] as const;
 export type OverridableField = (typeof OVERRIDABLE_FIELDS)[number];
-export const SELF_SERVICE_ALLOWED: OverridableField[] = ['jobTitleEn', 'hideMobile', 'mobilePhone', 'jobTitleLv'];
+export const SELF_SERVICE_ALLOWED: OverridableField[] = ['jobTitleEn', 'hideMobile', 'mobilePhone', 'jobTitleLv', 'address'];
 
 export interface Company {
   key: string;
@@ -115,6 +116,8 @@ export interface Overrides {
   department?: string | null;
   company?: string | null;
   hideMobile?: boolean | null;
+  /** Their own address line instead of the company's (Brand and footer), e.g. another office. */
+  address?: string | null;
   /** Design set by an admin/editor; with designLocked the person can't change it. */
   design?: string | null;
   designLocked?: boolean | null;
@@ -148,6 +151,8 @@ export interface ResolvedUser {
     hideMobile: boolean;
     /** null = use the company/design closing line; '' = no closing line. */
     greeting: string | null;
+    /** Their own address line; null = the company's. */
+    address: string | null;
   };
   sources: Record<string, FieldSource>;
   entra: DirectoryUser;

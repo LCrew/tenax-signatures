@@ -23,6 +23,8 @@ interface Me {
   designs?: { id: string; name: string; purpose: string; selected: boolean }[];
   greeting?: string | null;
   defaultGreeting?: string;
+  /** The company's address line, used unless they set their own. */
+  defaultAddress?: string;
   selfService: { enabled: boolean; fields: string[] };
 }
 
@@ -30,6 +32,7 @@ const HINTS: Record<string, string> = {
   jobTitleEn: 'Shown under your Latvian title',
   jobTitleLv: 'Replaces the title from the company directory',
   mobilePhone: 'Replaces the number from the company directory',
+  address: 'Replaces the company address, e.g. if you work at another office',
 };
 
 /** What each person sees after signing in with Microsoft: their own signature, and the parts they may change. */
@@ -123,7 +126,7 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
           </div>
           <div className="panel-body" style={{ paddingTop: 4, paddingBottom: 4 }}>
             <ReadOnlyRow label="Name" value={me.data.fields.displayName as string} source={me.data.sources.displayName} />
-            {(['jobTitleLv', 'jobTitleEn', 'mobilePhone'] as const).map((f) =>
+            {(['jobTitleLv', 'jobTitleEn', 'mobilePhone', 'address'] as const).map((f) =>
               editable.includes(f) ? (
                 <div className="field-row" key={f}>
                   <label className="k" htmlFor={`me-${f}`}>
@@ -139,7 +142,7 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
                         onChange={(e) => setDraft((d) => ({ ...d, [f]: e.target.value }))}
                       />
                       {draft[f] ? (
-                        <button type="button" className="btn ghost sm" title="Use the company directory value" onClick={() => setDraft((d) => ({ ...d, [f]: null }))}>
+                        <button type="button" className="btn ghost sm" title={f === 'address' ? 'Use the company address' : 'Use the company directory value'} onClick={() => setDraft((d) => ({ ...d, [f]: null }))}>
                           <Undo2 size={14} />
                         </button>
                       ) : null}
@@ -148,7 +151,7 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
                   </div>
                 </div>
               ) : (
-                <ReadOnlyRow key={f} label={FIELD_LABELS[f]} value={me.data!.fields[f] as string} source={me.data!.sources[f]} />
+                <ReadOnlyRow key={f} label={FIELD_LABELS[f]} value={((me.data!.fields[f] as string) || (f === 'address' ? me.data!.defaultAddress : null)) ?? null} source={me.data!.sources[f]} />
               ),
             )}
             <ReadOnlyRow label="Office phone" value={me.data.fields.officePhone as string} source={me.data.sources.officePhone} />
@@ -288,6 +291,7 @@ function legacyCopy(html: string): boolean {
 function entraFor(me: Me, f: string): string | null {
   if (f === 'jobTitleLv') return me.entra.jobTitle;
   if (f === 'mobilePhone') return me.entra.mobilePhone;
+  if (f === 'address') return me.defaultAddress || null;
   return null;
 }
 

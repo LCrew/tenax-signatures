@@ -9,6 +9,7 @@ import { SESSION_COOKIE, hashPassword, hashSessionId, passwordProblems } from '.
 import { GraphDiagnosticError, certThumbprintSha256, splitPem } from '../services/directory.js';
 import {
   TemplateError,
+  companyAddress,
   signatureDataFor,
   trialRender,
   validateMeta,
@@ -151,6 +152,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     return {
       ...summary(user, ctx.repo.listCompanies()),
       sharedMailbox: sharedMailboxCheck()(user),
+      defaultAddress: companyAddress(ctx.repo, user.company),
       oid: user.oid,
       fields: user.fields,
       sources: user.sources,
@@ -938,7 +940,7 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
       excludeGroupId: optionalGuid,
       excludeGroupName: z.string().trim().max(256),
       selfServiceEnabled: z.boolean(),
-      selfServiceFields: z.array(z.enum(['jobTitleEn', 'hideMobile', 'mobilePhone', 'jobTitleLv'])),
+      selfServiceFields: z.array(z.enum(['jobTitleEn', 'hideMobile', 'mobilePhone', 'jobTitleLv', 'address'])),
       language: z.enum(['lv', 'en', 'bilingual']),
       allowedOrigins: z.array(originSchema(true)).max(10),
       setupStep: z.number().int().min(0).max(20),

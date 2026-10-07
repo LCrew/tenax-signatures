@@ -72,6 +72,8 @@ export const MIGRATIONS: string[] = [
   // v8: what people sending from a shared mailbox get: the mailbox's signature, their own, or their own with the
   // mailbox's address. NULL = 'mailbox' (the behaviour before v8).
   `ALTER TABLE shared_mailboxes ADD COLUMN signature TEXT;`,
+  // v9: a person's own address line (another office…). NULL = the company's address from Brand and footer.
+  `ALTER TABLE signature_overrides ADD COLUMN address TEXT;`,
 ];
 
 const now = () => new Date().toISOString();
@@ -208,14 +210,14 @@ export class SqliteRepository implements Repository {
     this.db
       .prepare(
         `INSERT INTO signature_overrides(upn, display_name, job_title_lv, job_title_en, mobile_phone, office_phone, department, company, hide_mobile,
-           design, design_locked, chosen_design, greeting, updated_by, updated_at)
+           design, design_locked, chosen_design, greeting, address, updated_by, updated_at)
          VALUES(@upn, @displayName, @jobTitleLv, @jobTitleEn, @mobilePhone, @officePhone, @department, @company, @hideMobile,
-           @design, @designLocked, @chosenDesign, @greeting, @updatedBy, @updatedAt)
+           @design, @designLocked, @chosenDesign, @greeting, @address, @updatedBy, @updatedAt)
          ON CONFLICT(upn) DO UPDATE SET display_name=excluded.display_name, job_title_lv=excluded.job_title_lv,
            job_title_en=excluded.job_title_en, mobile_phone=excluded.mobile_phone, office_phone=excluded.office_phone,
            department=excluded.department, company=excluded.company, hide_mobile=excluded.hide_mobile,
            design=excluded.design, design_locked=excluded.design_locked, chosen_design=excluded.chosen_design,
-           greeting=excluded.greeting,
+           greeting=excluded.greeting, address=excluded.address,
            updated_by=excluded.updated_by, updated_at=excluded.updated_at`,
       )
       .run({
@@ -232,6 +234,7 @@ export class SqliteRepository implements Repository {
         designLocked: o.designLocked ? 1 : null,
         chosenDesign: o.chosenDesign ?? null,
         greeting: o.greeting ?? null,
+        address: o.address ?? null,
         updatedBy: o.updatedBy ?? 'system',
         updatedAt: o.updatedAt ?? now(),
       });
@@ -427,6 +430,7 @@ function mapOverrides(r: any): Overrides {
     designLocked: r.design_locked === 1,
     chosenDesign: r.chosen_design ?? null,
     greeting: r.greeting ?? null,
+    address: r.address ?? null,
     updatedBy: r.updated_by,
     updatedAt: r.updated_at,
   };

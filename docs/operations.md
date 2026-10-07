@@ -224,6 +224,15 @@ it with their own on **My signature › Closing line**: **Company default**, **M
 characters) or **None**. This doesn't depend on the self-service setting. Admins can set it on the person page too.
 It works for every design type, including SVG image designs, where it appears as text above the image.
 
+## Address line (another office)
+
+The address comes from **Brand and footer** and is the same for the whole company. Someone working at another
+office can have their own: tick **Address line** under **Settings › Signature options › Self-service** and people
+set it on **My signature** (one line, max 200 characters; empty = the company address). Admins and company editors
+can set it on the person page whether or not self-service is on. It replaces the company address wherever a design
+shows it. SVG image designs have the address drawn into the artwork: put `{{address}}` in that line of the image
+design to use the person's address (their own, else the company's).
+
 ## Service accounts and unlicensed accounts
 
 People lists only **enabled member accounts with an active Exchange Online mailbox plan**. Everything else is under

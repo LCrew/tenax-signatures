@@ -7,7 +7,7 @@ import { FIELD_LABELS, SKIP_REASONS, type ComposeType, type Design, type Overrid
 import { CompanyName, ErrorNote, Field, Loading, Modal, PageHead, timeAgo } from '../components/ui';
 import { LetterPreview } from '../components/LetterPreview';
 
-const TEXT_FIELDS = ['displayName', 'jobTitleLv', 'jobTitleEn', 'mobilePhone', 'officePhone', 'department'] as const;
+const TEXT_FIELDS = ['displayName', 'jobTitleLv', 'jobTitleEn', 'mobilePhone', 'officePhone', 'department', 'address'] as const;
 type TextField = (typeof TEXT_FIELDS)[number];
 
 function entraValue(u: UserDetail, f: TextField): string | null {
@@ -18,6 +18,7 @@ function entraValue(u: UserDetail, f: TextField): string | null {
     case 'mobilePhone': return u.entra.mobilePhone;
     case 'officePhone': return u.entra.businessPhones?.[0] ?? null;
     case 'department': return u.entra.department;
+    case 'address': return u.defaultAddress || null; // the company's, from Brand and footer
   }
 }
 
@@ -104,16 +105,16 @@ export function Person() {
                   </label>
                   <div>
                     <div className="row" style={{ flexWrap: 'nowrap' }}>
-                      <input id={`f-${f}`} type="text" value={ov} placeholder={ev ?? (f === 'jobTitleEn' ? 'Not in Entra; set here' : 'Empty in Entra: line is left out')} onChange={(e) => set(f, e.target.value)} />
+                      <input id={`f-${f}`} type="text" value={ov} placeholder={ev ?? (f === 'jobTitleEn' ? 'Not in Entra; set here' : f === 'address' ? 'No company address: line is left out' : 'Empty in Entra: line is left out')} onChange={(e) => set(f, e.target.value)} />
                       {ov && (
-                        <button type="button" className="btn ghost sm" onClick={() => set(f, null)} title="Use the Entra value">
+                        <button type="button" className="btn ghost sm" onClick={() => set(f, null)} title={f === 'address' ? 'Use the company address' : 'Use the Entra value'}>
                           <Undo2 size={14} />
                         </button>
                       )}
                     </div>
                     <div className="entra">
-                      {ov ? <span className="tag action">Correction</span> : ev ? <span className="tag">From Entra</span> : <span className="tag danger">Missing</span>}
-                      {ov && ev && <span>Entra says: {ev}</span>}
+                      {ov ? <span className="tag action">Correction</span> : ev ? <span className="tag">{f === 'address' ? 'Company address' : 'From Entra'}</span> : f !== 'address' && <span className="tag danger">Missing</span>}
+                      {ov && ev && <span>{f === 'address' ? 'Company address' : 'Entra says'}: {ev}</span>}
                     </div>
                   </div>
                 </div>
@@ -216,14 +217,14 @@ export function Person() {
 
 function pickOverrides(o: Overrides | null): Overrides {
   if (!o) return {};
-  const { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile, design, designLocked, greeting } = o;
-  return { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile, design, designLocked, greeting };
+  const { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile, design, designLocked, greeting, address } = o;
+  return { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile, design, designLocked, greeting, address };
 }
 
 /** Empty strings mean "no correction". */
 function normalize(o: Overrides): Overrides {
   const out: Record<string, unknown> = {};
-  for (const k of ['displayName', 'jobTitleLv', 'jobTitleEn', 'mobilePhone', 'officePhone', 'department', 'company'] as const) {
+  for (const k of ['displayName', 'jobTitleLv', 'jobTitleEn', 'mobilePhone', 'officePhone', 'department', 'company', 'address'] as const) {
     const v = o[k];
     out[k] = typeof v === 'string' && v.trim() ? v.trim() : null;
   }
