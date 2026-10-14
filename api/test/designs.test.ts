@@ -310,3 +310,55 @@ describe('sending from a shared mailbox as yourself', async () => {
     expect((await put({ signature: 'someoneElse', displayName: 'X' })).statusCode).toBe(400);
   });
 });
+
+describe('Signatures pane in a shared mailbox with a team signature', async () => {
+  const { app } = await makeApp();
+  const MBX = 'support@tenaxgrupa.lv';
+  const SHARED_LOGIN = 'test.nogroup@tenaxgrupa.lv'; // a shared mailbox opened with its own sign-in
+  const create = async (payload: object, content: string) => {
+    const id = (await app.inject({ method: 'POST', url: '/api/admin/designs', headers: IT, payload: { company: 'tenax', ...payload } })).json().id;
+    await app.inject({ method: 'POST', url: '/api/admin/templates/tenax/new', headers: IT, payload: { design: id, content } });
+    return id as string;
+  };
+  const sig = (h: Record<string, string>, q: string) => app.inject({ url: `/api/signature?type=newMail${q}`, headers: h });
+  const designs = (h: Record<string, string>, q = '') => app.inject({ url: `/api/me/designs${q}`, headers: h }).then((r) => r.json());
+  let service = '';
+  let english = '';
+
+  it('lists the team signature’s designs for that From address, with its own first', async () => {
+    service = await create({ name: 'Service', purpose: 'service' }, '<p>SERVICE {{user.displayName}}</p>');
+    english = await create({ name: 'English' }, '<p>EN {{user.displayName}}</p>');
+    await app.inject({ method: 'PUT', url: `/api/admin/shared-mailboxes/${MBX}`, headers: IT, payload: { company: 'tenax', displayName: 'Tenax atbalsts', design: service } });
+    const r = await designs(PANEL, `?from=${MBX}`);
+    expect(r.mailbox).toEqual({ email: MBX, displayName: 'Tenax atbalsts' });
+    expect(r.designs[0]).toMatchObject({ id: service, current: true });
+    expect(r.designs.map((d: any) => d.id)).toContain(english);
+    expect(r.designs.every((d: any) => d.id.startsWith('tenax-'))).toBe(true); // not the sender's company (Tenax Panel)
+    // Without the shared From it's still the person's own list.
+    expect((await designs(PANEL)).mailbox).toBeUndefined();
+  });
+
+  it('inserts the picked design with the team’s details; others fall back to the team’s own', async () => {
+    expect((await sig(PANEL, `&from=${MBX}&design=${english}`)).body).toBe('<p>EN Tenax atbalsts</p>');
+    expect((await sig(PANEL, `&from=${MBX}`)).body).toBe('<p>SERVICE Tenax atbalsts</p>');
+    expect((await sig(PANEL, `&from=${MBX}&design=tenaxpanel-standard`)).body).toBe('<p>SERVICE Tenax atbalsts</p>');
+  });
+
+  it('a shared mailbox signed in itself (excluded) gets its team signature, not nothing', async () => {
+    await app.inject({ method: 'PUT', url: `/api/admin/users/${SHARED_LOGIN}/exclusion`, headers: IT, payload: { excluded: true, reason: 'Shared mailbox' } });
+    expect((await sig(mock(SHARED_LOGIN), '')).statusCode).toBe(204);
+    expect(await designs(mock(SHARED_LOGIN), `?from=${SHARED_LOGIN}`)).toMatchObject({ excluded: true, designs: [] });
+
+    await app.inject({ method: 'PUT', url: `/api/admin/shared-mailboxes/${SHARED_LOGIN}`, headers: IT, payload: { company: 'tenax', displayName: 'Tenax birojs', design: service } });
+    expect((await sig(mock(SHARED_LOGIN), `&from=${SHARED_LOGIN}&design=${english}`)).body).toBe('<p>EN Tenax birojs</p>');
+    expect((await sig(mock(SHARED_LOGIN), '')).body).toBe('<p>SERVICE Tenax birojs</p>');
+    expect((await designs(mock(SHARED_LOGIN), `?from=${SHARED_LOGIN}`)).mailbox).toMatchObject({ displayName: 'Tenax birojs' });
+  });
+
+  it('personal modes keep the sender’s own designs and choice', async () => {
+    await app.inject({ method: 'PUT', url: `/api/admin/shared-mailboxes/${MBX}`, headers: IT, payload: { company: 'tenax', displayName: 'Tenax atbalsts', signature: 'senderWithMailboxEmail' } });
+    const r = await designs(PANEL, `?from=${MBX}`);
+    expect(r.mailbox).toBeUndefined();
+    expect(r.designs.map((d: any) => d.id)).toEqual(expect.arrayContaining(['tenaxpanel-standard']));
+  });
+});

@@ -30,9 +30,17 @@ interface DesignItem {
   current: boolean;
 }
 
+/** Shared mailbox with a team signature that this email is sent from. */
+interface Mailbox {
+  email: string;
+  displayName: string;
+}
+
 const $ = (id: string) => document.getElementById(id) as HTMLElement;
 let cfg: SigConfig | null = null;
 let token: string | null = null;
+/** From address the list was loaded for: a shared mailbox's team signature has its own designs. */
+let listedFrom: string | undefined;
 
 function status(text: string, kind: "info" | "error" | "ok" = "info"): void {
   const el = $("status");
@@ -82,7 +90,13 @@ async function insert(design: DesignItem, button: HTMLButtonElement): Promise<vo
     status(`Inserting ${design.name}…`);
     const item = currentItem();
     const type = await resolveComposeType(item);
-    const from = item?.itemType === Office.MailboxEnums.ItemType.Message ? await resolveFromAddress(item).catch(() => undefined) : undefined;
+    const from = await currentFrom();
+    if (from !== listedFrom) {
+      // From changed since the list loaded: show the signatures for the new address before inserting anything.
+      await load();
+      status(`From is now ${from ?? "your own address"}. Pick a signature for it.`, "info");
+      return;
+    }
     const sig = await fetchSignature(cfg!, token!, type, { from, design: design.id, inline: canAttachInline(item) });
     if (!sig.html.trim()) {
       status("There’s no signature for this account.", "error");
@@ -103,14 +117,22 @@ async function insert(design: DesignItem, button: HTMLButtonElement): Promise<vo
 async function makeDefault(design: DesignItem): Promise<void> {
   try {
     await api("PUT", "/api/me/design", { design: design.id });
-    status(`${design.name} is now your default. New emails start with it.`, "ok");
     await load();
+    status(`${design.name} is now your default. New emails start with it.`, "ok");
   } catch (e) {
     status(`Couldn’t change your default: ${errMessage(e)}`, "error");
   }
 }
 
-function render(designs: DesignItem[], locked: boolean): void {
+/** The From address of a message being written; undefined for appointments or when Outlook can't tell. */
+async function currentFrom(): Promise<string | undefined> {
+  const item = currentItem();
+  if (item?.itemType !== Office.MailboxEnums.ItemType.Message) return undefined;
+  const from = await resolveFromAddress(item).catch(() => undefined);
+  return from?.toLowerCase();
+}
+
+function render(designs: DesignItem[], locked: boolean, mailbox?: Mailbox): void {
   const list = $("designs");
   list.innerHTML = "";
   for (const d of designs) {
@@ -122,12 +144,13 @@ function render(designs: DesignItem[], locked: boolean): void {
     const name = document.createElement("strong");
     name.textContent = d.name; // textContent: names are never parsed as HTML
     const sub = document.createElement("span");
-    sub.textContent = d.current ? "Your default · insert in this email" : "Insert in this email";
+    sub.textContent = !d.current ? "Insert in this email" : mailbox ? "This mailbox’s signature · insert in this email" : "Your default · insert in this email";
     ins.append(name, sub);
     ins.addEventListener("click", () => void insert(d, ins));
     row.append(ins);
 
-    if (!locked && !d.current && d.purpose === "person") {
+    // A team signature's default is set by IT (Shared mailboxes), never here.
+    if (!locked && !mailbox && !d.current && d.purpose === "person") {
       const def = document.createElement("button");
       def.className = "link";
       def.textContent = "Make default";
@@ -137,12 +160,22 @@ function render(designs: DesignItem[], locked: boolean): void {
     list.append(row);
   }
   $("locked").hidden = !locked;
+  $("intro").textContent = mailbox
+    ? `Sending as ${mailbox.displayName} (${mailbox.email}). Pick a signature for this email.`
+    : "Pick a signature for this email. Your default is added automatically to new emails.";
 }
 
 async function load(): Promise<void> {
-  const r = await api<{ locked: boolean; designs: DesignItem[] }>("GET", "/api/me/designs");
-  render(r.designs, r.locked);
-  if (r.designs.length < 2 && !r.locked) status("Your company has one signature design.", "info");
+  const from = await currentFrom();
+  const r = await api<{ locked: boolean; excluded?: boolean; mailbox?: Mailbox; designs: DesignItem[] }>(
+    "GET",
+    `/api/me/designs${from ? `?from=${encodeURIComponent(from)}` : ""}`,
+  );
+  listedFrom = from;
+  render(r.designs, r.locked, r.mailbox);
+  if (r.excluded) status("There’s no signature for this account. For a shared mailbox, IT can set one up under Shared mailboxes.", "info");
+  else if (r.designs.length < 2 && !r.locked) status(r.mailbox ? "This mailbox has one signature design." : "Your company has one signature design.", "info");
+  else status("");
 }
 
 async function start(interactive: boolean): Promise<void> {
@@ -151,7 +184,6 @@ async function start(interactive: boolean): Promise<void> {
   try {
     token = await signIn(interactive);
     await load();
-    status("");
   } catch (e) {
     status(`Sign-in needed: ${errMessage(e)}`, "error");
     $("signin").hidden = false;

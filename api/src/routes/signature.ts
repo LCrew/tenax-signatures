@@ -6,7 +6,7 @@ import { actorOf, requireUser } from '../auth/plugin.js';
 import { findAsset } from '../services/assets.js';
 import { inlineImages, type ImageSource } from '../services/inline.js';
 import { companyAddress, signatureDataFor, signatureDataForMailbox } from '../services/renderer.js';
-import { applyOverrides } from '../services/designs.js';
+import { applyOverrides, ref } from '../services/designs.js';
 import type { ComposeType, Design, Overrides, ResolvedUser, SharedMailbox } from '../types.js';
 
 const typeSchema = z.enum(['newMail', 'reply', 'forward']).default('newMail');
@@ -23,6 +23,26 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
     const designs = ctx.repo.listDesigns(mailbox.company);
     return designs.find((d) => d.id === mailbox.design) ?? designs.find((d) => d.purpose === 'service') ?? designs.find((d) => d.isDefault);
   }
+
+  /** Designs a team signature can switch to for one email (Signatures pane): its own first, then service and selectable ones. */
+  function mailboxDesigns(mailbox: SharedMailbox): Design[] {
+    const own = mailboxDesign(mailbox);
+    const others = ctx.repo.listDesigns(mailbox.company).filter((d) => d.id !== own?.id && (d.purpose === 'service' || d.selectable));
+    return own ? [own, ...others] : others;
+  }
+
+  /**
+   * The configured shared mailbox the caller is sending as: the From address, else their own address (a shared
+   * mailbox opened with its own sign-in is the caller itself, so From equals the caller).
+   */
+  function sendingAs(user: ResolvedUser, from?: string): SharedMailbox | undefined {
+    const address = from?.trim().toLowerCase() || user.entra.mail?.toLowerCase() || user.upn;
+    return ctx.repo.getSharedMailbox(address);
+  }
+
+  /** Team signature (signature: mailbox) for this shared mailbox, if that's what it sends and its company still exists. */
+  const teamSignature = (mailbox?: SharedMailbox) =>
+    mailbox && (mailbox.signature ?? 'mailbox') === 'mailbox' && ctx.repo.listCompanies().some((c) => c.key === mailbox.company) ? mailbox : undefined;
 
   /** Image bytes behind our own image URLs, for embedding them in the email. */
   const imageSource: ImageSource = {
@@ -59,25 +79,23 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
       return reply.type('text/html; charset=utf-8').send(html);
     };
 
-    // OnMessageFromChanged: only switch identity for configured shared mailboxes; anything else
-    // falls back to the caller's own signature.
-    const from = q.from?.trim().toLowerCase();
-    let mailboxEmail: string | null = null;
-    if (from && from !== user.upn && from !== user.entra.mail?.toLowerCase()) {
-      const mailbox = ctx.repo.getSharedMailbox(from);
-      const company = mailbox && companies.find((c) => c.key === mailbox.company);
-      // Personal signature from a shared address (e.g. answering from support@ as yourself).
-      if (mailbox?.signature === 'senderWithMailboxEmail') mailboxEmail = mailbox.email;
-      if (mailbox && company && (mailbox.signature ?? 'mailbox') === 'mailbox') {
-        return send(ctx.renderer.render({ company, type: type.data as ComposeType, data: signatureDataForMailbox(mailbox), settings, design: mailboxDesign(mailbox) }));
-      }
-    }
+    // Only configured shared mailboxes switch identity; any other From keeps the caller's own signature.
+    const mailbox = sendingAs(user, q.from);
+    const team = teamSignature(mailbox);
+    // Personal signature from a shared address (e.g. answering from support@ as yourself).
+    const mailboxEmail = mailbox?.signature === 'senderWithMailboxEmail' ? mailbox.email : null;
 
-    // Excluded accounts (service accounts…) get no signature at all.
-    if (user.excluded) return reply.code(204).header('Cache-Control', 'no-store').send();
-    const company = companies.find((c) => c.key === user.company);
-    if (!company) return reply.code(500).send({ error: `Company "${user.company}" is not configured` });
+    // Excluded accounts (service accounts…) get no signature at all, unless they send as a team mailbox.
+    if (user.excluded && !team) return reply.code(204).header('Cache-Control', 'no-store').send();
+    const companyKey = team ? team.company : user.company;
+    const company = companies.find((c) => c.key === companyKey);
+    if (!company) return reply.code(500).send({ error: `Company "${companyKey}" is not configured` });
     try {
+      if (team) {
+        // A design picked in the Signatures pane, if the team signature may use it.
+        const design = mailboxDesigns(team).find((d) => d.id === q.design) ?? mailboxDesign(team);
+        return send(ctx.renderer.render({ company, type: type.data as ComposeType, data: signatureDataForMailbox(team), settings, design }));
+      }
       const data = { ...signatureDataFor(user), ...(mailboxEmail ? { email: mailboxEmail } : {}) };
       return send(ctx.renderer.render({ company, type: type.data as ComposeType, data, settings, design: designFor(user, q.design) }));
     } catch (e) {
@@ -176,13 +194,26 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
     return { ok: true };
   });
 
-  /** Designs the caller may use (Outlook task pane / My signature). */
+  /**
+   * Designs the caller may use (Outlook task pane / My signature). ?from= (task pane): sending as a shared mailbox
+   * with a team signature lists that signature's designs instead, which nobody can make their default.
+   */
   app.get('/api/me/designs', async (req, reply) => {
     const user = await requireUser(req, reply, ctx);
     if (!user) return;
+    const team = teamSignature(sendingAs(user, (req.query as { from?: string }).from));
+    if (team) {
+      const own = mailboxDesign(team);
+      return {
+        locked: false,
+        mailbox: { email: team.email, displayName: team.displayName },
+        designs: mailboxDesigns(team).map((d) => ({ ...ref(d), current: d.id === own?.id })),
+      };
+    }
     return {
       locked: user.designLocked,
-      designs: user.allowedDesigns.map((d) => ({ ...d, current: d.id === user.design.id })),
+      excluded: !!user.excluded,
+      designs: user.excluded ? [] : user.allowedDesigns.map((d) => ({ ...d, current: d.id === user.design.id })),
     };
   });
 

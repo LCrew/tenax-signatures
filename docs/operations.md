@@ -182,13 +182,19 @@ mailbox), the add-in inserts, per mailbox:
 
 Addresses not listed keep the sender's own signature unchanged.
 
+The **Signatures** button in the compose window follows the From address. For a mailbox with its own signature it
+lists that signature's designs (the one set here first, then the company's service designs and the designs people can
+pick, e.g. an English version) for this email only; nobody can change the mailbox's default from Outlook. For the two
+personal options it lists the sender's own designs.
+
 How it works: the add-in runs for the **person** writing (it's deployed to people, never to shared mailboxes), and
 the signature is chosen from who they are plus the From address. A shared mailbox never signs in, so it needs no
 licence and no add-in deployment; only people need **Send as** (or **Send on behalf**) on it in Exchange. **Full
 access** alone lets people read the mailbox but Exchange refuses sending as it. The add-in works whether the
 mailbox appears in the folder list (automapped), in its own tab in Outlook on the web, or as a separate account in
-new Outlook / Outlook for Mac (manifest 1.1.2+). Don't sign in to a shared mailbox with a password: add-ins don't
-run there.
+new Outlook / Outlook for Mac (manifest 1.1.2+). Better not to sign in to a shared mailbox with a password: the add-in
+only runs there if it's deployed to that account too. If it is, the mailbox still gets the signature set here, even
+when the account is excluded in People.
 
 ## Rotate the Entra certificate
 
