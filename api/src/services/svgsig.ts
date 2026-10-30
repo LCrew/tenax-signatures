@@ -1,6 +1,7 @@
 import { Resvg } from '@resvg/resvg-js';
 import { DOMParser, XMLSerializer, type Document, type Element } from '@xmldom/xmldom';
 import { z } from 'zod';
+import { bannerImage } from './blocks.js';
 
 /**
  * Image signatures from an SVG template (e.g. Vareno's Inkscape design). Email clients don't show SVG, so the
@@ -41,6 +42,8 @@ export const imageConfigSchema = z
     width: z.number().int().min(200).max(800),
     /** Clicking the image opens this (https only); empty = not clickable. */
     link: z.union([z.literal(''), z.string().max(500).refine((v) => /^https:\/\/[^\s"'<>]+$/i.test(v), 'The link must be a full https:// address')]),
+    /** Promo banner under the image in new messages (one of the company's banner-* uploads); null = none. */
+    banner: bannerImage.nullable().optional(),
   })
   .strict();
 export type ImageConfig = z.infer<typeof imageConfigSchema>;

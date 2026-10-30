@@ -93,6 +93,15 @@ describe('API hardening', async () => {
     expect(ok.json().publicUrl).toBe('https://sig.tenax.lv');
   });
 
+  it('image uploads: banners up to 1 MB, other images up to 650 KB', async () => {
+    const png = (bytes: number) => Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), Buffer.alloc(bytes - 8)]).toString('base64');
+    const upload = (name: string, bytes: number) => app.inject({ method: 'POST', url: '/api/admin/assets/tenax', headers: IT, payload: { name, dataBase64: png(bytes) } });
+    expect((await upload('banner-big.png', 1_000_000)).statusCode).toBe(200);
+    expect((await upload('banner-too-big.png', 1_000_001)).json().error).toBe('Keep banners under 1 MB');
+    expect((await upload('logo-big.png', 650_000)).statusCode).toBe(200);
+    expect((await upload('logo-too-big.png', 700_000)).json().error).toBe('Keep images under 650 KB');
+  });
+
   it('malformed URL escapes do not crash the static handler', async () => {
     expect((await app.inject({ url: '/%25' })).statusCode).toBeLessThan(500);
   });

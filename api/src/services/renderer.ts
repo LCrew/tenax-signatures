@@ -209,13 +209,14 @@ export class Renderer {
     // A design can choose its own job title language (e.g. an English design for foreign clients).
     const language = opts.design?.language ?? opts.settings.language;
 
-    // Image designs: one rendered PNG for new messages and replies alike (Vareno's SVG signature).
+    // Image designs: one rendered PNG for new messages and replies alike (Vareno's SVG signature), plus its promo banner in new messages.
     if (opts.design?.format === 'image' && opts.draft?.template == null) {
       if (!this.images) throw new TemplateError('Image designs are not available here');
       const { greeting: _g, address: _a, ...d } = applyLanguage(opts.data, language);
       return this.images.html({
         company: opts.company,
         design: { id: opts.design.id, name: opts.design.name ?? opts.design.id },
+        type: opts.type,
         // The closing line is HTML above the image, never part of the rendered image. {{address}}: theirs, else the company's.
         values: { ...d, address: meta.footer?.address || null },
         publicUrl: opts.settings.publicUrl,

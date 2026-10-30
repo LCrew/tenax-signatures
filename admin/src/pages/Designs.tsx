@@ -5,6 +5,7 @@ import { html as htmlLang } from '@codemirror/lang-html';
 import { json as jsonLang } from '@codemirror/lang-json';
 import { FolderSync, History, Plus, RotateCcw, Trash2, Upload } from 'lucide-react';
 import { api } from '../lib/api';
+import { prepareBanner } from '../lib/banner';
 import { useApp, useAsync, useDebounced, useToast } from '../lib/hooks';
 import type { Company, ComposeType, Design, MetaOverrides, TemplateKind, TemplateVersion, UserSummary } from '../lib/types';
 import { DesignBar, WordingForm } from '../components/designs/DesignBar';
@@ -530,9 +531,15 @@ function BrandForm({ company, metaText, meta, onChange }: { company: Company; me
   const banners = all.filter((a) => a.name.startsWith('banner-'));
   const logos = all.filter((a) => !a.name.startsWith('banner-'));
 
-  /** Uploads an image; banners get a "banner-" prefix so they're listed separately. */
+  /** Uploads an image; banners are scaled down and compressed first, and get a "banner-" prefix so they're listed separately. */
   async function upload(file: File, kind: 'logo' | 'banner') {
-    if (file.size > 650_000) return toast('Keep images under 650 KB. Export logos at 2× size as PNG, banners at 600px wide.', 'error');
+    if (kind === 'banner') {
+      try {
+        file = await prepareBanner(file);
+      } catch (e) {
+        return toast((e as Error).message, 'error');
+      }
+    } else if (file.size > 650_000) return toast('Keep logos under 650 KB. Export them at 2× size as PNG.', 'error');
     let name = file.name.toLowerCase().replace(/[^a-z0-9._-]/g, '-').replace(/^-+/, '');
     if (kind === 'banner' && !name.startsWith('banner-')) name = `banner-${name}`;
     const dataBase64 = await new Promise<string>((res) => {
@@ -659,7 +666,7 @@ function BrandForm({ company, metaText, meta, onChange }: { company: Company; me
 
       <section className="stack">
         <h3>Promo banner</h3>
-        <p className="xs muted">Shown under new-message signatures only, never in replies. Keep it 600px wide or less.</p>
+        <p className="xs muted">Shown under new-message signatures only, never in replies. Bigger images are scaled down to 1200px wide (shown at up to 600px) and kept under 1 MB.</p>
         <div className="logo-pick" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))' }}>
           <button type="button" aria-pressed={!banner} onClick={() => patch((m) => (m.banner = null))}>
             <span style={{ height: 36, display: 'grid', placeItems: 'center' }}>None</span>

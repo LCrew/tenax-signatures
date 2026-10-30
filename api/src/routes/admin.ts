@@ -627,6 +627,9 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     const ids = new Set(listTextFields(svg).map((f) => f.id));
     const unknown = Object.keys(cfg.fields).filter((id) => !ids.has(id));
     if (unknown.length) return reply.code(400).send({ error: `Text not found in the SVG: ${unknown.join(', ')}` });
+    if (cfg.banner && !companyAsset(d.company, cfg.banner.file)) {
+      return reply.code(400).send({ error: `The banner “${cfg.banner.file.replace(/^banner-/, '')}” isn’t uploaded for this company` });
+    }
     renderSignaturePng(cfg, { ...SAMPLE_PERSON }, ctx.fonts.files());
     const content = JSON.stringify(cfg);
     const before = ctx.repo.latestTemplate(d.company, 'image', d.id);
@@ -897,12 +900,19 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     return [...names].sort().map((name) => ({ name, url: `${base}/assets/${company}/${name}`, localUrl: `/assets/${company}/${name}` }));
   }));
 
-  app.post('/api/admin/assets/:company', { bodyLimit: 1_000_000 }, staff(async (req, reply, admin, access) => {
+  // Promo banners (banner-*) up to 1 MB (the console scales them down to fit), logos up to 650 KB.
+  const MAX_ASSET_BYTES = { banner: 1_000_000, other: 650_000 };
+
+  app.post('/api/admin/assets/:company', { bodyLimit: 1_500_000 }, staff(async (req, reply, admin, access) => {
     const { company } = req.params as { company: string };
     if (!findCompany(company)) return reply.code(404).send({ error: 'Unknown company' });
     if (!access.can(company)) return forbidden(reply);
-    const body = z.object({ name: safeName, dataBase64: z.string().max(900_000) }).parse(req.body);
+    const body = z.object({ name: safeName, dataBase64: z.string().max(1_400_000) }).parse(req.body);
     const buf = Buffer.from(body.dataBase64, 'base64');
+    const banner = /^banner-/i.test(body.name);
+    if (buf.length > MAX_ASSET_BYTES[banner ? 'banner' : 'other']) {
+      return reply.code(400).send({ error: banner ? 'Keep banners under 1 MB' : 'Keep images under 650 KB' });
+    }
     const isPng = buf.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
     const isJpg = buf[0] === 0xff && buf[1] === 0xd8;
     const isGif = buf.subarray(0, 3).toString('ascii') === 'GIF';

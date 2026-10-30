@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Repository, TemplateVersion } from '../db/repository.js';
-import type { Company, Design } from '../types.js';
+import type { Company, ComposeType, Design } from '../types.js';
 import type { Fonts } from './fonts.js';
 import { displayHeight, imageConfigSchema, renderSignaturePng, type ImageConfig, type PersonValues } from './svgsig.js';
 
@@ -27,8 +27,8 @@ export class ImageSignatures {
     return { version: v, cfg: imageConfigSchema.parse(JSON.parse(v.content)) };
   }
 
-  /** The signature HTML: an <img> (linked if configured) with the details as alt text. */
-  html(opts: { company: Company; design: Pick<Design, 'id' | 'name'>; values: PersonValues; publicUrl: string; greeting?: string; greetingColor?: string }): string {
+  /** The signature HTML: an <img> (linked if configured) with the details as alt text, and the promo banner in new messages. */
+  html(opts: { company: Company; design: Pick<Design, 'id' | 'name'>; type: ComposeType; values: PersonValues; publicUrl: string; greeting?: string; greetingColor?: string }): string {
     const latest = this.latest(opts.company.key, opts.design.id);
     if (!latest) throw new Error(`The image design "${opts.design.name}" has no SVG template yet`);
     const { version, cfg } = latest;
@@ -49,13 +49,23 @@ export class ImageSignatures {
       .join(' | ');
     const w = cfg.width;
     const h = displayHeight(cfg);
-    const src = `${opts.publicUrl.replace(/\/+$/, '')}/sig-img/${hash}.png`;
+    const base = opts.publicUrl.replace(/\/+$/, '');
+    const src = `${base}/sig-img/${hash}.png`;
     const img = `<img src="${esc(src)}" width="${w}" height="${h}" alt="${esc(alt)}" style="display:block;border:0;width:${w}px;max-width:100%;height:auto;">`;
     const linked = cfg.link ? `<a href="${esc(cfg.link)}" style="text-decoration:none;">${img}</a>` : img;
     const greeting = opts.greeting
       ? `<p style="margin:0 0 12px 0;font-family:Calibri, Arial, Helvetica, sans-serif;font-size:11pt;color:${esc(opts.greetingColor ?? '#222222')};">${esc(opts.greeting)}</p>\n`
       : '';
-    return `<!-- signature:${esc(opts.company.key)}:image -->\n${greeting}${linked}`;
+    // Like the HTML designs: the promo banner goes under new messages only, never replies. It stays a linked image.
+    const b = opts.type === 'newMail' ? cfg.banner : null;
+    let banner = '';
+    if (b) {
+      const bSrc = `${base}/assets/${encodeURIComponent(opts.company.key)}/${encodeURIComponent(b.file)}`;
+      const bImg = `<img src="${esc(bSrc)}" width="${b.width}" height="${b.height}" alt="${esc(b.alt ?? '')}" style="display:block;border:0;width:${b.width}px;max-width:100%;height:auto;">`;
+      const bLinked = b.link ? `<a href="${esc(b.link)}" style="text-decoration:none;">${bImg}</a>` : bImg;
+      banner = `\n<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;"><tr><td style="padding:10px 0 0 0;">${bLinked}</td></tr></table>`;
+    }
+    return `<!-- signature:${esc(opts.company.key)}:image -->\n${greeting}${linked}${banner}`;
   }
 
   /** PNG for a public image URL; rendered on first request and cached on disk. */

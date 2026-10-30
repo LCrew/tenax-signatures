@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { RefreshCw, Upload } from 'lucide-react';
 import { api } from '../../lib/api';
+import { prepareBanner } from '../../lib/banner';
 import { useApp, useAsync, useDebounced, useToast } from '../../lib/hooks';
 import type { Design, UserSummary } from '../../lib/types';
 import { LetterPreview } from '../LetterPreview';
@@ -23,11 +24,20 @@ interface Crop {
   width: number;
   height: number;
 }
+interface Banner {
+  file: string;
+  width: number;
+  height: number;
+  link?: string;
+  alt?: string;
+}
 interface Config {
   fields: Record<string, Mapping>;
   crop: Crop;
   width: number;
   link: string;
+  /** Promo banner under the image in new messages (not replies). */
+  banner?: Banner | null;
 }
 interface Info {
   textFields: TextField[];
@@ -54,6 +64,8 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const focused = useRef<{ id: string; line: number; el: HTMLInputElement } | null>(null);
+  const assets = useAsync(() => api.get<{ name: string; localUrl: string }[]>(`/api/admin/assets/${design.company}`), [design.company]);
+  const banners = (assets.data ?? []).filter((a) => a.name.startsWith('banner-'));
 
   useEffect(() => {
     if (!current.data) return;
@@ -74,9 +86,44 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
       const r = await api.post<{ svg: string; suggested: Config; bytes: { uploaded: number; cleaned: number } } & Info>(`/api/admin/designs/${design.id}/image/analyze`, { svg: await file.text() });
       setSvg(r.svg);
       setInfo({ textFields: r.textFields, missingFonts: r.missingFonts, placeholders: r.placeholders });
-      setCfg(r.suggested);
+      // A new SVG keeps the promo banner that was already picked.
+      setCfg((c) => ({ ...r.suggested, banner: c?.banner ?? null }));
       setDirty(true);
       toast(`SVG read: ${r.textFields.length} text fields found. Check the mapping, then save.`);
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    }
+  }
+
+  /** Shown at most 600px wide, keeping the image's proportions. */
+  const pickBanner = (file: string, src: string) => {
+    const img = new Image();
+    img.onload = () => {
+      const w = Math.min(600, img.naturalWidth);
+      update((c) => ({ ...c, banner: { ...(c.banner ?? {}), file, width: w, height: Math.round((img.naturalHeight * w) / img.naturalWidth) } }));
+    };
+    img.src = src;
+  };
+
+  /** Scales down and compresses, uploads to the company's images (as in Brand and footer) with a "banner-" prefix, then picks it. */
+  async function uploadBanner(file: File) {
+    try {
+      file = await prepareBanner(file);
+    } catch (e) {
+      return toast((e as Error).message, 'error');
+    }
+    let name = file.name.toLowerCase().replace(/[^a-z0-9._-]/g, '-').replace(/^-+/, '');
+    if (!name.startsWith('banner-')) name = `banner-${name}`;
+    const dataBase64 = await new Promise<string>((res) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result).split(',')[1]);
+      r.readAsDataURL(file);
+    });
+    try {
+      await api.post(`/api/admin/assets/${design.company}`, { name, dataBase64 });
+      pickBanner(name, URL.createObjectURL(file));
+      await assets.reload();
+      toast('Banner uploaded');
     } catch (e) {
       toast((e as Error).message, 'error');
     }
@@ -88,16 +135,21 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
     update((c) => ({ ...c, crop: r.suggested.crop }));
   }
 
-  const debounced = useDebounced(JSON.stringify({ cfg, svg, as }), 450);
+  // The banner isn't part of the rendered image, so changing it doesn't render the image again.
+  const { banner: _banner, ...imageCfg } = cfg ?? ({} as Config);
+  const debounced = useDebounced(JSON.stringify({ imageCfg, svg, as }), 450);
   const preview = useAsync(
     () =>
       cfg
-        ? api.post<{ dataUrl: string; missingFonts: string[] }>(`/api/admin/designs/${design.id}/image/preview`, { ...cfg, ...(svg ? { svg } : {}), upn: as || undefined })
+        ? api.post<{ dataUrl: string; missingFonts: string[] }>(`/api/admin/designs/${design.id}/image/preview`, { ...imageCfg, ...(svg ? { svg } : {}), upn: as || undefined })
         : Promise.resolve(null),
     [debounced],
   );
+  const banner = cfg?.banner ?? null;
+  const bannerUrl = banner && banners.find((a) => a.name === banner.file)?.localUrl;
   const html = preview.data && cfg
-    ? `${cfg.link ? `<a href="${cfg.link}">` : ''}<img src="${preview.data.dataUrl}" width="${cfg.width}" style="display:block;border:0;width:${cfg.width}px;max-width:100%;height:auto">${cfg.link ? '</a>' : ''}`
+    ? `${cfg.link ? `<a href="${cfg.link}">` : ''}<img src="${preview.data.dataUrl}" width="${cfg.width}" style="display:block;border:0;width:${cfg.width}px;max-width:100%;height:auto">${cfg.link ? '</a>' : ''}` +
+      (banner && bannerUrl ? `<div style="padding-top:10px"><img src="${bannerUrl}" width="${banner.width}" style="display:block;border:0;width:${banner.width}px;max-width:100%;height:auto"></div>` : '')
     : null;
 
   async function save() {
@@ -266,6 +318,48 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
                   </button>
                 </details>
               </section>
+              <section className="stack">
+                <h3>Promo banner</h3>
+                <p className="xs muted">Shown under the image in new messages only, never in replies. Bigger images are scaled down to 1200px wide (shown at up to 600px) and kept under 1 MB.</p>
+                <div className="logo-pick" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))' }}>
+                  <button type="button" aria-pressed={!banner} onClick={() => update((c) => ({ ...c, banner: null }))}>
+                    <span style={{ height: 36, display: 'grid', placeItems: 'center' }}>None</span>
+                    No banner
+                  </button>
+                  {banners.map((a) => (
+                    <button key={a.name} type="button" aria-pressed={banner?.file === a.name} onClick={() => pickBanner(a.name, a.localUrl)} title={a.name}>
+                      <img src={a.localUrl} alt="" />
+                      {a.name.replace(/^banner-/, '').slice(0, 28)}
+                    </button>
+                  ))}
+                  <label className="btn" style={{ height: 'auto', minHeight: 72, flexDirection: 'column' }}>
+                    <Upload size={16} /> Upload banner
+                    <input type="file" accept="image/png,image/jpeg,image/gif" className="visually-hidden" onChange={(e) => e.target.files?.[0] && uploadBanner(e.target.files[0])} />
+                  </label>
+                </div>
+                {banner && (
+                  <div className="grid-2">
+                    <Field label="Link when clicked" hint="Optional, must start with https://">
+                      <input type="url" value={banner.link ?? ''} onChange={(e) => update((c) => ({ ...c, banner: { ...banner, link: e.target.value.trim() } }))} />
+                    </Field>
+                    <Field label="Description" hint="Read out by screen readers and shown when images are blocked">
+                      <input type="text" value={banner.alt ?? ''} onChange={(e) => update((c) => ({ ...c, banner: { ...banner, alt: e.target.value } }))} />
+                    </Field>
+                    <Field label="Shown width (px)">
+                      <input
+                        type="number"
+                        min={50}
+                        max={600}
+                        value={banner.width}
+                        onChange={(e) => {
+                          const w = Number(e.target.value);
+                          update((c) => ({ ...c, banner: { ...banner, width: w, height: Math.round((banner.height * w) / banner.width) } }));
+                        }}
+                      />
+                    </Field>
+                  </div>
+                )}
+              </section>
               <p className="xs muted">
                 The same image is used for new emails and replies. Contact details are also written into the image’s
                 alternative text for screen readers and when images are blocked.
@@ -294,7 +388,7 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
             ))}
           </select>
         </Field>
-        <LetterPreview html={html} error={preview.error?.message} loading={preview.loading} type="newMail" caption="New messages and replies" />
+        <LetterPreview html={html} error={preview.error?.message} loading={preview.loading} type="newMail" caption={banner ? 'New messages (replies without the banner)' : 'New messages and replies'} />
       </div>
     </div>
   );

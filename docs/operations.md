@@ -19,7 +19,8 @@ recorded under **Activity**.
    - **Colours:** the chips follow the company's brand colours from **Brand and footer**, so changing a brand colour
      updates every block that uses it. **Custom** sets a fixed colour.
 3. **Brand and footer:** logo, brand colours, closing line, company line, address, websites, promo banner and
-   confidentiality notice.
+   confidentiality notice. Promo banners can be up to 1 MB. Bigger images are scaled down on upload to 1200px wide
+   (proportions kept, shown at up to 600px) and compressed to fit. GIFs are uploaded as they are, to keep their animation.
 4. The preview updates as you type. Use **Preview as** to see a real person, and **Dark mode check** for logo problems.
 5. **Save version** (add a note). The next message people write uses it. Nothing needs redeploying.
 
@@ -87,6 +88,8 @@ For companies whose signature is one designed image. **Designs** › company ›
 - **Link when clicked** makes the whole image open that address. The contact details are also written into the
   image's alternative text.
 - **Crop** is detected automatically from the visible artwork; adjust it if needed.
+- **Promo banner**: pick or upload a banner (with its own link and description). It's shown under the image in
+  new emails only, never in replies, and is saved with the image's version.
 
 The same image is used for new emails and replies. Each person's image is rendered once and cached. Its address
 (`/sig-img/<hash>.png`) only exists for renders the server created, so nobody can generate images with

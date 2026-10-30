@@ -99,7 +99,7 @@ const httpsLink = z
     }
   }, 'Links must be full https:// addresses');
 /** A banner chosen for this layout (e.g. the LT or EE promo); without it the design/company banner is used. */
-const bannerImage = z
+export const bannerImage = z
   .object({
     file: z.string().regex(/^banner-[a-z0-9._-]{1,64}\.(png|jpe?g|gif)$/i, 'Choose one of the uploaded banners'),
     width: z.number().int().min(1).max(1200),

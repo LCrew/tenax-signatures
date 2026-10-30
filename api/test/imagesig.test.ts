@@ -127,6 +127,30 @@ describe('image designs through the API', async () => {
     expect(html).toContain(`<img src="cid:${images[0].name}" width="500"`);
   });
 
+  it('adds the promo banner under the image in new messages, not replies', async () => {
+    const cfg = (await app.inject({ url: `/api/admin/designs/${id}/image`, headers: IT })).json().config;
+    const banner = { file: 'banner-vareno-promo.png', width: 600, height: 150, link: 'https://www.varenogroup.lv/akcija', alt: 'Akcija' };
+    const missing = await app.inject({ method: 'POST', url: `/api/admin/designs/${id}/image`, headers: IT, payload: { ...cfg, banner } });
+    expect(missing.statusCode).toBe(400);
+    expect(missing.json().error).toContain('isn’t uploaded');
+
+    const png = fs.readFileSync(path.join(root, 'assets/vareno/logo.png')).toString('base64');
+    expect((await app.inject({ method: 'POST', url: '/api/admin/assets/vareno', headers: IT, payload: { name: banner.file, dataBase64: png } })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'POST', url: `/api/admin/designs/${id}/image`, headers: IT, payload: { ...cfg, banner } })).statusCode).toBe(200);
+
+    const sig = (await app.inject({ url: '/api/signature?type=newMail', headers: VARENO })).body;
+    expect(sig).toMatch(/\/sig-img\/[a-f0-9]{40}\.png"[^>]*><\/a>\n<table [^>]*><tr><td style="padding:10px 0 0 0;"><a href="https:\/\/www\.varenogroup\.lv\/akcija" style="text-decoration:none;"><img src="https:\/\/sig\.tenax\.lv\/assets\/vareno\/banner-vareno-promo\.png" width="600" height="150" alt="Akcija"/);
+    expect((await app.inject({ url: '/api/signature?type=reply', headers: VARENO })).body).not.toContain('banner-');
+    // The banner stays a linked image for the add-in; only the signature image is embedded.
+    const { html, images } = (await app.inject({ url: '/api/signature?type=newMail&inline=1', headers: VARENO })).json();
+    expect(images).toHaveLength(1);
+    expect(html).toContain('src="https://sig.tenax.lv/assets/vareno/banner-vareno-promo.png"');
+
+    // Back to no banner for the tests below.
+    expect((await app.inject({ method: 'POST', url: `/api/admin/designs/${id}/image`, headers: IT, payload: { ...cfg, banner: null } })).statusCode).toBe(200);
+    expect((await app.inject({ url: '/api/signature?type=newMail', headers: VARENO })).body).not.toContain('banner-');
+  });
+
   it('rejects mappings to text that isn’t in the SVG, and non-https links', async () => {
     const bad = await app.inject({ method: 'POST', url: `/api/admin/designs/${id}/image`, headers: IT, payload: { fields: { nope: { lines: ['x'] } }, crop: { x: 0, y: 0, width: 10, height: 10 }, width: 500, link: '' } });
     expect(bad.statusCode).toBe(400);
