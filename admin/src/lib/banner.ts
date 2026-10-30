@@ -7,6 +7,16 @@ export const BANNER_MAX_BYTES = 1_000_000;
 const MB = (n: number) => `${(n / 1_000_000).toFixed(1)} MB`;
 
 /**
+ * The banner shown `width` px wide, with the height that keeps the image's proportions (`ratio` = height ÷ width,
+ * from useImageRatio). The height always comes from the image itself, never from the last width typed, so typing a
+ * width digit by digit (or clearing the box) can't squash it. Until the image has loaded, the saved size is used.
+ */
+export function resizeBanner<B extends { width: number; height: number }>(banner: B, width: number, ratio: number | null): B {
+  const r = ratio ?? (banner.width > 0 && banner.height > 0 ? banner.height / banner.width : null);
+  return { ...banner, width, height: r ? Math.max(1, Math.round(width * r)) : banner.height };
+}
+
+/**
  * Makes a banner ready to upload: scaled down to BANNER_MAX_STORED wide (keeping its proportions) and under 1 MB.
  * A PNG stays a PNG when it fits; otherwise it becomes a JPEG on white. Images that already fit are left untouched,
  * and so are GIFs (redrawing would lose their animation).

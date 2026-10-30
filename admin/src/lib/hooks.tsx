@@ -38,6 +38,23 @@ export function useDebounced<T>(value: T, ms = 350): T {
   return v;
 }
 
+/** The image's height ÷ width once it has loaded; null before that, or when it can't be read. */
+export function useImageRatio(src: string | undefined): number | null {
+  const [ratio, setRatio] = useState<number | null>(null);
+  useEffect(() => {
+    setRatio(null);
+    if (!src) return;
+    let live = true;
+    const img = new Image();
+    img.onload = () => live && img.naturalWidth > 0 && setRatio(img.naturalHeight / img.naturalWidth);
+    img.src = src;
+    return () => {
+      live = false;
+    };
+  }, [src]);
+  return ratio;
+}
+
 // ───────── Toasts ─────────
 type Toast = { id: number; text: string; kind: 'info' | 'error' };
 const ToastCtx = createContext<(text: string, kind?: Toast['kind']) => void>(() => {});

@@ -5,8 +5,8 @@ import { html as htmlLang } from '@codemirror/lang-html';
 import { json as jsonLang } from '@codemirror/lang-json';
 import { FolderSync, History, Plus, RotateCcw, Trash2, Upload } from 'lucide-react';
 import { api } from '../lib/api';
-import { prepareBanner } from '../lib/banner';
-import { useApp, useAsync, useDebounced, useToast } from '../lib/hooks';
+import { prepareBanner, resizeBanner } from '../lib/banner';
+import { useApp, useAsync, useDebounced, useImageRatio, useToast } from '../lib/hooks';
 import type { Company, ComposeType, Design, MetaOverrides, TemplateKind, TemplateVersion, UserSummary } from '../lib/types';
 import { DesignBar, WordingForm } from '../components/designs/DesignBar';
 import { ImageDesignEditor } from '../components/designs/ImageDesignEditor';
@@ -500,6 +500,7 @@ function BrandForm({ company, metaText, meta, onChange }: { company: Company; me
   const toast = useToast();
   const [raw, setRaw] = useState(false);
   const assets = useAsync(() => api.get<{ name: string; localUrl: string }[]>(`/api/admin/assets/${company.key}`), [company.key]);
+  const bannerRatio = useImageRatio((assets.data ?? []).find((a) => a.name === meta?.banner?.file)?.localUrl);
 
   if (raw || !meta) {
     return (
@@ -699,7 +700,7 @@ function BrandForm({ company, metaText, meta, onChange }: { company: Company; me
                 value={banner.width}
                 onChange={(e) => {
                   const w = Number(e.target.value);
-                  patch((m) => (m.banner = { ...banner, width: w, height: Math.round((banner.height * w) / banner.width) }));
+                  patch((m) => (m.banner = resizeBanner(banner, w, bannerRatio)));
                 }}
               />
             </Field>

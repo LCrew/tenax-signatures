@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { RefreshCw, Upload } from 'lucide-react';
 import { api } from '../../lib/api';
-import { prepareBanner } from '../../lib/banner';
-import { useApp, useAsync, useDebounced, useToast } from '../../lib/hooks';
+import { prepareBanner, resizeBanner } from '../../lib/banner';
+import { useApp, useAsync, useDebounced, useImageRatio, useToast } from '../../lib/hooks';
 import type { Design, UserSummary } from '../../lib/types';
 import { LetterPreview } from '../LetterPreview';
 import { Field } from '../ui';
@@ -147,6 +147,7 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
   );
   const banner = cfg?.banner ?? null;
   const bannerUrl = banner && banners.find((a) => a.name === banner.file)?.localUrl;
+  const bannerRatio = useImageRatio(bannerUrl || undefined);
   const html = preview.data && cfg
     ? `${cfg.link ? `<a href="${cfg.link}">` : ''}<img src="${preview.data.dataUrl}" width="${cfg.width}" style="display:block;border:0;width:${cfg.width}px;max-width:100%;height:auto">${cfg.link ? '</a>' : ''}` +
       (banner && bannerUrl ? `<div style="padding-top:10px"><img src="${bannerUrl}" width="${banner.width}" style="display:block;border:0;width:${banner.width}px;max-width:100%;height:auto"></div>` : '')
@@ -353,7 +354,7 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
                         value={banner.width}
                         onChange={(e) => {
                           const w = Number(e.target.value);
-                          update((c) => ({ ...c, banner: { ...banner, width: w, height: Math.round((banner.height * w) / banner.width) } }));
+                          update((c) => ({ ...c, banner: resizeBanner(banner, w, bannerRatio) }));
                         }}
                       />
                     </Field>
