@@ -17,7 +17,8 @@ const CSP = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' https: data:",
+  // blob: lets the console read images picked for upload (banner scaling, logo/banner sizes); only its own scripts make them.
+  "img-src 'self' https: data: blob:",
   "font-src 'self' data:",
   "connect-src 'self' https://login.microsoftonline.com",
   "frame-src 'self' https://login.microsoftonline.com",

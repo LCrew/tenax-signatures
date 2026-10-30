@@ -60,6 +60,11 @@ describe('API hardening', async () => {
     expect(res.headers['content-security-policy']).toContain("default-src 'none'");
   });
 
+  it('the console may show images picked for upload (blob:), so banners can be scaled before uploading', async () => {
+    const res = await app.inject({ url: '/healthz' });
+    expect(res.headers['content-security-policy']).toMatch(/img-src [^;]*blob:/);
+  });
+
   it('a template that breaks at render time yields 204, not a 500 for the whole company', async () => {
     ctx.repo.addTemplateVersion({ company: 'tenax', kind: 'new', content: '{{#with}}x{{/with}}', note: 'broken', createdBy: 'test' });
     const res = await app.inject({ url: '/api/signature?type=newMail', headers: IT });
