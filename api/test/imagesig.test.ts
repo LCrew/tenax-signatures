@@ -139,7 +139,8 @@ describe('image designs through the API', async () => {
     expect((await app.inject({ method: 'POST', url: `/api/admin/designs/${id}/image`, headers: IT, payload: { ...cfg, banner } })).statusCode).toBe(200);
 
     const sig = (await app.inject({ url: '/api/signature?type=newMail', headers: VARENO })).body;
-    expect(sig).toMatch(/\/sig-img\/[a-f0-9]{40}\.png"[^>]*><\/a>\n<table [^>]*><tr><td style="padding:10px 0 0 0;"><a href="https:\/\/www\.varenogroup\.lv\/akcija" style="text-decoration:none;"><img src="https:\/\/sig\.tenax\.lv\/assets\/vareno\/banner-vareno-promo\.png" width="600" height="150" alt="Akcija"/);
+    // Saved as 600×150, sent as 600×200: the height follows the picture (240×80), so Outlook doesn't stretch it.
+    expect(sig).toMatch(/\/sig-img\/[a-f0-9]{40}\.png"[^>]*><\/a>\n<table [^>]*><tr><td style="padding:10px 0 0 0;"><a href="https:\/\/www\.varenogroup\.lv\/akcija" style="text-decoration:none;"><img src="https:\/\/sig\.tenax\.lv\/assets\/vareno\/banner-vareno-promo\.png" width="600" height="200" alt="Akcija"/);
     expect((await app.inject({ url: '/api/signature?type=reply', headers: VARENO })).body).not.toContain('banner-');
     // The banner stays a linked image for the add-in; only the signature image is embedded.
     const { html, images } = (await app.inject({ url: '/api/signature?type=newMail&inline=1', headers: VARENO })).json();

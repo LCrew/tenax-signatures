@@ -2,6 +2,7 @@ import Handlebars from 'handlebars';
 import { z } from 'zod';
 import type { Repository } from '../db/repository.js';
 import type { Company, ComposeType, Design, MetaOverrides, ResolvedUser, Settings, SharedMailbox } from '../types.js';
+import { keepBannerProportions, type ImageSize } from './assets.js';
 import { applyOverrides } from './designs.js';
 import type { ImageSignatures } from './imagesig.js';
 import { telHref } from './phone.js';
@@ -174,7 +175,13 @@ export class Renderer {
     private repo: Repository,
     /** Image (SVG) designs; optional so plain HTML rendering works without fonts (tests, scripts). */
     private images?: ImageSignatures,
+    /** Pixel size of a company's banner file, so banners go out at their own proportions; optional like `images`. */
+    private assetSize?: (company: string, file: string) => ImageSize | null,
   ) {}
+
+  private fitBanners(html: string, publicUrl: string): string {
+    return this.assetSize ? keepBannerProportions(html, publicUrl, this.assetSize) : html;
+  }
 
   private compile(id: number, src: string): Compiled {
     let fn = this.compiled.get(id);
@@ -213,7 +220,7 @@ export class Renderer {
     if (opts.design?.format === 'image' && opts.draft?.template == null) {
       if (!this.images) throw new TemplateError('Image designs are not available here');
       const { greeting: _g, address: _a, ...d } = applyLanguage(opts.data, language);
-      return this.images.html({
+      const html = this.images.html({
         company: opts.company,
         design: { id: opts.design.id, name: opts.design.name ?? opts.design.id },
         type: opts.type,
@@ -223,6 +230,7 @@ export class Renderer {
         greeting: meta.greeting,
         greetingColor: meta.colors?.text,
       });
+      return this.fitBanners(html, opts.settings.publicUrl);
     }
 
     let fn: Compiled;
@@ -266,7 +274,7 @@ export class Renderer {
       },
       type: opts.type,
     };
-    return fn(context).trim();
+    return this.fitBanners(fn(context).trim(), base);
   }
 }
 

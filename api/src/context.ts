@@ -2,6 +2,7 @@ import type { JWTVerifyGetKey } from 'jose';
 import type { Repository } from './db/repository.js';
 import type { Env } from './env.js';
 import { GraphDirectory, MockDirectory, type Directory } from './services/directory.js';
+import { assetSize } from './services/assets.js';
 import { Renderer } from './services/renderer.js';
 import { UserResolver } from './services/resolver.js';
 import { SecretBox } from './services/secrets.js';
@@ -34,7 +35,7 @@ export class AppContext {
     this.settings = new SettingsService(repo, env, this.secrets);
     this.fonts = new Fonts(path.join(env.assetsDir, 'fonts'), path.join(env.dataDir, 'fonts'));
     this.images = new ImageSignatures(repo, this.fonts, path.join(env.dataDir, 'sig-img'));
-    this.renderer = new Renderer(repo, this.images);
+    this.renderer = new Renderer(repo, this.images, (company, file) => assetSize(env, company, file));
     this.resolver = new UserResolver(repo, () => this.directory(), () => this.settings.get());
     this.sessionKey = this.secrets.derive('session-id');
     this.directoryInstance = directoryOverride ?? null;

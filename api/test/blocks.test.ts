@@ -119,7 +119,8 @@ describe('banner chosen per layout (language versions)', async () => {
     const save = await app.inject({ method: 'POST', url: '/api/admin/templates/tenapors/new', headers: IT, payload: { blocks: withBanner({ file: LT, width: 600, height: 200, link: 'https://www.tenapors.lt', alt: 'Akcija' }) } });
     expect(save.statusCode).toBe(200);
     const sig = (await app.inject({ url: '/api/signature?type=newMail', headers: mock('test.lv@tenaxgrupa.lv') })).body;
-    expect(sig).toContain(`<a href="https://www.tenapors.lt" style="text-decoration:none;"><img src="https://sig.tenax.lv/assets/tenapors/${LT}" width="600" height="200" alt="Akcija"`);
+    // The height comes from the picture (800×450), not the saved 200, so the banner keeps its proportions.
+    expect(sig).toContain(`<a href="https://www.tenapors.lt" style="text-decoration:none;"><img src="https://sig.tenax.lv/assets/tenapors/${LT}" width="600" height="338" alt="Akcija"`);
   });
 
   it('refuses banners that aren’t uploaded for the company, other files, and non-https links', async () => {
