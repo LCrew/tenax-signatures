@@ -395,8 +395,8 @@ function BlockSettings({ block: b, doc, colors, onChange }: { block: Block; doc:
       {b.type === 'jobTitleEn' && language && language !== 'bilingual' && (
         <p className="callout warn xs" role="note">
           {language === 'lv'
-            ? 'Not shown: this design uses Latvian job titles only. Change “Job titles in this design” above the preview.'
-            : 'Stays empty: this design uses English job titles, shown in the Job title (LV) line. Change “Job titles in this design” above the preview.'}
+            ? 'Not shown for Latvian colleagues: this design uses Latvian job titles only (Estonian and Lithuanian colleagues still get it). Change it under Wording and job titles.'
+            : 'Stays empty: this design uses English job titles, shown in the Job title line. Change it under Wording and job titles.'}
         </p>
       )}
 
@@ -514,7 +514,7 @@ function BannerPicker({ block: b, onChange }: { block: Extract<Block, { type: 'b
     <div className="stack tight">
       <Ctl label="Banner image" wide>
         <select value={b.image?.file ?? ''} onChange={(e) => pick(e.target.value)}>
-          <option value="">{defaultBanner ? `This design’s banner (${label(defaultBanner)})` : 'This design’s banner (none set)'}</option>
+          <option value="">{`Each person’s language banner${defaultBanner ? ` (in the preview: ${label(defaultBanner)})` : ' (none in the preview)'}`}</option>
           {banners.map((x) => (
             <option key={x.name} value={x.name}>
               {label(x.name)}
@@ -534,7 +534,8 @@ function BannerPicker({ block: b, onChange }: { block: Extract<Block, { type: 'b
         </div>
       )}
       <p className="xs muted">
-        Pick the banner in this layout’s language, e.g. the English promo in the EN design. Upload banners in Brand and footer.
+        Usually leave this on the language banner: everyone gets the banner set for their signature language under Languages
+        and banners. Picking one here shows that banner to everyone on this design, whatever their language.
       </p>
     </div>
   );

@@ -19,8 +19,8 @@ function MicrosoftLogo() {
 /** Illustrative sheet for the sign-in side panel. */
 export function SampleSheet() {
   return (
-    <div className="sheet" aria-hidden>
-      <div className="sheet-head">
+    <div className="mail" aria-hidden>
+      <div className="mail-head">
         <div>
           <b>From</b>&nbsp; Līga Paraudziņa &lt;liga.paraudzina@tenaxgrupa.lv&gt;
         </div>
@@ -28,7 +28,7 @@ export function SampleSheet() {
           <b>Subject</b>&nbsp; Piedāvājums: siltumizolācijas paneļi
         </div>
       </div>
-      <div className="sheet-body">
+      <div className="mail-body">
         <div className="prose-line" style={{ width: '90%' }} />
         <div className="prose-line" style={{ width: '74%' }} />
         <div className="prose-line" style={{ width: '82%' }} />

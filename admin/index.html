@@ -1,12 +1,50 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light" data-surface="glass">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#F1F1ED" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Tenax Signatures</title>
+    <!-- Theme before first paint. A file, not inline: the CSP allows scripts from 'self' only. -->
+    <script src="/theme-init.js"></script>
+    <style>
+      /* Start-up splash: the mark drawn as two strokes. Removed by /theme-init.js once the app has drawn. */
+      #splash {
+        --sp-bg: #F1F1ED; --sp-a: #33332F; --sp-b: #F07A22; --sp-glow: 35%;
+        position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+        background: radial-gradient(60vmin 60vmin at 50% 50%, color-mix(in srgb, var(--sp-b) 12%, var(--sp-bg)), var(--sp-bg) 70%);
+        transition: opacity .4s;
+      }
+      [data-theme="dark"] #splash { --sp-bg: #26282C; --sp-a: #F2F2EF; --sp-b: #FF9A4D; --sp-glow: 60%; }
+      [data-theme="blue"] #splash { --sp-bg: #EEF2F7; --sp-a: #16233A; --sp-b: #6F9BE6; }
+      [data-theme="green"] #splash { --sp-bg: #EDF1EC; --sp-a: #1F2D26; --sp-b: #5FB088; }
+      [data-theme="neon"] #splash { --sp-bg: #14121F; --sp-a: #8C9BFF; --sp-b: #FF7AB8; --sp-glow: 90%; }
+      #splash.out { opacity: 0; pointer-events: none; }
+      #splash svg {
+        width: min(30vmin, 160px); height: auto; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+        animation: neon-in .5s cubic-bezier(.2, .8, .2, 1) both; overflow: visible;
+      }
+      #splash .a, #splash .b {
+        stroke-dasharray: 1; animation: neon-draw .6s cubic-bezier(.4, 0, .2, 1) .05s both;
+      }
+      #splash .a { stroke: var(--sp-a); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--sp-a) var(--sp-glow), transparent)) drop-shadow(0 0 12px color-mix(in srgb, var(--sp-a) var(--sp-glow), transparent)); }
+      #splash .b { stroke: var(--sp-b); animation-delay: .22s; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--sp-b) var(--sp-glow), transparent)) drop-shadow(0 0 12px color-mix(in srgb, var(--sp-b) var(--sp-glow), transparent)); }
+      @keyframes neon-in { from { opacity: 0; transform: scale(.86); } }
+      @keyframes neon-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+      @media (prefers-reduced-motion: reduce) {
+        #splash svg, #splash .a, #splash .b { animation: none; }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash" aria-hidden="true">
+      <svg viewBox="-2 -2 36 36">
+        <rect class="a" x="0" y="0" width="32" height="32" rx="7" pathLength="1" />
+        <path class="b" d="M7 21c3-1 4-9 7-9s1 7 4 7 3-4 7-5" pathLength="1" />
+      </svg>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

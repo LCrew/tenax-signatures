@@ -93,8 +93,8 @@ export interface BlockInfo {
 
 export const BLOCK_INFO: Record<BlockType, BlockInfo> = {
   name: { label: 'Name', hint: 'Full name from the directory', zones: ['main'], source: 'Person' },
-  jobTitleLv: { label: 'Job title (LV)', hint: 'Latvian job title', zones: ['main'], source: 'Person' },
-  jobTitleEn: { label: 'Job title (EN)', hint: 'English job title, if set', zones: ['main'], source: 'Person' },
+  jobTitleLv: { label: 'Job title', hint: 'In the person’s language: Latvian, Estonian or Lithuanian', zones: ['main'], source: 'Person' },
+  jobTitleEn: { label: 'English job title', hint: 'English job title, if set', zones: ['main'], source: 'Person' },
   department: { label: 'Department', hint: 'From the directory', zones: ['main'], source: 'Person' },
   mobile: { label: 'Mobile', hint: 'With a label such as "M:"', zones: ['main'], source: 'Person' },
   officePhone: { label: 'Office phone', hint: 'With a label such as "T:"', zones: ['main'], source: 'Person' },

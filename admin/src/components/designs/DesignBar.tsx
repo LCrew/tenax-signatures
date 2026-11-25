@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Plus, Settings2, Star } from 'lucide-react';
 import { api } from '../../lib/api';
-import { useAsync, useToast } from '../../lib/hooks';
+import { useToast } from '../../lib/hooks';
 import type { Design, MetaOverrides } from '../../lib/types';
-import { Field, Modal } from '../ui';
+import { Field, Modal, Segmented } from '../ui';
+import { type Asset, BannerPicker } from './BannerPicker';
 
 /** Chips for a company's designs (Standard ★, English, Service…) plus "New design" and per-design settings. */
 export function DesignBar({
@@ -228,19 +229,44 @@ function DesignSettingsModal({ design, onClose, onChanged, onUseImage }: { desig
 }
 
 /** Per-design wording on top of the company's Brand and footer (e.g. English closing line and notice). */
+export type TitleLanguage = 'lv' | 'en' | 'bilingual';
+export const TITLE_LABELS: Record<TitleLanguage, string> = {
+  bilingual: 'Latvian and English',
+  lv: 'Latvian only',
+  en: 'English only',
+};
+
+type BannerChoice = 'language' | 'none' | 'fixed';
+
+/**
+ * Design › Wording and job titles: which job titles this design shows, and wording that differs from the company's
+ * (closing line, company line, notice). Banners come from Languages and banners; a design can only switch them off
+ * (or, for older designs, pin one banner for everybody).
+ */
 export function WordingForm({
   company,
+  companyName,
   companyMeta,
   value,
   onChange,
+  language,
+  globalLanguage,
+  onLanguageChange,
+  assets,
+  onUploaded,
 }: {
   company: string;
+  companyName: string;
   companyMeta: any;
   value: MetaOverrides;
   onChange: (v: MetaOverrides) => void;
+  /** This design's job titles; null = Settings. */
+  language: TitleLanguage | null;
+  globalLanguage?: TitleLanguage;
+  onLanguageChange: (l: TitleLanguage | null) => void;
+  assets: Asset[];
+  onUploaded: () => void;
 }) {
-  const assets = useAsync(() => api.get<{ name: string; localUrl: string }[]>(`/api/admin/assets/${company}`), [company]);
-  const banners = (assets.data ?? []).filter((a) => a.name.startsWith('banner-'));
   const footer = value.footer ?? {};
   const setFooter = (k: 'companyLine' | 'confidential', v: string | undefined) => {
     const f = { ...footer, [k]: v };
@@ -253,83 +279,110 @@ export function WordingForm({
     if (v === undefined) delete next[k];
     onChange(next);
   };
+  const bannerChoice: BannerChoice = value.banner === undefined ? 'language' : value.banner === null ? 'none' : 'fixed';
 
-  const row = (label: string, own: boolean, toggle: (own: boolean) => void, input: React.ReactNode, companyValue: string) => (
+  const row = (label: string, own: boolean, toggle: (own: boolean) => void, input: React.ReactNode, companyValue: string, note?: string) => (
     <div className="wording-row">
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <strong className="small">{label}</strong>
         <div className="segmented" role="group" aria-label={label}>
           <button type="button" aria-pressed={!own} onClick={() => toggle(false)}>
-            Company setting
+            Company’s
           </button>
           <button type="button" aria-pressed={own} onClick={() => toggle(true)}>
-            This design
+            This design’s own
           </button>
         </div>
       </div>
-      {own ? input : <p className="xs muted">{companyValue || 'Empty, so it’s left out'}</p>}
+      {own ? input : <p className="xs muted">{companyValue ? `“${companyValue}”` : 'Empty, so it’s left out'}</p>}
+      {own && note && <p className="xs muted">{note}</p>}
     </div>
   );
 
   return (
-    <div className="stack">
-      <p className="small muted">
-        Logo, colours, websites and address come from <strong>Brand and footer</strong> for every design. Here you can
-        give this design its own wording, for example in English.
-      </p>
-      {row(
-        'Closing line',
-        value.greeting !== undefined,
-        (own) => setTop('greeting', own ? companyMeta?.greeting ?? '' : undefined),
-        <input type="text" value={value.greeting ?? ''} maxLength={200} placeholder="e.g. Best regards," onChange={(e) => setTop('greeting', e.target.value)} />,
-        companyMeta?.greeting ?? '',
-      )}
-      {row(
-        'Company line',
-        footer.companyLine !== undefined,
-        (own) => setFooter('companyLine', own ? companyMeta?.footer?.companyLine ?? '' : undefined),
-        <input type="text" value={footer.companyLine ?? ''} maxLength={200} onChange={(e) => setFooter('companyLine', e.target.value)} />,
-        companyMeta?.footer?.companyLine ?? '',
-      )}
-      {row(
-        'Confidentiality notice',
-        footer.confidential !== undefined,
-        (own) => setFooter('confidential', own ? companyMeta?.footer?.confidential ?? '' : undefined),
-        <textarea rows={3} style={{ fontFamily: 'var(--font)', fontSize: 'var(--t-sm)' }} value={footer.confidential ?? ''} maxLength={3000} onChange={(e) => setFooter('confidential', e.target.value)} />,
-        companyMeta?.footer?.confidential ?? '',
-      )}
-      {row(
-        'Promo banner',
-        value.banner !== undefined,
-        (own) => setTop('banner', own ? companyMeta?.banner ?? null : undefined),
-        <div className="stack tight">
-          <select
-            value={value.banner?.file ?? ''}
-            onChange={(e) => {
-              const file = e.target.value;
-              if (!file) return setTop('banner', null);
-              const img = new Image();
-              img.onload = () => {
-                const w = Math.min(600, img.naturalWidth);
-                setTop('banner', { ...(value.banner ?? {}), file, width: w, height: Math.round((img.naturalHeight * w) / img.naturalWidth) });
-              };
-              img.src = banners.find((b) => b.name === file)?.localUrl ?? '';
-            }}
-          >
-            <option value="">No banner</option>
-            {banners.map((b) => (
-              <option key={b.name} value={b.name}>
-                {b.name.replace(/^banner-/, '')}
+    <div className="stack loose">
+      <section className="stack">
+        <h3>Job titles</h3>
+        <Field
+          label="Shown in this design"
+          hint="Estonian and Lithuanian colleagues always get their own-language title with the English one, except on English-only designs."
+        >
+          <select value={language ?? ''} onChange={(e) => onLanguageChange((e.target.value || null) as TitleLanguage | null)}>
+            <option value="">Same as Settings{globalLanguage ? ` (${TITLE_LABELS[globalLanguage]})` : ''}</option>
+            {(Object.keys(TITLE_LABELS) as TitleLanguage[]).map((l) => (
+              <option key={l} value={l}>
+                {TITLE_LABELS[l]}
+                {l === 'en' ? ' (Latvian when there’s no English title)' : ''}
               </option>
             ))}
           </select>
-          {value.banner && (
-            <input type="url" placeholder="Link when clicked (https://…)" value={value.banner.link ?? ''} onChange={(e) => setTop('banner', { ...value.banner!, link: e.target.value })} />
-          )}
-          <span className="xs muted">Used by Promo banner blocks set to “This design’s banner”. You can also pick a banner on the block itself in New message / Reply. Upload banners in Brand and footer.</span>
-        </div>,
-        companyMeta?.banner?.file ? companyMeta.banner.file.replace(/^banner-/, '') : '',
-      )}
+        </Field>
+        {(language ?? globalLanguage) === 'en' && (
+          <p className="xs muted">English only: everyone on this design gets the English closing line and banner from {companyName} › Languages and banners.</p>
+        )}
+      </section>
+
+      <section className="stack">
+        <h3>Wording</h3>
+        <p className="small muted">
+          Logo, colours, websites and address come from <strong>Brand and footer</strong>, closing lines from{' '}
+          <strong>Languages and banners</strong>. Give this design its own wording only where it must differ.
+        </p>
+        {row(
+          'Closing line',
+          value.greeting !== undefined,
+          (own) => setTop('greeting', own ? companyMeta?.greeting ?? '' : undefined),
+          <input type="text" value={value.greeting ?? ''} maxLength={200} placeholder="e.g. Best regards," onChange={(e) => setTop('greeting', e.target.value)} />,
+          companyMeta?.greeting ?? '',
+          'Replaces the closing line in every language, including Estonian and Lithuanian. Usually better left to Languages and banners.',
+        )}
+        {row(
+          'Company line',
+          footer.companyLine !== undefined,
+          (own) => setFooter('companyLine', own ? companyMeta?.footer?.companyLine ?? '' : undefined),
+          <input type="text" value={footer.companyLine ?? ''} maxLength={200} onChange={(e) => setFooter('companyLine', e.target.value)} />,
+          companyMeta?.footer?.companyLine ?? '',
+        )}
+        {row(
+          'Confidentiality notice',
+          footer.confidential !== undefined,
+          (own) => setFooter('confidential', own ? companyMeta?.footer?.confidential ?? '' : undefined),
+          <textarea rows={3} style={{ fontFamily: 'var(--font)', fontSize: 'var(--t-sm)' }} value={footer.confidential ?? ''} maxLength={3000} onChange={(e) => setFooter('confidential', e.target.value)} />,
+          companyMeta?.footer?.confidential ?? '',
+        )}
+      </section>
+
+      <section className="stack">
+        <div className="row" style={{ justifyContent: 'space-between' }}>
+          <h3>Promo banner</h3>
+          <Segmented<BannerChoice>
+            label="Promo banner in this design"
+            value={bannerChoice}
+            options={[
+              { value: 'language', label: 'Each person’s language banner' },
+              { value: 'none', label: 'No banner' },
+              ...(bannerChoice === 'fixed' ? [{ value: 'fixed' as const, label: 'One banner for everyone' }] : []),
+            ]}
+            onChange={(v) => setTop('banner', v === 'language' ? undefined : null)}
+          />
+        </div>
+        {bannerChoice === 'language' && (
+          <p className="small muted">
+            People get the banner of their signature language, set in {companyName} › Languages and banners. New messages
+            only.
+          </p>
+        )}
+        {bannerChoice === 'none' && <p className="small muted">Nobody on this design gets a promo banner, whatever their language.</p>}
+        {bannerChoice === 'fixed' && (
+          <>
+            <div className="callout warn">
+              This design shows the same banner to everyone, whatever their language. Switch to “Each person’s language
+              banner” and set the banners per language instead.
+            </div>
+            <BannerPicker company={company} assets={assets} onUploaded={onUploaded} allowNone={false} value={value.banner ?? null} onChange={(b) => setTop('banner', b)} />
+          </>
+        )}
+      </section>
     </div>
   );
 }

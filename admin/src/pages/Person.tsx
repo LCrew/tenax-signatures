@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Ban, Undo2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useApp, useAsync, useCompanies, useDebounced, useToast } from '../lib/hooks';
-import { FIELD_LABELS, SKIP_REASONS, type ComposeType, type Design, type Overrides, type UserDetail } from '../lib/types';
+import { FIELD_LABELS, LOCALE_NAMES, SKIP_REASONS, STANDARD_GREETINGS, ownTitleLabel, type ComposeType, type Design, type Overrides, type PersonLanguage, type UserDetail } from '../lib/types';
 import { CompanyName, ErrorNote, Field, Loading, Modal, PageHead, timeAgo } from '../components/ui';
 import { LetterPreview } from '../components/LetterPreview';
 
@@ -95,13 +95,33 @@ export function Person() {
             <span className="xs muted">Empty means "use Entra ID"</span>
           </div>
           <div className="panel-body" style={{ paddingTop: 4, paddingBottom: 4 }}>
+            <div className="field-row">
+              <label className="k" htmlFor="f-language">
+                Signature language
+              </label>
+              <div>
+                <select id="f-language" value={draft.language ?? ''} onChange={(e) => set('language', (e.target.value || null) as PersonLanguage | null)}>
+                  <option value="">Latvian (company language)</option>
+                  {(['et', 'lt'] as PersonLanguage[]).map((l) => (
+                    <option key={l} value={l}>
+                      {LOCALE_NAMES[l]}
+                    </option>
+                  ))}
+                </select>
+                <div className="entra">
+                  {draft.language
+                    ? `${LOCALE_NAMES[draft.language]} job title with the English one under it (except on English-only designs), and the ${LOCALE_NAMES[draft.language]} closing line and banner from Designs › Languages and banners. Company details stay as in Latvia.`
+                    : 'For Estonian and Lithuanian colleagues: they get their own-language job title, closing line and banner.'}
+                </div>
+              </div>
+            </div>
             {TEXT_FIELDS.map((f) => {
               const ev = entraValue(u, f);
               const ov = (draft[f] as string | null | undefined) ?? '';
               return (
                 <div className="field-row" key={f}>
                   <label className="k" htmlFor={`f-${f}`}>
-                    {FIELD_LABELS[f]}
+                    {f === 'jobTitleLv' ? ownTitleLabel(draft.language) : FIELD_LABELS[f]}
                   </label>
                   <div>
                     <div className="row" style={{ flexWrap: 'nowrap' }}>
@@ -154,9 +174,9 @@ export function Person() {
                   id="f-greeting-mode"
                   aria-label="Closing line"
                   value={draft.greeting == null ? 'default' : draft.greeting === '' ? 'none' : 'own'}
-                  onChange={(e) => set('greeting', e.target.value === 'default' ? null : e.target.value === 'none' ? '' : draft.greeting || 'Ar cieņu,')}
+                  onChange={(e) => set('greeting', e.target.value === 'default' ? null : e.target.value === 'none' ? '' : draft.greeting || (draft.language ? STANDARD_GREETINGS[draft.language] : 'Ar cieņu,'))}
                 >
-                  <option value="default">Company / design default</option>
+                  <option value="default">Company default{draft.language ? ` (${LOCALE_NAMES[draft.language]})` : ''}</option>
                   <option value="own">Own text</option>
                   <option value="none">None</option>
                 </select>
@@ -217,8 +237,8 @@ export function Person() {
 
 function pickOverrides(o: Overrides | null): Overrides {
   if (!o) return {};
-  const { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile, design, designLocked, greeting, address } = o;
-  return { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile, design, designLocked, greeting, address };
+  const { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile, design, designLocked, greeting, address, language } = o;
+  return { displayName, jobTitleLv, jobTitleEn, mobilePhone, officePhone, department, company, hideMobile, design, designLocked, greeting, address, language };
 }
 
 /** Empty strings mean "no correction". */
@@ -232,6 +252,7 @@ function normalize(o: Overrides): Overrides {
   out.design = o.design || null;
   out.greeting = o.greeting == null ? null : o.greeting.trim();
   out.designLocked = !!o.design && o.designLocked === true;
+  out.language = o.language || null;
   return out as Overrides;
 }
 

@@ -30,10 +30,30 @@ export interface Company {
   editorGroupId?: string;
 }
 
+/** A promo banner as saved in the company's brand settings. */
+export interface Banner {
+  file: string;
+  width: number;
+  height: number;
+  link?: string;
+  alt?: string;
+}
+
+/** Signature languages besides Latvian, set per person (Estonian and Lithuanian colleagues). */
+export type PersonLanguage = 'et' | 'lt';
+/** Latvian is the company language; 'en' = designs set to English only. */
+export type SignatureLocale = 'lv' | 'en' | PersonLanguage;
+export const LOCALE_NAMES: Record<SignatureLocale, string> = { lv: 'Latvian', en: 'English', et: 'Estonian', lt: 'Lithuanian' };
+/** Closing line used for Estonian and Lithuanian colleagues until the company sets its own. */
+export const STANDARD_GREETINGS: Record<PersonLanguage, string> = { et: 'Lugupidamisega,', lt: 'Pagarbiai,' };
+
+/** Per-language closing line and banner (meta.languages). Missing banner key = the Latvian banner; null = none. */
+export type LanguageMeta = Partial<Record<'en' | PersonLanguage, { greeting?: string; banner?: Banner | null }>>;
+
 export interface MetaOverrides {
   greeting?: string;
   footer?: { companyLine?: string; confidential?: string };
-  banner?: { file: string; width: number; height: number; link?: string; alt?: string } | null;
+  banner?: Banner | null;
 }
 
 export interface Design {
@@ -105,6 +125,8 @@ export interface UserSummary {
   sharedMailbox?: boolean;
   design?: DesignRef & { source: 'locked' | 'chosen' | 'assigned' | 'default' };
   designLocked?: boolean;
+  /** Estonian or Lithuanian signature; null = Latvian. */
+  language?: PersonLanguage | null;
 }
 
 export type SkipReason = 'guest' | 'disabled' | 'unlicensed' | 'noMailbox' | 'mailboxOff';
@@ -138,6 +160,8 @@ export interface Overrides {
   hideMobile?: boolean | null;
   /** Their own address line; null = the company's. */
   address?: string | null;
+  /** Estonian or Lithuanian signature (own-language title + English, own closing line and banner); null = Latvian. */
+  language?: PersonLanguage | null;
   design?: string | null;
   designLocked?: boolean | null;
   chosenDesign?: string | null;
@@ -239,4 +263,9 @@ export const FIELD_LABELS: Record<string, string> = {
   company: 'Company',
   hideMobile: 'Hide mobile',
   address: 'Address',
+  language: 'Signature language',
 };
+
+/** Label of the own-language job title field (jobTitleLv) for a person's signature language. */
+export const ownTitleLabel = (language: PersonLanguage | null | undefined) =>
+  `Job title (${language ? LOCALE_NAMES[language] : 'Latvian'})`;

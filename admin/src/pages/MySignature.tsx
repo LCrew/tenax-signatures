@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Check, ClipboardCopy, LogOut, Undo2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useApp, useAsync, useDebounced, useToast } from '../lib/hooks';
-import { FIELD_LABELS, type ComposeType } from '../lib/types';
+import { FIELD_LABELS, ownTitleLabel, type ComposeType, type PersonLanguage } from '../lib/types';
 import { LetterPreview } from '../components/LetterPreview';
 import { Mark, signOut } from '../components/Layout';
 import { ErrorNote, Loading, Segmented } from '../components/ui';
@@ -126,11 +126,12 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
           </div>
           <div className="panel-body" style={{ paddingTop: 4, paddingBottom: 4 }}>
             <ReadOnlyRow label="Name" value={me.data.fields.displayName as string} source={me.data.sources.displayName} />
-            {(['jobTitleLv', 'jobTitleEn', 'mobilePhone', 'address'] as const).map((f) =>
-              editable.includes(f) ? (
+            {(['jobTitleLv', 'jobTitleEn', 'mobilePhone', 'address'] as const).map((f) => {
+              const label = f === 'jobTitleLv' ? ownTitleLabel(me.data!.fields.language as PersonLanguage | null) : FIELD_LABELS[f];
+              return editable.includes(f) ? (
                 <div className="field-row" key={f}>
                   <label className="k" htmlFor={`me-${f}`}>
-                    {FIELD_LABELS[f]}
+                    {label}
                   </label>
                   <div>
                     <div className="row" style={{ flexWrap: 'nowrap' }}>
@@ -151,9 +152,9 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
                   </div>
                 </div>
               ) : (
-                <ReadOnlyRow key={f} label={FIELD_LABELS[f]} value={((me.data!.fields[f] as string) || (f === 'address' ? me.data!.defaultAddress : null)) ?? null} source={me.data!.sources[f]} />
-              ),
-            )}
+                <ReadOnlyRow key={f} label={label} value={((me.data!.fields[f] as string) || (f === 'address' ? me.data!.defaultAddress : null)) ?? null} source={me.data!.sources[f]} />
+              );
+            })}
             <ReadOnlyRow label="Office phone" value={me.data.fields.officePhone as string} source={me.data.sources.officePhone} />
             <ReadOnlyRow label="Email" value={me.data.fields.email as string} source="entra" />
             <ReadOnlyRow label="Company" value={me.data.companyName} source="entra" />

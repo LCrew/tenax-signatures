@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy, X } from 'lucide-react';
 
 export function PageHead({ title, lead, actions }: { title: string; lead?: ReactNode; actions?: ReactNode }) {
   return (
@@ -70,7 +70,31 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
   );
 }
 
-export function Modal({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
+/**
+ * A dialog on the native <dialog> (focus trap, Escape to close).
+ * - variant "window" (default): centred window; the last `.row.end` in it sticks to the bottom as its actions.
+ * - variant "sheet": bottom sheet with a fixed head (title + close), scrolling middle and optional fixed `footer`;
+ *   closes on the close button, Escape or a tap on the shade. `size="auto"` makes it only as tall as its content.
+ */
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  variant = 'window',
+  footer,
+  size,
+  wide,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+  variant?: 'window' | 'sheet';
+  footer?: ReactNode;
+  size?: 'auto' | 'full';
+  wide?: boolean;
+}) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = ref.current;
@@ -78,13 +102,47 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
     if (open && !d.open) d.showModal();
     if (!open && d.open) d.close();
   }, [open]);
+  if (variant === 'sheet') {
+    return (
+      <dialog
+        ref={ref}
+        className={`modal sheet${size === 'auto' ? ' auto' : ''}`}
+        onClose={onClose}
+        aria-label={title}
+        // The dialog itself is only hit outside .sheet__inner, i.e. on the shade.
+        onClick={(e) => e.target === e.currentTarget && ref.current?.close()}
+      >
+        <div className="sheet__inner">
+          <header className="sheet__head">
+            <h2>{title}</h2>
+            <button type="button" className="rb dk sm" aria-label="Close" onClick={() => ref.current?.close()}>
+              <X size={20} />
+            </button>
+          </header>
+          <div className="sheet__body">{children}</div>
+          {footer && <div className="sheet__foot">{footer}</div>}
+        </div>
+      </dialog>
+    );
+  }
   return (
-    <dialog ref={ref} className="modal" onClose={onClose} aria-label={title}>
+    <dialog ref={ref} className={`modal${wide ? ' wide' : ''}`} onClose={onClose} aria-label={title}>
       <div className="modal-body">
         <h2>{title}</h2>
         {children}
       </div>
     </dialog>
+  );
+}
+
+/** iOS-style switch; the checkbox stays in the page for keyboards and screen readers. */
+export function Toggle({ checked, onChange, children, disabled }: { checked: boolean; onChange: (v: boolean) => void; children?: ReactNode; disabled?: boolean }) {
+  return (
+    <label className="toggle">
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+      <span className="toggle__ui" aria-hidden />
+      {children}
+    </label>
   );
 }
 

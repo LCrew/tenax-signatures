@@ -5,10 +5,13 @@ import { html as htmlLang } from '@codemirror/lang-html';
 import { json as jsonLang } from '@codemirror/lang-json';
 import { FolderSync, History, Plus, RotateCcw, Trash2, Upload } from 'lucide-react';
 import { api } from '../lib/api';
-import { prepareBanner, resizeBanner } from '../lib/banner';
-import { useApp, useAsync, useDebounced, useImageRatio, useToast } from '../lib/hooks';
-import type { Company, ComposeType, Design, MetaOverrides, TemplateKind, TemplateVersion, UserSummary } from '../lib/types';
-import { DesignBar, WordingForm } from '../components/designs/DesignBar';
+import { useApp, useAsync, useDebounced, useToast } from '../lib/hooks';
+import type { Company, ComposeType, Design, MetaOverrides, SignatureLocale, TemplateKind, TemplateVersion, UserSummary } from '../lib/types';
+import { LOCALE_NAMES } from '../lib/types';
+import { DesignBar, type TitleLanguage, WordingForm } from '../components/designs/DesignBar';
+import { type Asset, useCompanyAssets } from '../components/designs/BannerPicker';
+import { LanguagesForm, LOCALES, localeSummary } from '../components/designs/LanguagesForm';
+import '../components/designs/designer.css';
 import { ImageDesignEditor } from '../components/designs/ImageDesignEditor';
 import { ErrorNote, Field, Loading, Modal, PageHead, Segmented, timeAgo } from '../components/ui';
 import { BlockEditor } from '../components/blocks/BlockEditor';
@@ -26,13 +29,47 @@ type EditKind = 'new' | 'reply' | 'meta';
 type Drafts = Record<EditKind, string>;
 type MsgKind = 'new' | 'reply';
 type BlockDrafts = Record<MsgKind, BlockDoc | null>;
-type EditorTab = 'brand' | 'new' | 'reply' | 'wording';
+type EditorTab = 'new' | 'reply' | 'wording' | 'brand' | 'languages';
+
+/** The editor's sections: three belong to the open design, two to the whole company. */
+const TABS: Record<EditorTab, { label: string; sub: string; lead: string; scope: 'design' | 'company' }> = {
+  new: {
+    label: 'New message',
+    sub: 'Full signature layout',
+    lead: 'The signature under new messages: name, job titles, phones, logo, websites and the promo banner.',
+    scope: 'design',
+  },
+  reply: {
+    label: 'Reply and forward',
+    sub: 'Short signature layout',
+    lead: 'The shorter signature under replies and forwards. Banners are never shown here.',
+    scope: 'design',
+  },
+  wording: {
+    label: 'Wording and job titles',
+    sub: 'Titles, texts, banner on or off',
+    lead: 'Which job titles this design shows and any wording that differs from the company’s.',
+    scope: 'design',
+  },
+  brand: {
+    label: 'Brand and footer',
+    sub: 'Logo, colours, address, websites',
+    lead: 'The company’s look and details, the same in every language.',
+    scope: 'company',
+  },
+  languages: {
+    label: 'Languages and banners',
+    sub: 'LV · EN · ET · LT',
+    lead: 'Closing line and promo banner for each signature language.',
+    scope: 'company',
+  },
+};
 type Presets = Record<'side' | 'stacked' | 'textOnly' | 'reply', BlockDoc>;
 
 const VARIABLES: [string, string][] = [
   ['{{user.displayName}}', 'Name'],
-  ['{{user.jobTitleLv}}', 'Job title (LV)'],
-  ['{{user.jobTitleEn}}', 'Job title (EN)'],
+  ['{{user.jobTitleLv}}', 'First job title: Latvian, or Estonian / Lithuanian for those colleagues'],
+  ['{{user.jobTitleEn}}', 'English job title (empty on English-only designs)'],
   ['{{user.mobilePhone}}', 'Mobile, formatted'],
   ['{{tel user.mobilePhone}}', 'Mobile for tel: links'],
   ['{{user.officePhone}}', 'Office phone'],
@@ -44,9 +81,9 @@ const VARIABLES: [string, string][] = [
   ['{{meta.colors.primary}}', 'Brand colour'],
   ['{{meta.footer.companyLine}}', 'Company line'],
   ['{{meta.footer.address}}', 'Address'],
-  ['{{meta.greeting}}', 'Closing line'],
+  ['{{meta.greeting}}', 'Closing line in the person’s language'],
   ['{{#each meta.websites}}{{label}}{{/each}}', 'Websites (url, label)'],
-  ['{{meta.bannerUrl}}', 'Promo banner URL (empty when none)'],
+  ['{{meta.bannerUrl}}', 'Promo banner URL for the person’s language (empty when none)'],
   ['{{meta.footer.confidential}}', 'Confidentiality notice'],
   ['{{#if user.mobilePhone}}…{{/if}}', 'Leave a line out when empty'],
 ];
@@ -60,13 +97,6 @@ const safeParse = (s: string) => {
 };
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-type Language = 'lv' | 'en' | 'bilingual';
-const LANGUAGE_LABELS: Record<Language, string> = {
-  bilingual: 'Latvian and English',
-  lv: 'Latvian only',
-  en: 'English only (Latvian when no English title)',
-};
-
 export function Designs() {
   const { company: companyParam } = useParams();
   const { session } = useApp();
@@ -74,9 +104,10 @@ export function Designs() {
   const toast = useToast();
   const rows = useAsync(() => api.get<Row[]>('/api/admin/templates'));
   const presets = useAsync(() => api.get<Presets>('/api/admin/templates/presets'));
-  const globalLanguage = useAsync(() => api.get<{ language: Language }>('/api/admin/templates/language')).data?.language;
+  const globalLanguage = useAsync(() => api.get<{ language: TitleLanguage }>('/api/admin/templates/language')).data?.language;
   const users = useAsync(() => api.get<UserSummary[]>('/api/admin/users').catch(() => [] as UserSummary[]));
   const active = rows.data?.find((r) => r.company.key === companyParam) ?? rows.data?.[0];
+  const assets = useCompanyAssets(active?.company.key ?? '');
   const [designId, setDesignId] = useState<string | null>(null);
   const [imageMode, setImageMode] = useState<string | null>(null);
   const [restoreTick, setRestoreTick] = useState(0);
@@ -86,12 +117,19 @@ export function Designs() {
   const savedWording = useMemo(() => activeDesign?.metaOverrides ?? {}, [activeDesign]);
   useEffect(() => setWording(savedWording), [savedWording]);
   const wordingDirty = !same(wording, savedWording);
+  // The design's job titles are a draft too, saved with its wording.
+  const savedTitles: TitleLanguage | null = activeDesign?.language ?? null;
+  const [titles, setTitles] = useState<TitleLanguage | null>(savedTitles);
+  useEffect(() => setTitles(savedTitles), [savedTitles, activeDesign?.id]);
+  const titlesDirty = titles !== savedTitles;
 
   const [tab, setTab] = useState<EditorTab>('new');
   const [drafts, setDrafts] = useState<Drafts>({ new: '', reply: '', meta: '' });
   const [blockDrafts, setBlockDrafts] = useState<BlockDrafts>({ new: null, reply: null });
   const [previewType, setPreviewType] = useState<ComposeType>('newMail');
   const [as, setAs] = useState('');
+  /** Whose signature the preview shows when no real person is picked; also the card open under Languages and banners. */
+  const [sample, setSample] = useState<SignatureLocale>('lv');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -112,15 +150,15 @@ export function Designs() {
   const isDirty = (k: EditKind) =>
     k === 'meta' ? drafts.meta !== saved.meta : blockDrafts[k] ? !same(blockDrafts[k], savedBlocks[k]) : savedBlocks[k] !== null || drafts[k] !== saved[k];
   const dirtyKinds = (['new', 'reply', 'meta'] as EditKind[]).filter(isDirty);
-  const anyDirty = dirtyKinds.length > 0 || wordingDirty;
+  const anyDirty = dirtyKinds.length > 0 || wordingDirty || titlesDirty;
 
-  // Keep the preview on the template being edited.
+  // Keep the preview on what's being edited: the layout's message type; banners only show in new messages.
   useEffect(() => {
-    if (tab === 'new') setPreviewType('newMail');
+    if (tab === 'new' || tab === 'languages') setPreviewType('newMail');
     if (tab === 'reply') setPreviewType('reply');
   }, [tab]);
 
-  const draftState = useMemo(() => ({ drafts, blockDrafts, wording }), [drafts, blockDrafts, wording]);
+  const draftState = useMemo(() => ({ drafts, blockDrafts, wording, titles }), [drafts, blockDrafts, wording, titles]);
   const debounced = useDebounced(draftState, 300);
   const previewKind: MsgKind = previewType === 'newMail' ? 'new' : 'reply';
   const preview = useAsync(
@@ -130,13 +168,15 @@ export function Designs() {
             company: active.company.key,
             design: activeDesign?.id,
             metaOverrides: debounced.wording,
+            designLanguage: debounced.titles,
             type: previewType,
             upn: as || undefined,
+            language: as || sample === 'lv' ? undefined : sample,
             ...(debounced.blockDrafts[previewKind] ? { blocks: debounced.blockDrafts[previewKind] } : { template: debounced.drafts[previewKind] }),
             meta: debounced.drafts.meta,
           })
         : Promise.resolve(''),
-    [active?.company.key, activeDesign?.id, activeDesign?.language, previewType, as, JSON.stringify(debounced)],
+    [active?.company.key, activeDesign?.id, previewType, as, sample, JSON.stringify(debounced)],
   );
 
   const switchCompany = (key: string) => {
@@ -152,6 +192,7 @@ export function Designs() {
     setDrafts(saved);
     setBlockDrafts(savedBlocks);
     setWording(savedWording);
+    setTitles(savedTitles);
   };
 
   async function save() {
@@ -160,13 +201,18 @@ export function Designs() {
     try {
       // Brand first (layouts are trial-rendered against it), then this design's wording, then its layouts.
       if (dirtyKinds.includes('meta')) await api.post(`/api/admin/templates/${active.company.key}/meta`, { content: drafts.meta, note: note || undefined });
-      if (wordingDirty && activeDesign) await api.put(`/api/admin/designs/${activeDesign.id}`, { metaOverrides: wording });
+      if ((wordingDirty || titlesDirty) && activeDesign)
+        await api.put(`/api/admin/designs/${activeDesign.id}`, { ...(wordingDirty ? { metaOverrides: wording } : {}), ...(titlesDirty ? { language: titles } : {}) });
       for (const kind of dirtyKinds.filter((k) => k !== 'meta')) {
         const payload = blockDrafts[kind] ? { blocks: blockDrafts[kind] } : { content: drafts[kind] };
         await api.post(`/api/admin/templates/${active.company.key}/${kind}`, { ...payload, design: activeDesign?.id, note: note || undefined });
       }
       setNote('');
-      toast(`Saved. New messages with ${active.company.displayName} › ${activeDesign?.name ?? 'this design'} use it from now on.`);
+      toast(
+        dirtyKinds.includes('meta')
+          ? `Saved. Every ${active.company.displayName} design uses it from the next message.`
+          : `Saved. ${active.company.displayName} › ${activeDesign?.name ?? 'this design'} is used from the next message.`,
+      );
       await rows.reload();
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -189,15 +235,46 @@ export function Designs() {
   if (!rows.data || !active) return <Loading />;
 
   const meta = safeParse(drafts.meta);
-  const tabLabel: Record<EditorTab, string> = { new: 'New message', reply: 'Reply and forward', wording: 'Wording', brand: 'Brand (company)' };
-  const tabKind: Record<EditorTab, EditKind | 'wording'> = { brand: 'meta', new: 'new', reply: 'reply', wording: 'wording' };
-  const tabDirty = (t: EditorTab) => (t === 'wording' ? wordingDirty : dirtyKinds.includes(tabKind[t] as EditKind));
+  const savedMeta = safeParse(saved.meta);
+  const patchMeta = (fn: (m: any) => void) => {
+    const next = structuredClone(meta);
+    fn(next);
+    setDrafts((d) => ({ ...d, meta: JSON.stringify(next, null, 2) + '\n' }));
+  };
+  // Brand and footer and Languages and banners are two views of the same company settings; tell them apart for the dots.
+  const languagePart = (m: any) => ({ greeting: m?.greeting, banner: m?.banner, languages: m?.languages });
+  const brandPart = (m: any) => {
+    const { greeting: _g, banner: _b, languages: _l, ...rest } = m ?? {};
+    return rest;
+  };
+  const metaDirty = dirtyKinds.includes('meta');
+  const tabDirty: Record<EditorTab, boolean> = {
+    new: dirtyKinds.includes('new'),
+    reply: dirtyKinds.includes('reply'),
+    wording: wordingDirty || titlesDirty,
+    brand: metaDirty && (!meta || !same(brandPart(meta), brandPart(savedMeta))),
+    languages: metaDirty && !!meta && !same(languagePart(meta), languagePart(savedMeta)),
+  };
+  const unsaved = (Object.keys(TABS) as EditorTab[]).filter((t) => tabDirty[t]).map((t) => TABS[t].label);
+  const companyPeople = (users.data ?? []).filter((u) => u.company === active.company.key);
+  const asPerson = (users.data ?? []).find((u) => u.upn === as);
+  const scope = TABS[tab].scope === 'design' ? `${active.company.displayName} › ${activeDesign?.name ?? ''}` : `Every ${active.company.displayName} design`;
+
+  const navItem = (t: EditorTab) => (
+    <button key={t} type="button" role="tab" aria-selected={tab === t} className="designer-nav-item" onClick={() => setTab(t)}>
+      <span className="designer-nav-text">
+        <strong>{TABS[t].label}</strong>
+        <span>{TABS[t].sub}</span>
+      </span>
+      {tabDirty[t] && <span className="dirty-dot" aria-label="unsaved changes" />}
+    </button>
+  );
 
   return (
     <>
       <PageHead
         title="Designs"
-        lead="Each company can have several designs, e.g. Standard, English and Service. Changes apply to the next message people write. Every save is kept as a version you can go back to."
+        lead="Pick a company and one of its designs. A design has its own layouts and wording; the brand, languages and banners are shared by all of a company’s designs. Every save is kept as a version."
         actions={
           <>
             <button className="btn" onClick={() => setHistoryOpen(true)}>
@@ -218,34 +295,36 @@ export function Designs() {
         }
       />
 
-      <div className="tabs" role="tablist" aria-label="Company">
-        {rows.data.map((r) => {
-          const color = safeParse(r.meta?.content ?? '{}')?.colors?.primary;
-          return (
-            <button key={r.company.key} role="tab" aria-selected={r.company.key === active.company.key} onClick={() => switchCompany(r.company.key)}>
-              <span className="swatch" style={{ background: color }} aria-hidden /> {r.company.displayName}
-            </button>
-          );
-        })}
-      </div>
+      <div className="designer-picker">
+        <div className="tabs" role="tablist" aria-label="Company">
+          {rows.data.map((r) => {
+            const color = safeParse(r.meta?.content ?? '{}')?.colors?.primary;
+            return (
+              <button key={r.company.key} role="tab" aria-selected={r.company.key === active.company.key} onClick={() => switchCompany(r.company.key)}>
+                <span className="swatch" style={{ background: color }} aria-hidden /> {r.company.displayName}
+              </button>
+            );
+          })}
+        </div>
 
-      {activeDesign && (
-        <DesignBar
-          company={active.company.key}
-          companyName={active.company.displayName}
-          designs={active.designs}
-          activeId={activeDesign.id}
-          onSelect={switchDesign}
-          onChanged={async (id) => {
-            await rows.reload();
-            if (id) setDesignId(id);
-          }}
-          onUseImage={(id) => {
-            setDesignId(id);
-            setImageMode(id);
-          }}
-        />
-      )}
+        {activeDesign && (
+          <DesignBar
+            company={active.company.key}
+            companyName={active.company.displayName}
+            designs={active.designs}
+            activeId={activeDesign.id}
+            onSelect={switchDesign}
+            onChanged={async (id) => {
+              await rows.reload();
+              if (id) setDesignId(id);
+            }}
+            onUseImage={(id) => {
+              setDesignId(id);
+              setImageMode(id);
+            }}
+          />
+        )}
+      </div>
 
       {activeDesign && (activeDesign.format === 'image' || imageMode === activeDesign.id) ? (
         <ImageDesignEditor
@@ -257,48 +336,86 @@ export function Designs() {
           onLeave={() => setImageMode(null)}
         />
       ) : (
-      <div className="split">
-        <section className="panel">
-          <div className="panel-head" style={{ paddingBottom: 0, borderBottom: 0 }}>
-            <div className="tabs" role="tablist" aria-label="Part of the design" style={{ margin: 0, flex: 1 }}>
-              {(Object.keys(tabLabel) as EditorTab[]).map((t) => (
-                <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
-                  {tabLabel[t]}
-                  {tabDirty(t) && <span className="dirty-dot" aria-label="unsaved changes" />}
-                </button>
-              ))}
-            </div>
+      <div className="designer">
+        <nav className="designer-nav" role="tablist" aria-label="What to edit">
+          <div className="designer-nav-group">
+            <span className="designer-nav-label">This design · {activeDesign?.name}</span>
+            {navItem('new')}
+            {navItem('reply')}
+            {navItem('wording')}
           </div>
-          <div className="panel-body stack">
+          <div className="designer-nav-group">
+            <span className="designer-nav-label">{active.company.displayName} · all designs</span>
+            {navItem('brand')}
+            {navItem('languages')}
+          </div>
+        </nav>
+
+        <section className="panel designer-pane" role="tabpanel" aria-label={TABS[tab].label}>
+          <div className="designer-pane-head">
+            <div>
+              <span className={`scope-tag ${TABS[tab].scope}`}>{TABS[tab].scope === 'design' ? 'This design' : 'Whole company'}</span>
+              <h2>{TABS[tab].label}</h2>
+              <p className="small muted">
+                {TABS[tab].lead} <span className="nowrap">Applies to: {scope}.</span>
+              </p>
+            </div>
+            {(tab === 'new' || tab === 'reply') && session?.isAdmin && (
+              <Segmented<'visual' | 'html'>
+                label="Editor"
+                value={blockDrafts[tab] ? 'visual' : 'html'}
+                options={[
+                  { value: 'visual', label: 'Visual' },
+                  { value: 'html', label: 'HTML' },
+                ]}
+                onChange={(m) => {
+                  if (m === 'html' && blockDrafts[tab]) setToHtml(tab);
+                  if (m === 'visual' && !blockDrafts[tab]) {
+                    if (savedBlocks[tab] && drafts[tab] === saved[tab]) setBlockDrafts((b) => ({ ...b, [tab]: savedBlocks[tab] }));
+                    else setToVisual(tab);
+                  }
+                }}
+              />
+            )}
+          </div>
+
+          <div className="panel-body stack designer-body">
             {tab === 'brand' ? (
-              <>
-                <p className="small muted">Shared by every {active.company.displayName} design. Each design can change some wording in its Wording tab.</p>
-                <BrandForm company={active.company} metaText={drafts.meta} meta={meta} onChange={(m) => setDrafts((d) => ({ ...d, meta: m }))} />
-              </>
+              <BrandForm company={active.company} metaText={drafts.meta} meta={meta} onChange={(m) => setDrafts((d) => ({ ...d, meta: m }))} assets={assets.data ?? []} onUploaded={() => void assets.reload()} />
+            ) : tab === 'languages' ? (
+              meta ? (
+                <LanguagesForm
+                  company={active.company.key}
+                  companyName={active.company.displayName}
+                  meta={meta}
+                  patch={patchMeta}
+                  assets={assets.data ?? []}
+                  onUploaded={() => void assets.reload()}
+                  selected={sample}
+                  onSelect={(l) => {
+                    setSample(l);
+                    setAs('');
+                  }}
+                  people={companyPeople}
+                />
+              ) : (
+                <div className="callout danger">The company settings aren’t valid JSON. Fix them under Brand and footer › Edit as JSON, or discard your changes.</div>
+              )
             ) : tab === 'wording' ? (
-              <WordingForm company={active.company.key} companyMeta={meta} value={wording} onChange={setWording} />
+              <WordingForm
+                company={active.company.key}
+                companyName={active.company.displayName}
+                companyMeta={meta}
+                value={wording}
+                onChange={setWording}
+                language={titles}
+                globalLanguage={globalLanguage}
+                onLanguageChange={setTitles}
+                assets={assets.data ?? []}
+                onUploaded={() => void assets.reload()}
+              />
             ) : (
               <>
-                <div className="mode-bar">
-                  <p className="small muted" style={{ flex: '1 1 260px' }}>
-                    {tab === 'new' ? 'The full signature for new messages and meeting invites.' : 'A shorter signature for replies and forwards.'}
-                  </p>
-                  {session?.isAdmin && <Segmented<'visual' | 'html'>
-                    label="Editor"
-                    value={blockDrafts[tab] ? 'visual' : 'html'}
-                    options={[
-                      { value: 'visual', label: 'Visual' },
-                      { value: 'html', label: 'HTML' },
-                    ]}
-                    onChange={(m) => {
-                      if (m === 'html' && blockDrafts[tab]) setToHtml(tab);
-                      if (m === 'visual' && !blockDrafts[tab]) {
-                        if (savedBlocks[tab] && drafts[tab] === saved[tab]) setBlockDrafts((b) => ({ ...b, [tab]: savedBlocks[tab] }));
-                        else setToVisual(tab);
-                      }
-                    }}
-                  />}
-                </div>
                 {!session?.isAdmin && !blockDrafts[tab] && (
                   <div className="callout row">
                     <span style={{ flex: '1 1 240px' }}>
@@ -315,9 +432,9 @@ export function Designs() {
                     key={`${active.company.key}-${activeDesign?.id}-${tab}`}
                     doc={blockDrafts[tab]!}
                     kind={tab}
-                    language={activeDesign?.language ?? globalLanguage}
+                    language={titles ?? globalLanguage}
                     company={active.company.key}
-                    defaultBanner={(wording.banner !== undefined ? wording.banner : meta?.banner)?.file ?? null}
+                    defaultBanner={(wording.banner !== undefined ? wording.banner : localeSummary(meta, sample).banner)?.file ?? null}
                     colors={meta?.colors ?? {}}
                     onChange={(d) => setBlockDrafts((b) => ({ ...b, [tab]: d }))}
                   />
@@ -327,11 +444,11 @@ export function Designs() {
                     <div className="editor">
                       <CodeMirror
                         value={drafts[tab]}
-                        height="420px"
+                        height="520px"
                         extensions={[htmlLang()]}
                         onChange={(v) => setDrafts((d) => ({ ...d, [tab]: v }))}
                         basicSetup={{ foldGutter: false, highlightActiveLine: false }}
-                        aria-label={`${tabLabel[tab]} template`}
+                        aria-label={`${TABS[tab].label} template`}
                       />
                     </div>
                     <details>
@@ -357,60 +474,71 @@ export function Designs() {
               </>
             )}
           </div>
-          <div className="panel-body row save-bar">
-            <input type="text" placeholder="What changed? (optional)" value={note} onChange={(e) => setNote(e.target.value)} style={{ flex: '1 1 200px' }} aria-label="Version note" />
-            <button className="btn ghost" disabled={!anyDirty || saving} onClick={discard}>
-              Discard
-            </button>
+
+          <div className={`save-dock ${anyDirty ? 'dirty' : ''}`}>
+            <p className="small save-dock-status" aria-live="polite">
+              {anyDirty ? (
+                <>
+                  <span className="dirty-dot" aria-hidden /> Not saved yet: {unsaved.join(', ') || 'changes'}
+                </>
+              ) : (
+                <span className="muted">All changes saved</span>
+              )}
+            </p>
+            {anyDirty && (
+              <>
+                <input type="text" placeholder="What changed? (optional)" value={note} onChange={(e) => setNote(e.target.value)} aria-label="Version note" />
+                <button className="btn ghost" disabled={saving} onClick={discard}>
+                  Discard
+                </button>
+              </>
+            )}
             <button className="btn primary" disabled={!anyDirty || saving || !!preview.error} onClick={save} title={preview.error ? 'Fix the error shown in the preview first' : undefined}>
               {saving ? 'Saving…' : 'Save version'}
             </button>
           </div>
         </section>
 
-        <div className="sticky stack">
-          {activeDesign && globalLanguage && (
-            <Field label="Job titles in this design">
-              <select
-                value={activeDesign.language ?? ''}
-                onChange={async (e) => {
-                  try {
-                    await api.put(`/api/admin/designs/${activeDesign.id}`, { language: e.target.value || null });
-                    await rows.reload();
-                    toast(`Job titles saved for ${activeDesign.name}`);
-                  } catch (err) {
-                    toast((err as Error).message, 'error');
-                  }
+        <aside className="designer-preview" aria-label="Preview">
+          <div className="stack">
+            <div className="stack tight">
+              <span className="designer-nav-label">Preview as</span>
+              <Segmented<SignatureLocale | ''>
+                label="Sample colleague"
+                value={as ? '' : sample}
+                options={LOCALES.map((l) => ({ value: l, label: LOCALE_NAMES[l] }))}
+                onChange={(l) => {
+                  if (!l) return;
+                  setSample(l);
+                  setAs('');
                 }}
-              >
-                <option value="">Same as Settings ({LANGUAGE_LABELS[globalLanguage]})</option>
-                {(Object.keys(LANGUAGE_LABELS) as Language[]).map((l) => (
-                  <option key={l} value={l}>
-                    {LANGUAGE_LABELS[l]}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          )}
-          <Field label="Preview as">
-            <select value={as} onChange={(e) => setAs(e.target.value)}>
-              <option value="">Sample person (all fields filled)</option>
+              />
+              <p className="xs muted">
+                {as
+                  ? `${asPerson?.displayName ?? as}, with their own details and language.`
+                  : sample === 'en'
+                    ? 'This design as if set to English only: English job title, English closing line and banner.'
+                    : `A sample ${LOCALE_NAMES[sample]} colleague with every field filled in.`}
+              </p>
+            </div>
+            <select value={as} onChange={(e) => setAs(e.target.value)} aria-label="Or a real person">
+              <option value="">…or pick a real person</option>
               {(users.data ?? []).map((u) => (
                 <option key={u.upn} value={u.upn}>
                   {u.displayName ?? u.upn}
+                  {u.language ? ` (${LOCALE_NAMES[u.language]})` : ''}
                   {u.company !== active.company.key ? ` (normally ${u.companyName})` : ''}
                 </option>
               ))}
             </select>
-          </Field>
-          <LetterPreview html={preview.data ?? null} error={preview.error?.message} loading={preview.loading} type={previewType} onTypeChange={setPreviewType} />
-          <p className="xs muted">
-            {activeDesign?.name}: new v{activeDesign?.new?.version ?? '–'}, reply v{activeDesign?.reply?.version ?? '–'} · brand v{active.meta?.version ?? '–'}
-            {activeDesign?.new && <> · last saved {timeAgo([activeDesign.new, activeDesign.reply, active.meta].filter(Boolean).map((t) => t!.createdAt).sort().pop())}</>}
-          </p>
-        </div>
+            <LetterPreview html={preview.data ?? null} error={preview.error?.message} loading={preview.loading} type={previewType} onTypeChange={setPreviewType} />
+            <p className="xs muted">
+              {activeDesign?.name}: new v{activeDesign?.new?.version ?? '–'}, reply v{activeDesign?.reply?.version ?? '–'} · company v{active.meta?.version ?? '–'}
+              {activeDesign?.new && <> · last saved {timeAgo([activeDesign.new, activeDesign.reply, active.meta].filter(Boolean).map((t) => t!.createdAt).sort().pop())}</>}
+            </p>
+          </div>
+        </aside>
       </div>
-
       )}
 
       <VersionsModal open={historyOpen} onClose={() => setHistoryOpen(false)} company={active.company} design={activeDesign} onRestored={() => {
@@ -496,11 +624,23 @@ export function Designs() {
 }
 
 // ───────── Brand + footer form (meta.json) ─────────
-function BrandForm({ company, metaText, meta, onChange }: { company: Company; metaText: string; meta: any; onChange: (text: string) => void }) {
+function BrandForm({
+  company,
+  metaText,
+  meta,
+  onChange,
+  assets,
+  onUploaded,
+}: {
+  company: Company;
+  metaText: string;
+  meta: any;
+  onChange: (text: string) => void;
+  assets: Asset[];
+  onUploaded: () => void;
+}) {
   const toast = useToast();
   const [raw, setRaw] = useState(false);
-  const assets = useAsync(() => api.get<{ name: string; localUrl: string }[]>(`/api/admin/assets/${company.key}`), [company.key]);
-  const bannerRatio = useImageRatio((assets.data ?? []).find((a) => a.name === meta?.banner?.file)?.localUrl);
 
   if (raw || !meta) {
     return (
@@ -527,22 +667,12 @@ function BrandForm({ company, metaText, meta, onChange }: { company: Company; me
   const footer = meta.footer ?? {};
   const logo = meta.logo ?? { file: '', width: 120, height: 40 };
   const websites: { label: string; url?: string }[] = meta.websites ?? (footer.website ? [{ label: footer.website }] : []);
-  const banner = meta.banner ?? null;
-  const all = assets.data ?? [];
-  const banners = all.filter((a) => a.name.startsWith('banner-'));
-  const logos = all.filter((a) => !a.name.startsWith('banner-'));
+  const logos = assets.filter((a) => !a.name.startsWith('banner-'));
 
-  /** Uploads an image; banners are scaled down and compressed first, and get a "banner-" prefix so they're listed separately. */
-  async function upload(file: File, kind: 'logo' | 'banner') {
-    if (kind === 'banner') {
-      try {
-        file = await prepareBanner(file);
-      } catch (e) {
-        return toast((e as Error).message, 'error');
-      }
-    } else if (file.size > 650_000) return toast('Keep logos under 650 KB. Export them at 2× size as PNG.', 'error');
-    let name = file.name.toLowerCase().replace(/[^a-z0-9._-]/g, '-').replace(/^-+/, '');
-    if (kind === 'banner' && !name.startsWith('banner-')) name = `banner-${name}`;
+  /** Uploads a logo (a 2× export is assumed: it's shown at half its pixel size). */
+  async function upload(file: File) {
+    if (file.size > 650_000) return toast('Keep logos under 650 KB. Export them at 2× size as PNG.', 'error');
+    const name = file.name.toLowerCase().replace(/[^a-z0-9._-]/g, '-').replace(/^-+/, '').replace(/^banner-/, 'logo-');
     const dataBase64 = await new Promise<string>((res) => {
       const r = new FileReader();
       r.onload = () => res(String(r.result).split(',')[1]);
@@ -551,33 +681,14 @@ function BrandForm({ company, metaText, meta, onChange }: { company: Company; me
     try {
       await api.post(`/api/admin/assets/${company.key}`, { name, dataBase64 });
       const img = new Image();
-      img.onload = () =>
-        patch((m) => {
-          if (kind === 'logo') {
-            // Assume a 2× export; the signature shows it at half its pixel size.
-            m.logo = { ...logo, file: name, width: Math.round(img.naturalWidth / 2), height: Math.round(img.naturalHeight / 2) };
-          } else {
-            const w = Math.min(600, img.naturalWidth);
-            m.banner = { ...(banner ?? {}), file: name, width: w, height: Math.round((img.naturalHeight * w) / img.naturalWidth) };
-          }
-        });
+      img.onload = () => patch((m) => (m.logo = { ...logo, file: name, width: Math.round(img.naturalWidth / 2), height: Math.round(img.naturalHeight / 2) }));
       img.src = URL.createObjectURL(file);
-      await assets.reload();
-      toast(kind === 'logo' ? 'Logo uploaded' : 'Banner uploaded');
+      onUploaded();
+      toast('Logo uploaded');
     } catch (e) {
       toast((e as Error).message, 'error');
     }
   }
-
-  const pickBanner = (a: { name: string; localUrl: string }) => {
-    const img = new Image();
-    img.onload = () =>
-      patch((m) => {
-        const w = Math.min(600, img.naturalWidth);
-        m.banner = { ...(banner ?? {}), file: a.name, width: w, height: Math.round((img.naturalHeight * w) / img.naturalWidth) };
-      });
-    img.src = a.localUrl;
-  };
 
   return (
     <div className="stack loose">
@@ -592,7 +703,7 @@ function BrandForm({ company, metaText, meta, onChange }: { company: Company; me
           ))}
           <label className="btn" style={{ height: 'auto', minHeight: 72, flexDirection: 'column' }}>
             <Upload size={16} /> Upload
-            <input type="file" accept="image/png,image/jpeg,image/gif" className="visually-hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0], 'logo')} />
+            <input type="file" accept="image/png,image/jpeg,image/gif" className="visually-hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
           </label>
         </div>
         <div className="grid-2">
@@ -614,8 +725,8 @@ function BrandForm({ company, metaText, meta, onChange }: { company: Company; me
               ['primary', 'Brand colour', 'Links and the divider line'],
               ['text', 'Text', 'Phone numbers, company and address'],
               ['name', 'Name', 'Your name, in bold'],
-              ['title', 'Job title', 'Latvian job title'],
-              ['muted', 'Secondary text', 'English title and the confidentiality notice'],
+              ['title', 'Job title', 'The first job title (Latvian, Estonian or Lithuanian)'],
+              ['muted', 'Secondary text', 'The English title under it and the confidentiality notice'],
             ] as const
           ).map(([k, label, hint]) => (
             <Field key={k} label={label} hint={hint}>
@@ -629,10 +740,8 @@ function BrandForm({ company, metaText, meta, onChange }: { company: Company; me
       </section>
 
       <section className="stack">
-        <h3>Text</h3>
-        <Field label="Closing line" hint='Shown above the signature, e.g. "Ar cieņu,". Leave empty to leave it out.'>
-          <input type="text" value={meta.greeting ?? ''} onChange={(e) => patch((m) => (m.greeting = e.target.value))} />
-        </Field>
+        <h3>Company details</h3>
+        <p className="xs muted">The same in every language, also for Estonian and Lithuanian colleagues. Closing lines and promo banners are under Languages and banners.</p>
         <Field label="Company line" hint={`e.g. SIA “TENAPORS”. The legal name set under Companies is ${company.legalName}.`}>
           <input type="text" value={footer.companyLine ?? ''} onChange={(e) => patch((m) => (m.footer = { ...footer, companyLine: e.target.value }))} />
         </Field>
@@ -665,49 +774,6 @@ function BrandForm({ company, metaText, meta, onChange }: { company: Company; me
         </button>
       </section>
 
-      <section className="stack">
-        <h3>Promo banner</h3>
-        <p className="xs muted">Shown under new-message signatures only, never in replies. Bigger images are scaled down to 1200px wide (shown at up to 600px) and kept under 1 MB.</p>
-        <div className="logo-pick" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))' }}>
-          <button type="button" aria-pressed={!banner} onClick={() => patch((m) => (m.banner = null))}>
-            <span style={{ height: 36, display: 'grid', placeItems: 'center' }}>None</span>
-            No banner
-          </button>
-          {banners.map((a) => (
-            <button key={a.name} type="button" aria-pressed={banner?.file === a.name} onClick={() => pickBanner(a)} title={a.name}>
-              <img src={a.localUrl} alt="" />
-              {a.name.replace(/^banner-/, '').slice(0, 28)}
-            </button>
-          ))}
-          <label className="btn" style={{ height: 'auto', minHeight: 72, flexDirection: 'column' }}>
-            <Upload size={16} /> Upload banner
-            <input type="file" accept="image/png,image/jpeg,image/gif" className="visually-hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0], 'banner')} />
-          </label>
-        </div>
-        {banner && (
-          <div className="grid-2">
-            <Field label="Link when clicked" hint="Optional, must start with https://">
-              <input type="url" value={banner.link ?? ''} onChange={(e) => patch((m) => (m.banner = { ...banner, link: e.target.value }))} />
-            </Field>
-            <Field label="Description" hint="Read out by screen readers and shown when images are blocked">
-              <input type="text" value={banner.alt ?? ''} onChange={(e) => patch((m) => (m.banner = { ...banner, alt: e.target.value }))} />
-            </Field>
-            <Field label="Shown width (px)">
-              <input
-                type="number"
-                min={50}
-                max={600}
-                value={banner.width}
-                onChange={(e) => {
-                  const w = Number(e.target.value);
-                  patch((m) => (m.banner = resizeBanner(banner, w, bannerRatio)));
-                }}
-              />
-            </Field>
-          </div>
-        )}
-      </section>
-
       <button className="btn ghost sm" style={{ alignSelf: 'flex-start' }} onClick={() => setRaw(true)}>
         Edit as JSON
       </button>
@@ -722,7 +788,7 @@ function VersionsModal({ open, onClose, company, design, onRestored }: { open: b
     () => (open ? api.get<Omit<TemplateVersion, 'content'>[]>(`/api/admin/templates/${company.key}/history${design ? `?design=${encodeURIComponent(design.id)}` : ''}`) : Promise.resolve([])),
     [open, company.key, design?.id],
   );
-  const label: Record<TemplateKind, string> = { new: 'New message', reply: 'Reply', meta: 'Brand (company)', image: 'Image (SVG)', wording: 'Wording' };
+  const label: Record<TemplateKind, string> = { new: 'New message', reply: 'Reply', meta: 'Company brand and languages', image: 'Image (SVG)', wording: 'Wording and job titles' };
   const latest = new Map<string, number>();
   for (const v of list.data ?? []) latest.set(v.kind, Math.max(latest.get(v.kind) ?? 0, v.version));
   // Newest first, as a timeline of saves across all parts of the design.

@@ -1,0 +1,84 @@
+/*
+  Motion (GLASS-DESIGN.md section 7). Only transform and opacity move; one curve (--ease).
+  Everything here switches off under prefers-reduced-motion (bottom of file).
+*/
+
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes rise-in { from { opacity: 0; transform: translateY(12px); } }
+@keyframes rise-far { from { opacity: 0; transform: translateY(36px); } }
+@keyframes view-in { from { opacity: 0; transform: translateY(18px) scale(.98); } }
+@keyframes row-in { from { opacity: 0; transform: translateY(-6px); } }
+@keyframes sheet-up { from { transform: translateY(100%); } }
+@keyframes window-in { from { opacity: 0; transform: translateY(14px) scale(.97); } }
+@keyframes toast-rise { from { opacity: 0; transform: translateY(8px); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 50% { opacity: .35; } }
+@keyframes bar-grow { from { transform: scaleX(0); } }
+@keyframes btn-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-line) 55%, transparent); }
+  100% { box-shadow: 0 0 0 12px transparent; }
+}
+@keyframes target {
+  0%, 65% { box-shadow: 0 0 0 2.5px var(--accent-line); }
+}
+
+/* ---------- Page content ---------- */
+
+/* Overview tiles and bars */
+.stats > .stat { animation: rise-in .5s var(--ease) both; }
+.stats > .stat:nth-child(2) { animation-delay: .05s; }
+.stats > .stat:nth-child(3) { animation-delay: .1s; }
+.stats > .stat:nth-child(4) { animation-delay: .15s; }
+.bar > span { transform-origin: left; animation: bar-grow .7s var(--ease) both; animation-delay: .3s; }
+.bar-row:nth-child(2) .bar > span { animation-delay: .34s; }
+.bar-row:nth-child(3) .bar > span { animation-delay: .38s; }
+.bar-row:nth-child(4) .bar > span { animation-delay: .42s; }
+.bar-row:nth-child(5) .bar > span { animation-delay: .46s; }
+.bar-row:nth-child(n+6) .bar > span { animation-delay: .5s; }
+
+/* Panels and table rows arrive with a short stagger (first 12 rows; the rest come in with the last). */
+.main .panel { animation: rise-in .45s var(--ease) both; }
+.two-col > .panel:nth-child(2), .split > :nth-child(2) > .panel:first-child { animation-delay: .06s; }
+.data tbody tr { animation: rise-in .4s var(--ease) both; }
+.data tbody tr:nth-child(2) { animation-delay: .035s; }
+.data tbody tr:nth-child(3) { animation-delay: .07s; }
+.data tbody tr:nth-child(4) { animation-delay: .105s; }
+.data tbody tr:nth-child(5) { animation-delay: .14s; }
+.data tbody tr:nth-child(6) { animation-delay: .175s; }
+.data tbody tr:nth-child(7) { animation-delay: .21s; }
+.data tbody tr:nth-child(8) { animation-delay: .245s; }
+.data tbody tr:nth-child(9) { animation-delay: .28s; }
+.data tbody tr:nth-child(10) { animation-delay: .315s; }
+.data tbody tr:nth-child(11) { animation-delay: .35s; }
+.data tbody tr:nth-child(n+12) { animation-delay: .385s; }
+
+/* Lists of cards: add .list--in and set --i on each card. */
+.list--in > .card { animation: view-in .5s var(--ease) both; animation-delay: calc(var(--i, 0) * 45ms); }
+
+/* Contents of a freshly opened sheet */
+dialog.modal.sheet[open] .sheet__body > * { animation: rise-in .45s var(--ease) both; animation-delay: .1s; }
+dialog.modal.sheet[open] .sheet__body > :nth-child(2) { animation-delay: .14s; }
+dialog.modal.sheet[open] .sheet__body > :nth-child(n+3) { animation-delay: .18s; }
+
+/* Feedback */
+.icon-btn.view-flash { animation: btn-ring 1s ease-out; color: var(--accent-line); }
+.card.target, .panel.target { animation: target 2.6s ease-out; }
+.callout { animation: fade-in .25s ease-out both; }
+
+/* ---------- View transitions between pages (desktop; see withViewTransition in lib/appearance.ts) ---------- */
+
+::view-transition-group(*) { animation-duration: 260ms; animation-timing-function: var(--ease); }
+::view-transition-old(*), ::view-transition-new(*) { height: 100%; object-fit: none; object-position: top left; }
+::view-transition-old(root), ::view-transition-new(root) { height: auto; object-fit: fill; object-position: 50% 50%; }
+html[data-vt="tab"]::view-transition-group(*) { animation-duration: 180ms; }
+/* The page itself fades; the sidebar does not move. */
+html[data-vt] .shell-main > .main { view-transition-name: page; }
+html[data-vt] .sidebar { view-transition-name: sidebar; }
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+  .loading::before, .spinner, .spin svg { animation: pulse 1.2s ease-in-out infinite !important; }
+}

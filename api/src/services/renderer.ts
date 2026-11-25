@@ -1,7 +1,7 @@
 import Handlebars from 'handlebars';
 import { z } from 'zod';
 import type { Repository } from '../db/repository.js';
-import type { Company, ComposeType, Design, MetaOverrides, ResolvedUser, Settings, SharedMailbox } from '../types.js';
+import type { Company, ComposeType, Design, MetaOverrides, PersonLanguage, ResolvedUser, Settings, SharedMailbox, SignatureLocale } from '../types.js';
 import { keepBannerProportions, type ImageSize } from './assets.js';
 import { applyOverrides } from './designs.js';
 import type { ImageSignatures } from './imagesig.js';
@@ -25,7 +25,16 @@ export interface TemplateMeta {
   };
   /** Optional promo banner under the signature (new messages only in the shipped designs). */
   banner?: { file: string; width: number; height: number; link?: string; alt?: string } | null;
+  /**
+   * The other signature languages (Brand › Languages and banners). greeting and banner above are the Latvian ones.
+   * Per language: greeting left out = the standard one (et/lt) or the Latvian one (en); banner left out = the Latvian
+   * banner, null = no banner.
+   */
+  languages?: Partial<Record<Exclude<SignatureLocale, 'lv'>, { greeting?: string; banner?: TemplateMeta['banner'] }>>;
 }
+
+/** Closing lines Estonian and Lithuanian signatures get until the company sets its own. */
+export const STANDARD_GREETINGS: Record<PersonLanguage, string> = { et: 'Lugupidamisega,', lt: 'Pagarbiai,' };
 
 export interface SignatureData {
   displayName: string | null;
@@ -39,6 +48,8 @@ export interface SignatureData {
   greeting?: string | null;
   /** The person's own address line (null/undefined = the company's). */
   address?: string | null;
+  /** Estonian / Lithuanian colleague (jobTitleLv then holds the title in that language); null = Latvian. */
+  language?: PersonLanguage | null;
 }
 
 /**
@@ -123,6 +134,10 @@ const httpsUrl = z
 const assetFile = z.string().regex(/^[a-z0-9][a-z0-9._-]{0,63}\.(png|jpe?g|gif)$/i, 'Image file name: letters, digits, dot, dash; .png/.jpg/.gif');
 const px = (max: number) => z.number().int().min(1).max(max);
 const text = (max: number) => z.string().max(max);
+const bannerSchema = z.union([
+  z.null(),
+  z.object({ file: assetFile, width: px(1200), height: px(1200), link: z.union([httpsUrl, z.literal('')]).optional(), alt: text(200).optional() }).strict(),
+]);
 const metaSchema = z
   .object({
     version: z.number().optional(),
@@ -142,11 +157,10 @@ const metaSchema = z
       })
       .strict()
       .optional(),
-    banner: z
-      .union([
-        z.null(),
-        z.object({ file: assetFile, width: px(1200), height: px(1200), link: z.union([httpsUrl, z.literal('')]).optional(), alt: text(200).optional() }).strict(),
-      ])
+    banner: bannerSchema.optional(),
+    languages: z
+      .object(Object.fromEntries(['en', 'et', 'lt'].map((l) => [l, z.object({ greeting: text(200).optional(), banner: bannerSchema.optional() }).strict().optional()])))
+      .strict()
       .optional(),
   })
   .strict();
@@ -207,19 +221,22 @@ export class Renderer {
     const stored = this.repo.latestTemplate(opts.company.key, kind, opts.design?.id) ?? this.repo.latestTemplate(opts.company.key, kind);
     const storedMeta = this.repo.latestTemplate(opts.company.key, 'meta');
     const companyMeta = opts.draft?.meta ?? storedMeta?.content ?? '{}';
-    const metaSrc = applyOverrides(companyMeta, opts.draft?.metaOverrides ?? opts.design?.metaOverrides);
+    // A design can choose its own job title language (e.g. an English design for foreign clients).
+    const language = opts.design?.language ?? opts.settings.language;
+    // Closing line and promo banner follow the language the signature is written in: Estonian / Lithuanian colleagues
+    // get theirs, English designs the English ones. The design's own wording, then the person's own line, go on top.
+    const locale = signatureLocale(opts.data.language, language);
+    const metaSrc = applyOverrides(localizeMeta(companyMeta, locale), opts.draft?.metaOverrides ?? opts.design?.metaOverrides);
     const meta = validateMeta(metaSrc);
     // A personal closing line replaces the company/design one ('' hides it).
     if (opts.data.greeting != null) meta.greeting = opts.data.greeting;
     // A personal address line replaces the company's, wherever the design shows it.
     if (opts.data.address) meta.footer = { ...meta.footer, address: opts.data.address };
-    // A design can choose its own job title language (e.g. an English design for foreign clients).
-    const language = opts.design?.language ?? opts.settings.language;
 
     // Image designs: one rendered PNG for new messages and replies alike (Vareno's SVG signature), plus its promo banner in new messages.
     if (opts.design?.format === 'image' && opts.draft?.template == null) {
       if (!this.images) throw new TemplateError('Image designs are not available here');
-      const { greeting: _g, address: _a, ...d } = applyLanguage(opts.data, language);
+      const { greeting: _g, address: _a, language: _l, ...d } = applyLanguage(opts.data, language);
       const html = this.images.html({
         company: opts.company,
         design: { id: opts.design.id, name: opts.design.name ?? opts.design.id },
@@ -278,10 +295,40 @@ export class Renderer {
   }
 }
 
+/**
+ * Which job titles show. Latvian colleagues: the design's (or Settings') choice. Estonian / Lithuanian colleagues
+ * always get their own-language title (jobTitleLv) and the English one, except in designs set to English only.
+ */
 function applyLanguage(d: SignatureData, lang: Settings['language']): SignatureData {
-  if (lang === 'lv') return { ...d, jobTitleEn: null };
   if (lang === 'en') return { ...d, jobTitleLv: d.jobTitleEn ?? d.jobTitleLv, jobTitleEn: null };
+  if (d.language) return d;
+  if (lang === 'lv') return { ...d, jobTitleEn: null };
   return d;
+}
+
+/** The language a signature is written in (closing line, promo banner): English designs are English for everyone. */
+export function signatureLocale(person: PersonLanguage | null | undefined, titles: Settings['language']): SignatureLocale {
+  if (titles === 'en') return 'en';
+  return person ?? 'lv';
+}
+
+/** Company brand settings (meta.json text) with the closing line and promo banner of `locale`; returns meta.json text. */
+export function localizeMeta(metaSrc: string, locale: SignatureLocale): string {
+  if (locale === 'lv') return metaSrc;
+  let meta: any;
+  try {
+    meta = JSON.parse(metaSrc);
+  } catch {
+    return metaSrc; // validateMeta reports it
+  }
+  if (!meta || typeof meta !== 'object') return metaSrc;
+  const own = meta.languages?.[locale];
+  const next = { ...meta };
+  if (typeof own?.greeting === 'string') next.greeting = own.greeting;
+  // No line of their own: the standard Estonian / Lithuanian one, unless the company uses no closing line at all.
+  else if (locale !== 'en' && meta.greeting) next.greeting = STANDARD_GREETINGS[locale];
+  if (own && own.banner !== undefined) next.banner = own.banner;
+  return JSON.stringify(next);
 }
 
 /** Proves a template + brand settings actually render (catches runtime-only failures before they reach Outlook). */
@@ -312,6 +359,7 @@ export function signatureDataFor(user: ResolvedUser): SignatureData {
     department: f.department,
     greeting: f.greeting,
     address: f.address,
+    language: f.language,
   };
 }
 

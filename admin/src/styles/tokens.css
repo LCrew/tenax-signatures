@@ -1,0 +1,96 @@
+/*
+  Tokens: the base (solid) colours for each theme, type and shape.
+  Source: GLASS-DESIGN.md sections 2 and 3. Components use only these names.
+
+  <html data-theme="light|dark|blue|green|neon" data-surface="glass|solid">
+  is set before first paint by /theme-init.js (see src/lib/appearance.ts).
+*/
+
+:root {
+  /* surfaces and text */
+  --bg: #F1F1ED; --card: #fff; --ink: #33332F; --muted: #6B6B64; --faint: #A3A39B;
+  --line: #E8E8E3; --line2: #EFEFEA; --line3: #C9C9C2;
+  --tile: #F2F2EE;     /* small grey patches on a card: icon circles, quiet buttons */
+  --pillbg: #E6E6E0;   /* the trough of a pill switch */
+  --hover: #FAFAF8; --sel: #F4F4F0; --track: #EBEBE6;
+  /* roles */
+  --accent: #F07A22; --accent-line: var(--accent);       /* highlights, focus rings, chart accents */
+  --on-ink: #fff; --ink-hover: #4A4A45;
+  --primary: var(--ink); --on-primary: var(--on-ink);    /* the main button: dark pill */
+  --outline: var(--ink);                                  /* selected card outline */
+  --badge: var(--accent); --on-badge: #fff;
+  --seg-on: #fff;                                         /* chosen option in a switch */
+  --nav: var(--ink); --nav-fg: #B8B8B0; --nav-pill: #fff; --nav-pill-fg: var(--ink);  /* phone tab bar */
+  /* status */
+  --ok: #2E7D4F; --ok-bg: #E7F3EB; --warn-ink: #9A6B08; --warn-bg: #FBF3DC;
+  --bad: #C8321E; --bad-bg: #FBE9E6; --info-ink: #3C5A99; --info-bg: #EAEFF8;
+  --alert-bg: #FDF0E4; --alert-ink: #9A4208;
+  --danger: #E0640F; --on-danger: #fff;
+  /* motion: one curve for everything that moves */
+  --ease: cubic-bezier(.2, .8, .2, 1);
+
+  /* type */
+  --font: 'Geist Variable', 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --t-xs: 12.5px; --t-sm: 13.5px; --t-base: 15px; --t-md: 18px; --t-lg: 24px; --t-xl: 30px;
+
+  /* shape */
+  --r-sm: 10px;      /* menu items, tiny thumbnails */
+  --r-md: 16px;      /* textareas, small cards, menus */
+  --r-card: 22px;    /* cards and list rows */
+  --r-pane: 32px;    /* big panes (28px on phones) */
+
+  /* fields: the fill behind inputs; glass and windows override it */
+  --field-bg: var(--bg);
+
+  /* Older names still used by a few inline styles; kept as aliases onto the system. */
+  --surface: var(--card); --paper: var(--bg); --graphite: var(--muted); --line-strong: var(--line3);
+  --action: var(--ink); --action-ink: var(--on-ink); --warn: var(--warn-ink); --focus: var(--ink);
+
+  font-family: var(--font);
+  color: var(--ink);
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #26282C; --card: #303338; --ink: #F2F2EF; --muted: #B4B6BA; --faint: #8C8F94;
+  --line: #44484E; --line2: #3B3E44; --line3: #666A70; --tile: #3B3E44; --pillbg: #3A3D43;
+  --hover: #363940; --sel: #3A3D43; --track: #44484E;
+  --on-ink: #26282C; --ink-hover: #D5D5CF; --seg-on: #54585F;
+  --nav: #3A3D43; --nav-fg: #C2C4C8; --nav-pill: #F2F2EF; --nav-pill-fg: #26282C;
+  --ok: #7CCB94; --ok-bg: #26432F; --warn-ink: #E8C46A; --warn-bg: #443B1E;
+  --bad: #F0705C; --bad-bg: #4A2A25; --info-ink: #9DB7EE; --info-bg: #2B3852;
+  --alert-bg: #45331F; --alert-ink: #FFB27A; --danger: #FF9A4D; --on-danger: #26282C;
+  color-scheme: dark;
+}
+
+/* Pastel themes: same dark ink, tinted page, a pastel main colour with dark text on it. */
+:root[data-theme="blue"] {
+  --bg: #EEF2F7; --ink: #16233A; --muted: #5A6880; --faint: #8A97AB;
+  --line: #DDE4EE; --line2: #E9EEF5; --line3: #BFC9D8; --tile: #EDF2F8; --pillbg: #DFE6F0;
+  --hover: #F7F9FC; --sel: #EEF3F9; --track: #E3E9F1; --ink-hover: #2A3A56;
+  --primary: #A9C4F2; --on-primary: #16233A; --outline: #8FB0EA;
+  --badge: #A9C4F2; --on-badge: #16233A; --accent-line: #6F9BE6; --danger: var(--bad);
+}
+:root[data-theme="green"] {
+  --bg: #EDF1EC; --ink: #1F2D26; --muted: #5C6B62; --faint: #8C9A91;
+  --line: #DCE4DB; --line2: #E8EEE7; --line3: #BECABF; --tile: #ECF1EB; --pillbg: #DDE5DC;
+  --hover: #F7FAF6; --sel: #EEF3ED; --track: #E2E9E1; --ink-hover: #33443B;
+  --primary: #A8D5BC; --on-primary: #1F2D26; --outline: #86C2A2;
+  --badge: #A8D5BC; --on-badge: #1F2D26; --accent-line: #5FB088; --danger: var(--bad);
+}
+
+/* "Neon": purple-black page, pink main marks, blue outlines. */
+:root[data-theme="neon"] {
+  --bg: #14121F; --card: #1F1B30; --ink: #F1EEFF; --muted: #A9A3C7; --faint: #7F799E;
+  --line: #332D4D; --line2: #2A2540; --line3: #564E78; --tile: #2A2540; --pillbg: #262139;
+  --hover: #262139; --sel: #2A2540; --track: #332D4D;
+  --on-ink: #14121F; --ink-hover: #D9D4F2; --seg-on: #3A3357;
+  --nav: #262139; --nav-fg: #C9C3E6; --nav-pill: #FF7AB8; --nav-pill-fg: #14121F;
+  --primary: #FF7AB8; --on-primary: #14121F; --outline: #8C9BFF;
+  --badge: #FF7AB8; --on-badge: #14121F; --accent-line: #8C9BFF;
+  --ok: #7CCB94; --ok-bg: #26432F; --warn-ink: #E8C46A; --warn-bg: #443B1E;
+  --info-ink: #9DB7EE; --info-bg: #2B3852; --alert-bg: #45331F; --alert-ink: #FFB27A;
+  --bad: #FF6B7A; --bad-bg: #4A2A2E; --danger: var(--bad); --on-danger: #14121F;
+  color-scheme: dark;
+}

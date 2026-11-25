@@ -5,7 +5,7 @@ import { BatchFix, fixableMissing } from '../components/people/BatchFix';
 import { ImportCsv } from '../components/people/ImportCsv';
 import { api } from '../lib/api';
 import { useApp, useAsync, useCompanies } from '../lib/hooks';
-import { FIELD_LABELS, SKIP_REASONS, type SkipReason, type UserSummary } from '../lib/types';
+import { FIELD_LABELS, LOCALE_NAMES, SKIP_REASONS, type SkipReason, type UserSummary } from '../lib/types';
 import { CompanyName, ErrorNote, Loading, PageHead, Segmented } from '../components/ui';
 
 type Filter = 'all' | 'issues' | 'overrides' | string;
@@ -167,6 +167,11 @@ export function People() {
                     </td>
                     <td>
                       <div className="tags">
+                        {u.language && (
+                          <span className="tag" title={`${LOCALE_NAMES[u.language]} signature: own-language job title and English, own closing line and banner`}>
+                            {u.language.toUpperCase()}
+                          </span>
+                        )}
                         {u.missing.map((m) => (
                           <span key={m} className="tag danger">No {FIELD_LABELS[m]?.toLowerCase() ?? m}</span>
                         ))}

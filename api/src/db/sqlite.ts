@@ -74,6 +74,8 @@ export const MIGRATIONS: string[] = [
   `ALTER TABLE shared_mailboxes ADD COLUMN signature TEXT;`,
   // v9: a person's own address line (another office…). NULL = the company's address from Brand and footer.
   `ALTER TABLE signature_overrides ADD COLUMN address TEXT;`,
+  // v10: signature language of Estonian / Lithuanian colleagues ('et' | 'lt'). NULL = the company's (Latvian).
+  `ALTER TABLE signature_overrides ADD COLUMN language TEXT;`,
 ];
 
 const now = () => new Date().toISOString();
@@ -210,14 +212,14 @@ export class SqliteRepository implements Repository {
     this.db
       .prepare(
         `INSERT INTO signature_overrides(upn, display_name, job_title_lv, job_title_en, mobile_phone, office_phone, department, company, hide_mobile,
-           design, design_locked, chosen_design, greeting, address, updated_by, updated_at)
+           design, design_locked, chosen_design, greeting, address, language, updated_by, updated_at)
          VALUES(@upn, @displayName, @jobTitleLv, @jobTitleEn, @mobilePhone, @officePhone, @department, @company, @hideMobile,
-           @design, @designLocked, @chosenDesign, @greeting, @address, @updatedBy, @updatedAt)
+           @design, @designLocked, @chosenDesign, @greeting, @address, @language, @updatedBy, @updatedAt)
          ON CONFLICT(upn) DO UPDATE SET display_name=excluded.display_name, job_title_lv=excluded.job_title_lv,
            job_title_en=excluded.job_title_en, mobile_phone=excluded.mobile_phone, office_phone=excluded.office_phone,
            department=excluded.department, company=excluded.company, hide_mobile=excluded.hide_mobile,
            design=excluded.design, design_locked=excluded.design_locked, chosen_design=excluded.chosen_design,
-           greeting=excluded.greeting, address=excluded.address,
+           greeting=excluded.greeting, address=excluded.address, language=excluded.language,
            updated_by=excluded.updated_by, updated_at=excluded.updated_at`,
       )
       .run({
@@ -235,6 +237,7 @@ export class SqliteRepository implements Repository {
         chosenDesign: o.chosenDesign ?? null,
         greeting: o.greeting ?? null,
         address: o.address ?? null,
+        language: o.language ?? null,
         updatedBy: o.updatedBy ?? 'system',
         updatedAt: o.updatedAt ?? now(),
       });
@@ -431,6 +434,7 @@ function mapOverrides(r: any): Overrides {
     chosenDesign: r.chosen_design ?? null,
     greeting: r.greeting ?? null,
     address: r.address ?? null,
+    language: r.language === 'et' || r.language === 'lt' ? r.language : null,
     updatedBy: r.updated_by,
     updatedAt: r.updated_at,
   };

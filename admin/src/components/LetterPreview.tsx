@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { Segmented } from './ui';
 import type { ComposeType } from '../lib/types';
@@ -22,6 +22,20 @@ export function LetterPreview({ html, error, loading, from, type, onTypeChange, 
   const frame = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(120);
   const [pulse, setPulse] = useState(0);
+  // Narrow columns: a signature wider than the column (fixed-width tables, banners) is laid out at its own
+  // width and scaled down to fit, instead of being cut off. `needed` = that width, 0 = it fits.
+  const [avail, setAvail] = useState(0);
+  const [needed, setNeeded] = useState(0);
+  const observer = useRef<ResizeObserver | null>(null);
+  const mailRef = useCallback((el: HTMLDivElement | null) => {
+    observer.current?.disconnect();
+    observer.current = null;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    observer.current = new ResizeObserver(([entry]) => setAvail(entry.contentRect.width));
+    observer.current.observe(el);
+  }, []);
+  useEffect(() => () => observer.current?.disconnect(), []);
+  const scale = avail > 0 && needed > avail ? avail / needed : 1;
 
   useEffect(() => setPulse((p) => p + 1), [type]);
 
@@ -33,8 +47,18 @@ export function LetterPreview({ html, error, loading, from, type, onTypeChange, 
 
   const measure = () => {
     const d = frame.current?.contentDocument;
-    if (d?.body) setHeight(Math.max(60, d.documentElement.scrollHeight));
+    if (!d?.body) return;
+    const root = d.documentElement;
+    setHeight(Math.max(60, root.scrollHeight));
+    if (root.scrollWidth > root.clientWidth + 1) setNeeded(root.scrollWidth);
   };
+  // New content: measure it again at the column's width (onLoad follows).
+  useEffect(() => setNeeded(0), [doc]);
+  // Column resized while the signature fitted: check it still does.
+  useEffect(() => {
+    if (needed === 0) measure();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avail]);
 
   const isReply = type !== 'newMail';
   return (
@@ -57,8 +81,8 @@ export function LetterPreview({ html, error, loading, from, type, onTypeChange, 
           {dark ? <Sun size={14} /> : <Moon size={14} />} {dark ? 'Light mode' : 'Dark mode check'}
         </button>
       </div>
-      <div key={pulse} className={`sheet enter ${dark ? 'dark' : ''}`}>
-        <div className="sheet-head">
+      <div key={pulse} ref={mailRef} className={`mail enter${dark ? ' dark' : ''}`}>
+        <div className="mail-head">
           <div>
             <b>From</b>&nbsp; {from ? `${from.name} <${from.email}>` : 'Sample person'}
           </div>
@@ -66,7 +90,7 @@ export function LetterPreview({ html, error, loading, from, type, onTypeChange, 
             <b>Subject</b>&nbsp; {isReply ? 'RE: Piegādes grafiks nākamajai nedēļai' : 'Piedāvājums: siltumizolācijas paneļi'}
           </div>
         </div>
-        <div className="sheet-body" aria-hidden>
+        <div className="mail-body" aria-hidden>
           <div className="prose-line" style={{ width: '92%' }} />
           <div className="prose-line" style={{ width: '78%' }} />
           {!isReply && <div className="prose-line" style={{ width: '85%' }} />}
@@ -77,15 +101,22 @@ export function LetterPreview({ html, error, loading, from, type, onTypeChange, 
             <div className="callout danger">{error}</div>
           </div>
         ) : (
-          <iframe
-            ref={frame}
-            title="Signature preview"
-            sandbox="allow-same-origin"
-            srcDoc={doc}
-            onLoad={measure}
-            style={{ height, opacity: loading ? 0.5 : 1 }}
-          />
+          <div className="mail-frame" style={{ height: Math.ceil(height * scale) }}>
+            <iframe
+              ref={frame}
+              title="Signature preview"
+              sandbox="allow-same-origin"
+              srcDoc={doc}
+              onLoad={measure}
+              style={{
+                height,
+                opacity: loading ? 0.5 : 1,
+                ...(scale < 1 ? { width: needed, transform: `scale(${scale})`, transformOrigin: '0 0' } : {}),
+              }}
+            />
+          </div>
         )}
+        {!error && scale < 1 && <div className="mail-scale">Shown at {Math.round(scale * 100)}% to fit. Widen the window for full size.</div>}
       </div>
     </div>
   );

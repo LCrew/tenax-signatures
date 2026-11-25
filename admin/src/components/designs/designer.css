@@ -1,0 +1,181 @@
+/*
+  Designs editor: section list | editing pane | live preview.
+  Built only on the console tokens (src/styles/tokens.css, glass.css), so themes and Glass/Solid apply as everywhere else.
+
+  Wide screens: three columns. Medium: the section list runs across the top. Narrow: one column, preview last.
+  The preview scales a signature down when its column is narrower than the signature (LetterPreview).
+*/
+
+/* The editor wants the whole width: the preview alone needs ~640px for a 600px signature. */
+.main:has(.designer) { max-width: none; }
+
+.designer {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) minmax(420px, 640px);
+  grid-template-areas: 'nav pane preview';
+  gap: 20px;
+  align-items: start;
+}
+.designer-nav { grid-area: nav; }
+.designer-pane { grid-area: pane; }
+.designer-preview { grid-area: preview; }
+
+/* Company tabs and the design chips share one row when there is room. */
+.designer-picker { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; margin-bottom: 20px; }
+.designer-picker > .tabs { margin: 0; }
+.designer-picker > .design-bar { flex: 1 1 auto; margin: 0; } /* moves to its own row when it doesn't fit */
+
+/* ---------- Section list ---------- */
+.designer-nav {
+  position: sticky; top: 16px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+.designer-nav-group { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.designer-nav-label {
+  font-size: var(--t-xs); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--faint);
+  padding: 0 12px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.designer-preview .designer-nav-label { padding-left: 2px; }
+.designer-nav-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; text-align: left;
+  border: 1px solid transparent; border-radius: var(--r-md); background: transparent; color: var(--ink);
+  font: inherit; cursor: pointer; transition: background .15s var(--ease), border-color .15s var(--ease);
+}
+.designer-nav-item:hover { background: var(--hover); }
+.designer-nav-item[aria-selected="true"] {
+  background: var(--card); border-color: var(--outline); box-shadow: 0 6px 18px rgba(40,40,36,.08);
+}
+:root[data-surface="glass"] .designer-nav-item[aria-selected="true"] {
+  background: var(--glass-hover); box-shadow: var(--glass-shine);
+}
+.designer-nav-item:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 1px; }
+.designer-nav-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.designer-nav-text strong { font-size: var(--t-sm); font-weight: 600; }
+.designer-nav-text span { font-size: var(--t-xs); color: var(--muted); }
+
+/* ---------- Editing pane ---------- */
+.designer-pane { display: flex; flex-direction: column; min-width: 0; container: pane / inline-size; }
+.designer-pane-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap;
+  padding: 22px 24px 0;
+}
+.designer-pane-head h2 { font-size: var(--t-lg); letter-spacing: -.02em; line-height: 1.15; margin-top: 8px; }
+.designer-pane-head p { margin-top: 6px; max-width: 70ch; }
+.designer-body { flex: 1; }
+.designer-body h3 { font-size: var(--t-md); letter-spacing: -.01em; }
+.nowrap { white-space: nowrap; }
+
+/* Whether an edit changes one design or every design of the company. */
+.scope-tag {
+  display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 12px;
+  font-size: var(--t-xs); font-weight: 600;
+}
+.scope-tag.design { background: var(--info-bg); color: var(--info-ink); }
+.scope-tag.company { background: var(--alert-bg); color: var(--alert-ink); }
+
+/* Save bar: stays at the bottom of the screen while the pane scrolls. */
+.save-dock {
+  position: sticky; bottom: 12px; z-index: 2;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 0 12px 12px; padding: 10px 10px 10px 16px; border-radius: var(--r-card);
+  background: color-mix(in srgb, var(--bg) 90%, transparent); border: 1px solid var(--line);
+  -webkit-backdrop-filter: saturate(1.4) blur(18px); backdrop-filter: saturate(1.4) blur(18px);
+  box-shadow: 0 10px 30px -12px rgba(20,20,18,.25);
+}
+:root[data-surface="glass"] .save-dock { border-color: var(--glass-edge); }
+.save-dock.dirty { border-color: var(--accent-line); }
+/* Nothing to save: the bar stays at the end of the pane instead of floating over it. */
+.save-dock:not(.dirty) { position: static; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; background: transparent; border-color: transparent; }
+.save-dock-status { flex: 1 1 200px; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.save-dock input[type="text"] { flex: 1 1 200px; min-width: 0; }
+
+/* ---------- Preview ---------- */
+.designer-preview {
+  position: sticky; top: 16px; min-width: 0;
+  max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+}
+.designer-preview .segmented { width: 100%; }
+.designer-preview .segmented button { flex: 1; }
+
+/* ---------- Languages and banners ---------- */
+.lang-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.lang-card {
+  display: flex; flex-direction: column; align-items: stretch; gap: 10px; padding: 14px; min-width: 0; text-align: left;
+  border: 1px solid var(--line); border-radius: var(--r-card); background: var(--card); color: var(--ink);
+  font: inherit; cursor: pointer; transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
+}
+:root[data-surface="glass"] .lang-card { background: var(--tile); border-color: var(--line2); }
+.lang-card:hover { border-color: var(--line3); }
+.lang-card[aria-selected="true"] { border-color: var(--outline); box-shadow: inset 0 0 0 .5px var(--outline), 0 10px 26px rgba(40,40,36,.1); }
+:root[data-surface="glass"] .lang-card[aria-selected="true"] { background: var(--glass-hover); }
+.lang-card:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 2px; }
+.lang-card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lang-card-head strong { font-size: var(--t-sm); font-weight: 600; flex: 1; }
+.lang-code {
+  display: inline-grid; place-items: center; min-width: 30px; height: 22px; padding: 0 6px; border-radius: 8px;
+  background: var(--pillbg); font-size: 11.5px; font-weight: 700; letter-spacing: .04em;
+}
+.lang-card[aria-selected="true"] .lang-code { background: var(--primary); color: var(--on-primary); }
+.lang-card-greeting { font-size: var(--t-sm); min-height: 1.4em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lang-card-banner {
+  display: grid; place-items: center; height: 46px; border-radius: var(--r-sm); overflow: hidden;
+  background: var(--hover); font-size: var(--t-xs);
+}
+.lang-card-banner img { width: 100%; height: 100%; object-fit: cover; }
+
+/* A box inside the pane: the open language, a group of fields. */
+.panel-inset {
+  padding: 20px; border-radius: var(--r-card); background: var(--hover); border: 1px solid var(--line2);
+}
+:root[data-surface="glass"] .panel-inset { background: var(--tile); border-color: var(--line2); }
+
+/* ---------- Banner picker ---------- */
+.banner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.banner-tile {
+  display: flex; flex-direction: column; gap: 6px; padding: 6px; min-width: 0; text-align: left;
+  border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); color: var(--ink);
+  font: inherit; cursor: pointer;
+}
+:root[data-surface="glass"] .banner-tile { background: var(--tile); border-color: var(--line2); }
+.banner-tile:hover { border-color: var(--line3); }
+.banner-tile[aria-pressed="true"] { border-color: var(--outline); box-shadow: inset 0 0 0 1px var(--outline); }
+.banner-tile:focus-visible, .banner-tile:focus-within { outline: 2px solid var(--accent-line); outline-offset: 1px; }
+.banner-thumb {
+  display: grid; place-items: center; height: 56px; border-radius: var(--r-sm); overflow: hidden;
+  /* banners are opaque email images: show them on white, like in the message */
+  background: #fff; color: #6B6B64; font-size: var(--t-xs);
+}
+.banner-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.banner-tile.none .banner-thumb, .banner-tile.upload .banner-thumb { background: var(--hover); color: var(--muted); }
+.banner-tile.upload { border-style: dashed; }
+.banner-name { font-size: var(--t-xs); color: var(--muted); padding: 0 2px 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 700px) { .grid-3 { grid-template-columns: 1fr; } }
+
+/* The four language cards: 2 × 2 when the pane is narrow, stacked when very narrow. */
+@container pane (max-width: 640px) { .lang-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container pane (max-width: 360px) { .lang-cards { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Narrower screens ---------- */
+/* Section list across the top in one row; the pane gets a bit more room than the preview. */
+@media (max-width: 1799px) {
+  .designer {
+    grid-template-columns: minmax(0, 1.1fr) minmax(400px, 1fr);
+    grid-template-areas: 'nav nav' 'pane preview';
+  }
+  .designer-nav { position: static; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 28px; }
+  .designer-nav-group { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 2px; }
+  .designer-nav-label { padding: 0 4px 0 2px; }
+  .designer-nav-item { width: auto; padding: 8px 12px; }
+  .designer-nav-text span { display: none; }
+}
+/* One column: preview under the pane, no sticky parts except the save bar. */
+@media (max-width: 1100px) {
+  .designer { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'nav' 'pane' 'preview'; }
+  .designer-preview { position: static; max-height: none; overflow: visible; }
+}
+@media (max-width: 800px) {
+  .designer-pane-head { padding: 18px 18px 0; }
+  .save-dock { bottom: calc(76px + env(safe-area-inset-bottom)); margin: 0 8px 8px; }
+}

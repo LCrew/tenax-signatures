@@ -5,7 +5,7 @@ import type { AppContext } from '../context.js';
 import { actorOf, requireUser } from '../auth/plugin.js';
 import { findAsset } from '../services/assets.js';
 import { inlineImages, type ImageSource } from '../services/inline.js';
-import { companyAddress, signatureDataFor, signatureDataForMailbox } from '../services/renderer.js';
+import { companyAddress, localizeMeta, signatureDataFor, signatureDataForMailbox, signatureLocale } from '../services/renderer.js';
 import { applyOverrides, ref } from '../services/designs.js';
 import type { ComposeType, Design, Overrides, ResolvedUser, SharedMailbox } from '../types.js';
 
@@ -173,7 +173,8 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
   /** The closing line the person's design would use without a personal one. */
   function defaultGreeting(user: ResolvedUser): string {
     const design = ctx.repo.getDesign(user.design.id);
-    const meta = applyOverrides(ctx.repo.latestTemplate(user.company, 'meta')?.content ?? '{}', design?.metaOverrides);
+    const locale = signatureLocale(user.fields.language, design?.language ?? ctx.settings.get().language);
+    const meta = applyOverrides(localizeMeta(ctx.repo.latestTemplate(user.company, 'meta')?.content ?? '{}', locale), design?.metaOverrides);
     try {
       return String(JSON.parse(meta).greeting ?? '');
     } catch {

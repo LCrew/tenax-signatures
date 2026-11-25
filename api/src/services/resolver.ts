@@ -77,9 +77,11 @@ export function resolveFields(entra: DirectoryUser, o: Overrides | null) {
     hideMobile: o?.hideMobile === true,
     greeting: o?.greeting ?? null,
     address: f('address', o?.address, null),
+    language: o?.language ?? null,
   };
   sources.hideMobile = o?.hideMobile != null ? 'override' : 'none';
   sources.greeting = o?.greeting != null ? 'override' : 'none';
+  sources.language = o?.language != null ? 'override' : 'none';
   // A mobile hidden on purpose ("No mobile") isn't missing.
   const missing = REPORTED_FIELDS.filter((k) => fields[k] == null && !(k === 'mobilePhone' && fields.hideMobile));
   return { fields, sources, missing: [...missing] };

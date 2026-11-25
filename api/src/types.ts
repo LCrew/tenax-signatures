@@ -4,6 +4,16 @@ export type TemplateKind = 'new' | 'reply' | 'meta' | 'image' | 'wording';
 export type CompanySource = 'group' | 'override' | 'default';
 export type DirectoryMode = 'mock' | 'graph';
 export type SignatureLanguage = 'lv' | 'en' | 'bilingual';
+/**
+ * The language a person's signature is written in. null = the company's own (Latvian). Estonian and Lithuanian
+ * colleagues work for the same companies: they get the same company details, with their own-language job title
+ * (stored in jobTitleLv: "the title in their signature language") plus the English one, their language's closing
+ * line and their language's promo banner (Brand › Languages and banners).
+ */
+export type PersonLanguage = 'et' | 'lt';
+export const PERSON_LANGUAGES = ['et', 'lt'] as const;
+/** What a signature ends up written in: decides the closing line and the promo banner. */
+export type SignatureLocale = 'lv' | 'en' | PersonLanguage;
 
 export const OVERRIDABLE_FIELDS = [
   'displayName',
@@ -125,6 +135,8 @@ export interface Overrides {
   chosenDesign?: string | null;
   /** Personal closing line: null/undefined = company or design default, '' = none. */
   greeting?: string | null;
+  /** Signature language: null = the company's (Latvian); 'et' / 'lt' = Estonian / Lithuanian colleague. */
+  language?: PersonLanguage | null;
   updatedBy?: string;
   updatedAt?: string;
 }
@@ -153,6 +165,8 @@ export interface ResolvedUser {
     greeting: string | null;
     /** Their own address line; null = the company's. */
     address: string | null;
+    /** Signature language; null = the company's (Latvian). */
+    language: PersonLanguage | null;
   };
   sources: Record<string, FieldSource>;
   entra: DirectoryUser;

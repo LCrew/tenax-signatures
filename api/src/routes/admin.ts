@@ -23,8 +23,8 @@ import { resolveCompany } from '../services/resolver.js';
 import { CsvError, IMPORT_FIELDS, planImport } from '../services/csvimport.js';
 import { MAX_SVG_BYTES, PLACEHOLDERS, imageConfigSchema, listTextFields, missingFonts, renderSignaturePng, sanitizeSvg, suggestCrop, type ImageConfig } from '../services/svgsig.js';
 import type { TemplateVersion } from '../db/repository.js';
-import type { Company, ComposeType, Design, MetaOverrides, Overrides, ResolvedUser, TemplateKind } from '../types.js';
-import { MAILBOX_SIGNATURES } from '../types.js';
+import type { Company, ComposeType, Design, MetaOverrides, Overrides, PersonLanguage, ResolvedUser, TemplateKind } from '../types.js';
+import { MAILBOX_SIGNATURES, PERSON_LANGUAGES } from '../types.js';
 import { greetingSchema, overridePatchSchema } from './signature.js';
 import { renderManifest } from './addin.js';
 
@@ -54,6 +54,7 @@ function summary(u: ResolvedUser, companies: Company[]) {
     skipped: u.skipped,
     design: u.design,
     designLocked: u.designLocked,
+    language: u.fields.language,
   };
 }
 
@@ -107,6 +108,8 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     design: z.union([z.string().max(80), z.null()]).optional(),
     designLocked: z.boolean().optional(),
     greeting: greetingSchema.optional(),
+    // Estonian / Lithuanian colleague (their title in that language goes in jobTitleLv); null = Latvian.
+    language: z.enum(PERSON_LANGUAGES).nullable().optional(),
   });
   function checkDesignFor(user: ResolvedUser, design: string | null | undefined, company?: string | null): string | null {
     if (!design) return null;
@@ -748,7 +751,13 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     const body = { note: raw.note, content: doc ? compileBlocks(doc, kind as 'new' | 'reply') : raw.content! };
     const companyMeta = ctx.repo.latestTemplate(company, 'meta')?.content ?? '{}';
     if (kind === 'meta') {
-      validateMeta(body.content);
+      const meta = validateMeta(body.content);
+      // Banners for the other languages must be this company's uploads (like banners picked on a layout).
+      const beforeBanner = (() => { try { return JSON.parse(companyMeta).banner?.file; } catch { return undefined; } })();
+      const banners = [meta.banner?.file !== beforeBanner ? meta.banner : null, ...Object.values(meta.languages ?? {}).map((l) => l?.banner)];
+      for (const b of banners) {
+        if (b && !companyAsset(company, b.file)) return reply.code(400).send({ error: `The banner “${b.file.replace(/^banner-/, '')}” isn’t uploaded for this company` });
+      }
       // New brand settings must still render with every design's layouts and wording.
       for (const d of ctx.repo.listDesigns(company)) {
         for (const k of ['new', 'reply'] as const) {
@@ -863,15 +872,20 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext) {
     blocks: z.unknown().optional(),
     meta: z.string().max(20_000).optional(),
     metaOverrides: metaOverridesSchema.optional(),
+    /** Sample person (no upn): a Latvian, Estonian or Lithuanian colleague; 'en' shows the design as English only. */
+    language: z.enum(['lv', 'en', ...PERSON_LANGUAGES]).optional(),
+    /** The design's job-title setting while it's being edited (null = Settings); leave out to use the saved one. */
+    designLanguage: z.enum(['lv', 'en', 'bilingual']).nullable().optional(),
   });
   app.post('/api/admin/templates/preview', staff(async (req, reply, _admin, access) => {
     const body = previewSchema.parse(req.body);
     const company = findCompany(body.company);
     if (!company) return reply.code(404).send({ error: 'Unknown company' });
     if (!access.can(company.key)) return forbidden(reply);
-    const design = designOf(company.key, body.design);
-    if (!design) return reply.code(404).send({ error: 'Design not found' });
-    let data: SignatureData = SAMPLE_PERSON;
+    const found = designOf(company.key, body.design);
+    if (!found) return reply.code(404).send({ error: 'Design not found' });
+    const design = { ...found, ...(body.designLanguage !== undefined ? { language: body.designLanguage } : {}), ...(body.language === 'en' ? { language: 'en' as const } : {}) };
+    let data: SignatureData = body.language === 'et' || body.language === 'lt' ? SAMPLE_PEOPLE[body.language] : SAMPLE_PERSON;
     if (body.upn) {
       // Editors can preview as people of their own companies only (it shows that person's details).
       const user = await scopedUser(access, body.upn);
@@ -1146,6 +1160,11 @@ const SAMPLE_PERSON: SignatureData = {
   officePhone: '+371 67 123 456',
   email: 'liga.paraudzina@tenaxgrupa.lv',
   department: 'Pārdošana',
+};
+/** Estonian / Lithuanian colleagues: same company details, their own-language title plus the English one. */
+const SAMPLE_PEOPLE: Record<PersonLanguage, SignatureData> = {
+  et: { ...SAMPLE_PERSON, displayName: 'Kadri Tamm', jobTitleLv: 'Müügiprojektide juht', mobilePhone: '+372 5123 4567', email: 'kadri.tamm@tenaxgrupa.lv', department: 'Müük', language: 'et' },
+  lt: { ...SAMPLE_PERSON, displayName: 'Rūta Kazlauskienė', jobTitleLv: 'Pardavimų projektų vadovė', mobilePhone: '+370 612 34567', email: 'ruta.kazlauskiene@tenaxgrupa.lv', department: 'Pardavimai', language: 'lt' },
 };
 
 function pickKeys(o: object, keys: string[]) {
