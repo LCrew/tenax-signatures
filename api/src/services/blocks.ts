@@ -179,6 +179,23 @@ export function extractBlocks(template: string): BlockDoc | null {
   }
 }
 
+/** The promo banner row for the signature's language (meta.banner); `m` is how the template reaches meta. */
+function languageBannerRow(spaceAfter: number | string, m: 'meta' | '@root.meta'): string {
+  return `{{#if ${m}.bannerUrl}}<tr><td style="padding:0 0 ${spaceAfter}px 0;">{{#if ${m}.banner.link}}<a href="{{${m}.banner.link}}" style="text-decoration:none;">{{/if}}<img src="{{${m}.bannerUrl}}" width="{{${m}.banner.width}}" height="{{${m}.banner.height}}" alt="{{${m}.banner.alt}}" style="display:block;border:0;width:{{${m}.banner.width}}px;max-width:100%;height:auto;">{{#if ${m}.banner.link}}</a>{{/if}}</td></tr>{{/if}}`;
+}
+
+/** A banner picked per layout, as the block compiler writes it (also in layouts saved before languages existed). */
+const LAYOUT_BANNER_RE =
+  /<tr><td style="padding:0 0 (\d+)px 0;">(?:<a href="[^"]*" style="text-decoration:none;">)?<img src="\{\{@root\.meta\.assetBase\}\}[^"]*"[^>]*>(?:<\/a>)?<\/td><\/tr>/g;
+
+/**
+ * A banner picked per layout is the Latvian one: Estonian / Lithuanian colleagues whose language has its own banner
+ * (or "no banner") get that instead (meta.languageBanner, set by the renderer). Applied when a template is compiled.
+ */
+export function languageAwareBanners(template: string): string {
+  return template.replace(LAYOUT_BANNER_RE, (row, space: string) => `{{#if @root.meta.languageBanner}}${languageBannerRow(space, '@root.meta')}{{else}}${row}{{/if}}`);
+}
+
 /** Removes the design-data comment so it never reaches an email. */
 export function stripBlocksHeader(template: string): string {
   return template.replace(HEADER_RE, '');
@@ -290,9 +307,7 @@ function blockRow(doc: BlockDoc, b: Block): string {
     const linked = im.link ? `<a href="${literal(im.link)}" style="text-decoration:none;">${img}</a>` : img;
     return `<tr><td style="padding:0 0 ${b.spaceAfter}px 0;">${linked}</td></tr>`;
   }
-  if (b.type === 'banner') {
-    return `{{#if meta.bannerUrl}}<tr><td style="padding:0 0 ${b.spaceAfter}px 0;">{{#if meta.banner.link}}<a href="{{meta.banner.link}}" style="text-decoration:none;">{{/if}}<img src="{{meta.bannerUrl}}" width="{{meta.banner.width}}" height="{{meta.banner.height}}" alt="{{meta.banner.alt}}" style="display:block;border:0;width:{{meta.banner.width}}px;max-width:100%;height:auto;">{{#if meta.banner.link}}</a>{{/if}}</td></tr>{{/if}}`;
-  }
+  if (b.type === 'banner') return languageBannerRow(b.spaceAfter, 'meta');
   const style = b.style ?? {};
   const d = BLOCK_DEFAULTS[b.type] ?? {};
   const space = style.spaceAfter ?? d.spaceAfter ?? 0;

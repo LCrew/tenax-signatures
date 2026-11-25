@@ -334,7 +334,7 @@ export function WordingForm({
           (own) => setTop('greeting', own ? companyMeta?.greeting ?? '' : undefined),
           <input type="text" value={value.greeting ?? ''} maxLength={200} placeholder="e.g. Best regards," onChange={(e) => setTop('greeting', e.target.value)} />,
           companyMeta?.greeting ?? '',
-          'Replaces the closing line in every language, including Estonian and Lithuanian. Usually better left to Languages and banners.',
+          'Replaces the Latvian closing line on this design. Estonian and Lithuanian colleagues keep theirs from Languages and banners. Left empty, nobody on this design gets one.',
         )}
         {row(
           'Company line',
@@ -376,8 +376,9 @@ export function WordingForm({
         {bannerChoice === 'fixed' && (
           <>
             <div className="callout warn">
-              This design shows the same banner to everyone, whatever their language. Switch to “Each person’s language
-              banner” and set the banners per language instead.
+              This design shows this banner instead of the Latvian one. Estonian and Lithuanian colleagues still get their
+              own language’s banner where one is set. Switch to “Each person’s language banner” to manage banners only under
+              Languages and banners.
             </div>
             <BannerPicker company={company} assets={assets} onUploaded={onUploaded} allowNone={false} value={value.banner ?? null} onChange={(b) => setTop('banner', b)} />
           </>

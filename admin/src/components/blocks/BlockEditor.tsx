@@ -535,7 +535,8 @@ function BannerPicker({ block: b, onChange }: { block: Extract<Block, { type: 'b
       )}
       <p className="xs muted">
         Usually leave this on the language banner: everyone gets the banner set for their signature language under Languages
-        and banners. Picking one here shows that banner to everyone on this design, whatever their language.
+        and banners. A banner picked here replaces the Latvian one; Estonian and Lithuanian colleagues still get their own
+        language’s banner where one is set.
       </p>
     </div>
   );

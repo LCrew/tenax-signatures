@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { presetDoc } from '../src/services/blocks.js';
 import { makeApp, mock } from './helpers.js';
 
 const IT = { ...mock('test.tenax@tenaxgrupa.lv'), origin: 'https://sig.tenax.lv' };
@@ -106,5 +107,54 @@ describe('Estonian and Lithuanian colleagues', async () => {
     // An unsaved "Latvian only" choice for the design.
     const lvOnly = await app.inject({ method: 'POST', url: '/api/admin/templates/preview', headers: IT, payload: { company: 'tenapors', type: 'newMail', designLanguage: 'lv' } });
     expect(lvOnly.body).not.toContain('Sales Project Manager');
+  });
+
+  it('a design’s own closing line and banner are its Latvian ones: Estonian and Lithuanian colleagues keep their language’s', async () => {
+    const def = ctx.repo.listDesigns('tenapors').find((d) => d.isDefault)!;
+    const setDesign = (metaOverrides: object) => app.inject({ method: 'PUT', url: `/api/admin/designs/${def.id}`, headers: IT, payload: { metaOverrides } });
+    await saveMeta({ ...baseMeta, greeting: 'Ar cieņu,', banner: banner(LV_BANNER), languages: { lt: { greeting: 'Pagarbiai,', banner: banner(LT_BANNER) } } });
+    expect((await setDesign({ greeting: 'Ar labiem vēlējumiem,', banner: banner(EN_BANNER) })).statusCode).toBe(200);
+    await setPerson({ language: 'lt' });
+    const lv = await sig(OTHER);
+    expect(lv).toContain('Ar labiem vēlējumiem,');
+    expect(lv).toContain(EN_BANNER);
+    const lt = await sig();
+    expect(lt).toContain('Pagarbiai,');
+    expect(lt).toContain(LT_BANNER);
+    expect(lt).not.toContain('Ar labiem vēlējumiem,');
+    expect(lt).not.toContain(EN_BANNER);
+    // Nothing set for Estonian: the standard Estonian line and the design's banner.
+    await setPerson({ language: 'et' });
+    const et = await sig();
+    expect(et).toContain('Lugupidamisega,');
+    expect(et).toContain(EN_BANNER);
+    // A design with no closing line has none in any language.
+    await setDesign({ greeting: '' });
+    await setPerson({ language: 'lt' });
+    expect(await sig()).not.toContain('Pagarbiai,');
+    await setDesign({});
+    expect(await sig()).toContain('Pagarbiai,');
+  });
+
+  it('a banner picked on a layout is the Latvian one: a language with its own banner (or none) replaces it', async () => {
+    const doc = presetDoc('side');
+    doc.footer = doc.footer.map((b) => (b.type === 'banner' ? { ...b, image: { ...banner(LV_BANNER), link: 'https://www.tenapors.lv' } } : b));
+    expect((await app.inject({ method: 'POST', url: '/api/admin/templates/tenapors/new', headers: IT, payload: { blocks: doc } })).statusCode).toBe(200);
+    await saveMeta({ ...baseMeta, languages: { lt: { banner: banner(LT_BANNER) }, et: { banner: null } } });
+    expect(await sig(OTHER)).toContain(LV_BANNER);
+    await setPerson({ language: 'lt' });
+    const lt = await sig();
+    expect(lt).toContain(LT_BANNER);
+    expect(lt).not.toContain(LV_BANNER);
+    await setPerson({ language: 'et' });
+    expect(await sig()).not.toContain('banner-');
+    // No banner set for the language: the layout's banner.
+    await saveMeta({ ...baseMeta });
+    expect(await sig()).toContain(LV_BANNER);
+    // The designer's preview of an unsaved layout does the same.
+    await saveMeta({ ...baseMeta, languages: { lt: { banner: banner(LT_BANNER) } } });
+    const preview = await app.inject({ method: 'POST', url: '/api/admin/templates/preview', headers: IT, payload: { company: 'tenapors', type: 'newMail', language: 'lt', blocks: doc } });
+    expect(preview.body).toContain(LT_BANNER);
+    expect(preview.body).not.toContain(LV_BANNER);
   });
 });

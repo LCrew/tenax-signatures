@@ -5,8 +5,8 @@ import type { AppContext } from '../context.js';
 import { actorOf, requireUser } from '../auth/plugin.js';
 import { findAsset } from '../services/assets.js';
 import { inlineImages, type ImageSource } from '../services/inline.js';
-import { companyAddress, localizeMeta, signatureDataFor, signatureDataForMailbox, signatureLocale } from '../services/renderer.js';
-import { applyOverrides, ref } from '../services/designs.js';
+import { companyAddress, designMeta, signatureDataFor, signatureDataForMailbox, signatureLocale } from '../services/renderer.js';
+import { ref } from '../services/designs.js';
 import type { ComposeType, Design, Overrides, ResolvedUser, SharedMailbox } from '../types.js';
 
 const typeSchema = z.enum(['newMail', 'reply', 'forward']).default('newMail');
@@ -174,7 +174,7 @@ export function signatureRoutes(app: FastifyInstance, ctx: AppContext) {
   function defaultGreeting(user: ResolvedUser): string {
     const design = ctx.repo.getDesign(user.design.id);
     const locale = signatureLocale(user.fields.language, design?.language ?? ctx.settings.get().language);
-    const meta = applyOverrides(localizeMeta(ctx.repo.latestTemplate(user.company, 'meta')?.content ?? '{}', locale), design?.metaOverrides);
+    const meta = designMeta(ctx.repo.latestTemplate(user.company, 'meta')?.content ?? '{}', locale, design?.metaOverrides);
     try {
       return String(JSON.parse(meta).greeting ?? '');
     } catch {

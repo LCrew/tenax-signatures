@@ -6,7 +6,7 @@ import { keepBannerProportions, type ImageSize } from './assets.js';
 import { applyOverrides } from './designs.js';
 import type { ImageSignatures } from './imagesig.js';
 import { telHref } from './phone.js';
-import { stripBlocksHeader } from './blocks.js';
+import { languageAwareBanners, stripBlocksHeader } from './blocks.js';
 
 export interface TemplateMeta {
   version?: number;
@@ -200,7 +200,7 @@ export class Renderer {
   private compile(id: number, src: string): Compiled {
     let fn = this.compiled.get(id);
     if (!fn) {
-      fn = hb.compile(stripBlocksHeader(src), { noEscape: false, strict: false });
+      fn = hb.compile(languageAwareBanners(stripBlocksHeader(src)), { noEscape: false, strict: false });
       this.compiled.set(id, fn);
     }
     return fn;
@@ -224,10 +224,11 @@ export class Renderer {
     // A design can choose its own job title language (e.g. an English design for foreign clients).
     const language = opts.design?.language ?? opts.settings.language;
     // Closing line and promo banner follow the language the signature is written in: Estonian / Lithuanian colleagues
-    // get theirs, English designs the English ones. The design's own wording, then the person's own line, go on top.
+    // get theirs, English designs the English ones; the person's own closing line goes on top.
     const locale = signatureLocale(opts.data.language, language);
-    const metaSrc = applyOverrides(localizeMeta(companyMeta, locale), opts.draft?.metaOverrides ?? opts.design?.metaOverrides);
-    const meta = validateMeta(metaSrc);
+    const overrides = opts.draft?.metaOverrides ?? opts.design?.metaOverrides;
+    const meta = validateMeta(designMeta(companyMeta, locale, overrides));
+    const languageBanner = ownBannerReplacesLayouts(companyMeta, locale, overrides);
     // A personal closing line replaces the company/design one ('' hides it).
     if (opts.data.greeting != null) meta.greeting = opts.data.greeting;
     // A personal address line replaces the company's, wherever the design shows it.
@@ -253,7 +254,7 @@ export class Renderer {
     let fn: Compiled;
     if (opts.draft?.template != null) {
       validateTemplateSource(opts.draft.template);
-      fn = hb.compile(stripBlocksHeader(opts.draft.template));
+      fn = hb.compile(languageAwareBanners(stripBlocksHeader(opts.draft.template)));
     } else {
       if (!stored) throw new TemplateError(`No ${kind} template for company ${opts.company.key}`);
       fn = this.compile(stored.id, stored.content);
@@ -288,6 +289,8 @@ export class Renderer {
         bannerUrl: meta.banner ? asset(meta.banner.file) : '',
         // For banners chosen per layout (block designer): <assetBase><file>.
         assetBase: `${base}/assets/${encodeURIComponent(opts.company.key)}/`,
+        // Estonian / Lithuanian colleagues whose language has its own banner (or none): that, not a layout's banner.
+        languageBanner,
       },
       type: opts.type,
     };
@@ -329,6 +332,38 @@ export function localizeMeta(metaSrc: string, locale: SignatureLocale): string {
   else if (locale !== 'en' && meta.greeting) next.greeting = STANDARD_GREETINGS[locale];
   if (own && own.banner !== undefined) next.banner = own.banner;
   return JSON.stringify(next);
+}
+
+/**
+ * Company brand settings with a design's wording, in the language the signature is written in; returns meta.json text.
+ * Latvian and English: the design's closing line and banner win (an English design's wording is English).
+ * Estonian / Lithuanian: a design's own closing line and banner are its Latvian ones, so the language's own win, and a
+ * design's own line becomes the language's standard line. A design with no closing line or no banner has none in any
+ * language.
+ */
+export function designMeta(companyMeta: string, locale: SignatureLocale, o: MetaOverrides | undefined): string {
+  if (locale === 'lv' || locale === 'en') return applyOverrides(localizeMeta(companyMeta, locale), o);
+  const text = localizeMeta(applyOverrides(companyMeta, o), locale);
+  if (o?.greeting !== '' && o?.banner !== null) return text;
+  try {
+    const meta = JSON.parse(text);
+    if (o?.greeting === '') meta.greeting = '';
+    if (o?.banner === null) meta.banner = null;
+    return JSON.stringify(meta);
+  } catch {
+    return text; // validateMeta reports it
+  }
+}
+
+/** Whether an Estonian / Lithuanian colleague's language banner (or "no banner") replaces banners picked per layout. */
+function ownBannerReplacesLayouts(companyMeta: string, locale: SignatureLocale, o: MetaOverrides | undefined): boolean {
+  if (locale !== 'et' && locale !== 'lt') return false;
+  if (o?.banner === null) return false;
+  try {
+    return JSON.parse(companyMeta)?.languages?.[locale]?.banner !== undefined;
+  } catch {
+    return false;
+  }
 }
 
 /** Proves a template + brand settings actually render (catches runtime-only failures before they reach Outlook). */
