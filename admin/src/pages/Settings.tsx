@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { KeyRound, Plus, RefreshCw, Trash2, Upload, Wand2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useApp, useAsync, useToast } from '../lib/hooks';
+import { t, tx } from '../lib/i18n';
 import type { LocalAccount, Settings } from '../lib/types';
 import { passwordProblem } from '../lib/password';
 import { DirectoryForm } from '../components/DirectoryForm';
@@ -16,12 +17,12 @@ export function SettingsPage() {
   const settings = useAsync(() => api.get<Settings>('/api/admin/settings'));
   const [tab, setTab] = useState<Tab>('general');
   const labels: Record<Tab, string> = {
-    general: 'Server',
-    directory: 'Entra ID connection',
-    options: 'Signature options',
-    fonts: 'Fonts',
-    accounts: 'Local accounts',
-    addin: 'Outlook add-in',
+    general: t('Server'),
+    directory: t('Entra ID connection'),
+    options: t('Signature options'),
+    fonts: t('Fonts'),
+    accounts: t('Local accounts'),
+    addin: t('Outlook add-in'),
   };
 
   if (settings.error) return <ErrorNote error={settings.error} retry={settings.reload} />;
@@ -42,11 +43,11 @@ export function SettingsPage() {
 
   return (
     <>
-      <PageHead title="Settings" />
+      <PageHead title={t('Settings')} />
       <div className="tabs" role="tablist">
-        {(Object.keys(labels) as Tab[]).map((t) => (
-          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
-            {labels[t]}
+        {(Object.keys(labels) as Tab[]).map((k) => (
+          <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>
+            {labels[k]}
           </button>
         ))}
       </div>
@@ -66,7 +67,7 @@ function General({ settings, onSaved }: { settings: Settings; onSaved: () => voi
         publicUrl: publicUrl.replace(/\/+$/, ''),
         allowedOrigins: origins.split(/\s+/).filter(Boolean),
       });
-      toast('Server settings saved');
+      toast(t('Server settings saved'));
       onSaved();
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -75,23 +76,24 @@ function General({ settings, onSaved }: { settings: Settings; onSaved: () => voi
   return (
     <div className="stack loose">
       <section className="stack">
-        <Field label="Public address" hint="Where Outlook loads the add-in and logos from. Changing it means re-uploading the add-in manifest.">
+        <Field label={t('Public address')} hint={t('Where Outlook loads the add-in and logos from. Changing it means re-uploading the add-in manifest.')}>
           <input type="url" value={publicUrl} onChange={(e) => setPublicUrl(e.target.value)} />
         </Field>
-        <Field label="Extra allowed origins" hint="One per line. The public address is always allowed. Only add origins that call the API from a browser.">
+        <Field label={t('Extra allowed origins')} hint={t('One per line. The public address is always allowed. Only add origins that call the API from a browser.')}>
           <textarea rows={3} value={origins} onChange={(e) => setOrigins(e.target.value)} />
         </Field>
         <div className="row">
           <button className="btn primary" onClick={save}>
-            Save server settings
+            {t('Save server settings')}
           </button>
         </div>
       </section>
       <section className="stack">
-        <h3>Setup wizard</h3>
+        <h3>{t('Setup wizard')}</h3>
         <p className="small muted">
-          Walk through the first-launch steps again: server address, Entra ID, companies and groups, signature options
-          and the Outlook add-in. Your current settings are kept and shown in each step.
+          {t(
+            'Walk through the first-launch steps again: server address, Entra ID, companies and groups, signature options and the Outlook add-in. Your current settings are kept and shown in each step.',
+          )}
         </p>
         <button
           className="btn"
@@ -101,24 +103,23 @@ function General({ settings, onSaved }: { settings: Settings; onSaved: () => voi
             await refresh();
           }}
         >
-          <Wand2 size={14} /> Run setup wizard again
+          <Wand2 size={14} /> {t('Run setup wizard again')}
         </button>
       </section>
       <section className="stack">
-        <h3>Cached directory data</h3>
+        <h3>{t('Cached directory data')}</h3>
         <p className="small muted">
-          Profiles are cached for 10 minutes and group memberships for 30. Clear the cache after moving someone between
-          groups to see the change immediately.
+          {t('Profiles are cached for 10 minutes and group memberships for 30. Clear the cache after moving someone between groups to see the change immediately.')}
         </p>
         <button
           className="btn"
           style={{ alignSelf: 'flex-start' }}
           onClick={async () => {
             await api.post('/api/admin/cache/clear');
-            toast('Cache cleared');
+            toast(t('Cache cleared'));
           }}
         >
-          <RefreshCw size={14} /> Clear cache
+          <RefreshCw size={14} /> {t('Clear cache')}
         </button>
       </section>
     </div>
@@ -145,16 +146,17 @@ function Accounts() {
   return (
     <div className="stack">
       <p className="small muted">
-        Local accounts sign in with a username and password and always have full access. Keep at least one as a
-        break-glass login. Day to day, admins can use their Microsoft account instead.
+        {t(
+          'Local accounts sign in with a username and password and always have full access. Keep at least one as a break-glass login. Day to day, admins can use their Microsoft account instead.',
+        )}
       </p>
       {list.error && <ErrorNote error={list.error} />}
       <div className="panel table-wrap">
         <table className="data">
           <thead>
             <tr>
-              <th>Username</th>
-              <th>Last sign-in</th>
+              <th>{t('Username')}</th>
+              <th>{t('Last sign-in')}</th>
               <th />
             </tr>
           </thead>
@@ -162,20 +164,20 @@ function Accounts() {
             {(list.data ?? []).map((a) => (
               <tr key={a.id}>
                 <td className="name">
-                  {a.username} {session?.kind === 'local' && session.name === a.username && <span className="tag">You</span>}
+                  {a.username} {session?.kind === 'local' && session.name === a.username && <span className="tag">{t('You')}</span>}
                 </td>
                 <td className="sub">{timeAgo(a.lastLoginAt)}</td>
                 <td style={{ textAlign: 'right' }}>
                   <button className="btn ghost sm" onClick={() => setPwFor(a)}>
-                    <KeyRound size={14} /> Change password
+                    <KeyRound size={14} /> {t('Change password')}
                   </button>
                   <button
                     className="btn ghost sm danger"
-                    aria-label={`Remove ${a.username}`}
+                    aria-label={t('Remove {name}', { name: a.username })}
                     onClick={async () => {
                       try {
                         await api.del(`/api/admin/accounts/${a.id}`);
-                        toast(`${a.username} removed`);
+                        toast(t('{name} removed', { name: a.username }));
                         await list.reload();
                       } catch (e) {
                         toast((e as Error).message, 'error');
@@ -191,21 +193,21 @@ function Accounts() {
         </table>
       </div>
       <button className="btn" style={{ alignSelf: 'flex-start' }} onClick={() => setAdding(true)}>
-        <Plus size={14} /> Add local account
+        <Plus size={14} /> {t('Add local account')}
       </button>
 
-      <Modal open={adding || !!pwFor} onClose={close} title={pwFor ? `New password for ${pwFor.username}` : 'Add local account'}>
+      <Modal open={adding || !!pwFor} onClose={close} title={pwFor ? t('New password for {name}', { name: pwFor.username }) : t('Add local account')}>
         {adding && (
-          <Field label="Username">
+          <Field label={t('Username')}>
             <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="off" />
           </Field>
         )}
-        <Field label="Password" hint="At least 12 characters, mixing letters with numbers or symbols" error={problem}>
+        <Field label={t('Password')} hint={t('At least 12 characters, mixing letters with numbers or symbols')} error={problem}>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
         </Field>
         <div className="row end">
           <button className="btn ghost" onClick={close}>
-            Cancel
+            {t('Cancel')}
           </button>
           <button
             className="btn primary"
@@ -214,7 +216,7 @@ function Accounts() {
               try {
                 if (pwFor) await api.put(`/api/admin/accounts/${pwFor.id}/password`, { password });
                 else await api.post('/api/admin/accounts', { username, password });
-                toast(pwFor ? 'Password changed' : 'Account added');
+                toast(pwFor ? t('Password changed') : t('Account added'));
                 close();
                 await list.reload();
               } catch (e) {
@@ -222,7 +224,7 @@ function Accounts() {
               }
             }}
           >
-            {pwFor ? 'Change password' : 'Add account'}
+            {pwFor ? t('Change password') : t('Add account')}
           </button>
         </div>
       </Modal>
@@ -250,15 +252,15 @@ function FontsPanel() {
     setBusy(true);
     for (const file of Array.from(files)) {
       try {
-        if (file.size > 12 * 1024 * 1024) throw new Error('larger than 12 MB');
+        if (file.size > 12 * 1024 * 1024) throw new Error(t('larger than 12 MB'));
         const dataBase64 = await new Promise<string>((res, rej) => {
           const r = new FileReader();
           r.onload = () => res(String(r.result).split(',')[1]);
-          r.onerror = () => rej(new Error('could not read the file'));
+          r.onerror = () => rej(new Error(t('could not read the file')));
           r.readAsDataURL(file);
         });
         const f = await api.post<FontInfo>('/api/admin/fonts', { name: file.name, dataBase64 });
-        toast(`${f.family} ${f.style} added`);
+        toast(t('{font} added', { font: `${f.family} ${f.style}` }));
       } catch (e) {
         toast(`${file.name}: ${(e as Error).message}`, 'error');
       }
@@ -270,13 +272,13 @@ function FontsPanel() {
   return (
     <div className="stack">
       <p className="small muted">
-        Image signatures (designs made from an SVG) are drawn on the server, so it needs the font files the design uses.
-        Poppins is included. Upload the .ttf or .otf files of other fonts your company licenses, for example
-        <strong> Arial Nova Light</strong> for Vareno Group. They’re stored on this server only and never published.
-        After adding a font, new emails use it; images in already-sent emails don’t change.
+        {tx(
+          'Image signatures (designs made from an SVG) are drawn on the server, so it needs the font files the design uses. Poppins is included. Upload the .ttf or .otf files of other fonts your company licenses, for example {font} for Vareno Group. They’re stored on this server only and never published. After adding a font, new emails use it; images in already-sent emails don’t change.',
+          { font: <strong>Arial Nova Light</strong> },
+        )}
       </p>
       <label className="btn" style={{ alignSelf: 'flex-start' }}>
-        <Upload size={14} /> {busy ? 'Uploading…' : 'Upload font files'}
+        <Upload size={14} /> {busy ? t('Uploading…') : t('Upload font files')}
         <input type="file" accept=".ttf,.otf,font/ttf,font/otf" multiple className="visually-hidden" disabled={busy} onChange={(e) => e.target.files && upload(e.target.files)} />
       </label>
       {list.error && <ErrorNote error={list.error} />}
@@ -284,9 +286,9 @@ function FontsPanel() {
         <table className="data">
           <thead>
             <tr>
-              <th>Font</th>
-              <th>Weight</th>
-              <th>File</th>
+              <th>{t('Font')}</th>
+              <th>{t('Weight')}</th>
+              <th>{t('File')}</th>
               <th />
             </tr>
           </thead>
@@ -294,18 +296,18 @@ function FontsPanel() {
             {(list.data ?? []).map((f) => (
               <tr key={f.source + f.file}>
                 <td className="name">
-                  {f.family} {f.style} {f.source === 'bundled' && <span className="tag">Included</span>}
+                  {f.family} {f.style} {f.source === 'bundled' && <span className="tag">{t('Included')}</span>}
                 </td>
-                <td className="sub">{f.weight}{f.italic ? ' italic' : ''}</td>
+                <td className="sub">{f.weight}{f.italic ? ` ${t('italic')}` : ''}</td>
                 <td className="sub mono">{f.file}</td>
                 <td style={{ textAlign: 'right' }}>
                   {f.source === 'uploaded' && (
                     <button
                       className="btn ghost sm danger"
-                      aria-label={`Remove ${f.file}`}
+                      aria-label={t('Remove {name}', { name: f.file })}
                       onClick={async () => {
                         await api.del(`/api/admin/fonts/${encodeURIComponent(f.file)}`);
-                        toast(`${f.family} ${f.style} removed`);
+                        toast(t('{name} removed', { name: `${f.family} ${f.style}` }));
                         await list.reload();
                       }}
                     >

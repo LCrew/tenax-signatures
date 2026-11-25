@@ -1,4 +1,5 @@
 import { getEntraToken } from './auth';
+import { t } from './i18n';
 
 export class ApiError extends Error {
   constructor(message: string, readonly status: number, readonly line?: number) {
@@ -67,7 +68,7 @@ export const api = {
 /** Downloads need auth headers, so they go through fetch + blob rather than a plain link. */
 export async function download(url: string, fallbackName: string) {
   const res = await fetch(url, { credentials: 'same-origin', headers: await headers() });
-  if (!res.ok) throw new ApiError(`Download failed (${res.status})`, res.status);
+  if (!res.ok) throw new ApiError(t('Download failed ({status})', { status: res.status }), res.status);
   const name = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? fallbackName;
   const blobUrl = URL.createObjectURL(await res.blob());
   const a = Object.assign(document.createElement('a'), { href: blobUrl, download: name });

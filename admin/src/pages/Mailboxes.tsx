@@ -4,18 +4,20 @@ import { api } from '../lib/api';
 import { useAsync, useCompanies, useToast } from '../lib/hooks';
 import type { Design, SharedMailbox } from '../lib/types';
 import { CompanyName, ErrorNote, Field, Loading, Modal, PageHead } from '../components/ui';
+import { msg, t } from '../lib/i18n';
 
 const EMPTY: SharedMailbox = { email: '', company: '', displayName: '', officePhone: '' };
 
 type Mode = NonNullable<SharedMailbox['signature']>;
+/** English; translate where shown with t(). */
 const SIGNATURE_MODES: Record<Mode, { label: string; short: string; hint: string }> = {
-  mailbox: { label: 'The mailbox’s signature', short: 'Mailbox', hint: 'A team signature: the name below, the company’s design and this address.' },
+  mailbox: { label: msg('The mailbox’s signature'), short: msg('Mailbox'), hint: msg('A team signature: the name below, the company’s design and this address.') },
   senderWithMailboxEmail: {
-    label: 'Their own signature, with this address',
-    short: 'Sender’s own, with this address',
-    hint: 'Their name, title and phone, with {email} as the email, so replies come back to the shared mailbox.',
+    label: msg('Their own signature, with this address'),
+    short: msg('Sender’s own, with this address'),
+    hint: msg('Their name, title and phone, with {email} as the email, so replies come back to the shared mailbox.'),
   },
-  sender: { label: 'Their own signature', short: 'Sender’s own', hint: 'Exactly their personal signature, including their own email address.' },
+  sender: { label: msg('Their own signature'), short: msg('Sender’s own'), hint: msg('Exactly their personal signature, including their own email address.') },
 };
 
 export function Mailboxes() {
@@ -30,7 +32,7 @@ export function Mailboxes() {
     if (!editing) return;
     try {
       await api.put(`/api/admin/shared-mailboxes/${encodeURIComponent(editing.email)}`, editing);
-      toast(isNew ? 'Shared mailbox added' : 'Shared mailbox saved');
+      toast(isNew ? t('Shared mailbox added') : t('Shared mailbox saved'));
       setEditing(null);
       await list.reload();
     } catch (e) {
@@ -41,8 +43,8 @@ export function Mailboxes() {
   return (
     <>
       <PageHead
-        title="Shared mailboxes"
-        lead="Choose what people get when they send from one of these addresses: a team signature, or their own (optionally with the shared address). Addresses not listed here keep the sender's own signature."
+        title={t('Shared mailboxes')}
+        lead={t("Choose what people get when they send from one of these addresses: a team signature, or their own (optionally with the shared address). Addresses not listed here keep the sender's own signature.")}
         actions={
           <button
             className="btn primary"
@@ -51,7 +53,7 @@ export function Mailboxes() {
               setEditing({ ...EMPTY, company: companies[0]?.key ?? '' });
             }}
           >
-            <Plus size={14} /> Add mailbox
+            <Plus size={14} /> {t('Add mailbox')}
           </button>
         }
       />
@@ -59,16 +61,16 @@ export function Mailboxes() {
       {!list.data ? (
         !list.error && <Loading />
       ) : list.data.length === 0 ? (
-        <div className="panel empty">No shared mailboxes yet. Senders using a shared mailbox get their personal signature.</div>
+        <div className="panel empty">{t('No shared mailboxes yet. Senders using a shared mailbox get their personal signature.')}</div>
       ) : (
         <div className="panel table-wrap">
           <table className="data">
             <thead>
               <tr>
-                <th>Mailbox</th>
-                <th>Name in signature</th>
-                <th>Signature</th>
-                <th>Phone</th>
+                <th>{t('Mailbox')}</th>
+                <th>{t('Name in signature')}</th>
+                <th>{t('Signature')}</th>
+                <th>{t('Phone')}</th>
                 <th />
               </tr>
             </thead>
@@ -78,17 +80,17 @@ export function Mailboxes() {
                 return (
                   <tr key={m.email} className="clickable" onClick={() => { setIsNew(false); setEditing({ ...m, officePhone: m.officePhone ?? '' }); }}>
                     <td className="name">{m.email}</td>
-                    <td>{(m.signature ?? 'mailbox') === 'mailbox' ? m.displayName : <span className="muted">Sender’s own name</span>}</td>
+                    <td>{(m.signature ?? 'mailbox') === 'mailbox' ? m.displayName : <span className="muted">{t('Sender’s own name')}</span>}</td>
                     <td>
                       {(m.signature ?? 'mailbox') === 'mailbox' ? (
                         <CompanyName name={c?.displayName ?? m.company} color={c?.color} />
                       ) : (
-                        <span className="small">{SIGNATURE_MODES[m.signature!].short}</span>
+                        <span className="small">{t(SIGNATURE_MODES[m.signature!].short)}</span>
                       )}
                     </td>
-                    <td>{m.officePhone ?? <span className="muted">none</span>}</td>
+                    <td>{m.officePhone ?? <span className="muted">{t('none')}</span>}</td>
                     <td style={{ textAlign: 'right' }}>
-                      <button className="btn ghost sm" onClick={(e) => { e.stopPropagation(); setRemoving(m); }} aria-label={`Remove ${m.email}`}>
+                      <button className="btn ghost sm" onClick={(e) => { e.stopPropagation(); setRemoving(m); }} aria-label={t('Remove {email}', { email: m.email })}>
                         <Trash2 size={14} />
                       </button>
                     </td>
@@ -100,31 +102,31 @@ export function Mailboxes() {
         </div>
       )}
 
-      <Modal open={!!editing} onClose={() => setEditing(null)} title={isNew ? 'Add shared mailbox' : 'Edit shared mailbox'}>
+      <Modal open={!!editing} onClose={() => setEditing(null)} title={isNew ? t('Add shared mailbox') : t('Edit shared mailbox')}>
         {editing && (
           <>
-            <Field label="Mailbox address">
+            <Field label={t('Mailbox address')}>
               <input type="email" value={editing.email} disabled={!isNew} onChange={(e) => setEditing({ ...editing, email: e.target.value })} />
             </Field>
             <fieldset className="stack tight" style={{ border: 0, padding: 0, margin: 0 }}>
-              <legend className="small" style={{ fontWeight: 600, marginBottom: 6 }}>When someone sends from this address</legend>
+              <legend className="small" style={{ fontWeight: 600, marginBottom: 6 }}>{t('When someone sends from this address')}</legend>
               {(Object.keys(SIGNATURE_MODES) as Mode[]).map((k) => (
                 <label key={k} className="check">
                   <input type="radio" name="mbx-sig" checked={(editing.signature ?? 'mailbox') === k} onChange={() => setEditing({ ...editing, signature: k })} />
                   <span>
-                    <strong>{SIGNATURE_MODES[k].label}</strong>
+                    <strong>{t(SIGNATURE_MODES[k].label)}</strong>
                     <br />
-                    <span className="muted xs">{SIGNATURE_MODES[k].hint.replace('{email}', editing.email || 'this address')}</span>
+                    <span className="muted xs">{t(SIGNATURE_MODES[k].hint, { email: editing.email || t('this address') })}</span>
                   </span>
                 </label>
               ))}
             </fieldset>
             {(editing.signature ?? 'mailbox') === 'mailbox' && (
             <>
-            <Field label="Name in signature" hint="e.g. Tenax klientu serviss">
+            <Field label={t('Name in signature')} hint={t('e.g. {example}', { example: 'Tenax klientu serviss' })}>
               <input type="text" value={editing.displayName} onChange={(e) => setEditing({ ...editing, displayName: e.target.value })} />
             </Field>
-            <Field label="Company design">
+            <Field label={t('Company design')}>
               <select value={editing.company} onChange={(e) => setEditing({ ...editing, company: e.target.value })}>
                 {companies.map((c) => (
                   <option key={c.key} value={c.key}>
@@ -134,39 +136,39 @@ export function Mailboxes() {
               </select>
             </Field>
             <MailboxDesign company={editing.company} value={editing.design ?? ''} onChange={(v) => setEditing({ ...editing, design: v || null })} />
-            <Field label="Phone" hint="Optional">
+            <Field label={t('Phone')} hint={t('Optional')}>
               <input type="text" value={editing.officePhone ?? ''} onChange={(e) => setEditing({ ...editing, officePhone: e.target.value })} />
             </Field>
             </>
             )}
             <div className="row end">
               <button className="btn ghost" onClick={() => setEditing(null)}>
-                Cancel
+                {t('Cancel')}
               </button>
               <button className="btn primary" onClick={save} disabled={!editing.email || ((editing.signature ?? 'mailbox') === 'mailbox' && !editing.displayName)}>
-                {isNew ? 'Add mailbox' : 'Save mailbox'}
+                {isNew ? t('Add mailbox') : t('Save mailbox')}
               </button>
             </div>
           </>
         )}
       </Modal>
 
-      <Modal open={!!removing} onClose={() => setRemoving(null)} title="Remove shared mailbox?">
-        <p>People sending as {removing?.email} will get their personal signature instead.</p>
+      <Modal open={!!removing} onClose={() => setRemoving(null)} title={t('Remove shared mailbox?')}>
+        <p>{t('People sending as {email} will get their personal signature instead.', { email: removing?.email ?? '' })}</p>
         <div className="row end">
           <button className="btn ghost" onClick={() => setRemoving(null)}>
-            Keep it
+            {t('Keep it')}
           </button>
           <button
             className="btn danger"
             onClick={async () => {
               await api.del(`/api/admin/shared-mailboxes/${encodeURIComponent(removing!.email)}`);
-              toast('Shared mailbox removed');
+              toast(t('Shared mailbox removed'));
               setRemoving(null);
               await list.reload();
             }}
           >
-            Remove mailbox
+            {t('Remove mailbox')}
           </button>
         </div>
       </Modal>
@@ -178,9 +180,9 @@ function MailboxDesign({ company, value, onChange }: { company: string; value: s
   const designs = useAsync(() => (company ? api.get<Design[]>(`/api/admin/designs?company=${encodeURIComponent(company)}`) : Promise.resolve([] as Design[])), [company]);
   const service = designs.data?.find((d) => d.purpose === 'service');
   return (
-    <Field label="Design" hint={service ? `Default: ${service.name} (the company's service design)` : 'Default: the company default design'}>
+    <Field label={t('Design')} hint={service ? t("Default: {name} (the company's service design)", { name: service.name }) : t('Default: the company default design')}>
       <select value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{service ? `${service.name} (service design)` : 'Company default'}</option>
+        <option value="">{service ? t('{name} (service design)', { name: service.name }) : t('Company default')}</option>
         {(designs.data ?? []).map((d) => (
           <option key={d.id} value={d.id}>
             {d.name}

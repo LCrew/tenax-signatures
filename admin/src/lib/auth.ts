@@ -1,4 +1,5 @@
 import { InteractionRequiredAuthError, PublicClientApplication, type AccountInfo } from '@azure/msal-browser';
+import { t } from './i18n';
 
 /**
  * Entra sign-in for admins in SG-Signature-Admins. The tenant/client IDs come from
@@ -38,7 +39,7 @@ export function entraAccount(): AccountInfo | null {
 }
 
 export async function signInWithMicrosoft() {
-  if (!pca) throw new Error('Microsoft sign-in is not configured yet');
+  if (!pca) throw new Error(t('Microsoft sign-in is not configured yet'));
   await pca.loginRedirect({ scopes: [scope], prompt: 'select_account' });
 }
 

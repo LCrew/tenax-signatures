@@ -4,6 +4,7 @@ import { api, download } from '../../lib/api';
 import { useToast } from '../../lib/hooks';
 import { FIELD_LABELS } from '../../lib/types';
 import { Modal } from '../ui';
+import { t, tn } from '../../lib/i18n';
 
 interface ImportRow {
   line: number;
@@ -31,7 +32,7 @@ async function readText(file: File): Promise<string> {
   }
 }
 
-const changeLabel = (k: string, v: string | boolean) => (k === 'hideMobile' ? 'No mobile' : `${FIELD_LABELS[k] ?? k}: ${v}`);
+const changeLabel = (k: string, v: string | boolean) => (k === 'hideMobile' ? t('No mobile') : `${FIELD_LABELS[k] ? t(FIELD_LABELS[k]) : k}: ${v}`);
 
 /**
  * Download the list of gaps, let someone (or an agent, see docs/csv-import.md) fill it in, upload it back.
@@ -65,7 +66,7 @@ export function ImportCsv({ onClose }: { onClose: (changed: number) => void }) {
     setBusy(true);
     try {
       const r = await api.post<ImportResult>('/api/admin/import/missing', { csv: file.csv, dryRun: false });
-      toast(`Imported: ${r.totals.update} ${r.totals.update === 1 ? 'person' : 'people'} updated`);
+      toast(tn(r.totals.update, 'Imported: {n} person updated', 'Imported: {n} people updated'));
       onClose(r.totals.update);
     } catch (err) {
       toast((err as Error).message, 'error');
@@ -77,20 +78,20 @@ export function ImportCsv({ onClose }: { onClose: (changed: number) => void }) {
   const shown = result?.rows.filter((r) => r.status !== 'unchanged' || r.notes.length > 0) ?? [];
 
   return (
-    <Modal open onClose={() => onClose(0)} title="Import missing details">
+    <Modal open onClose={() => onClose(0)} title={t('Import missing details')}>
       <ol className="small" style={{ margin: 0, paddingLeft: 18 }}>
         <li>
-          Download the list of people with missing details. Blank cells are what’s missing.
+          {t('Download the list of people with missing details. Blank cells are what’s missing.')}
         </li>
-        <li>Fill in the blanks (by hand, or give the file and docs/csv-import.md to an agent).</li>
-        <li>Upload it here. You see what would change before anything is saved.</li>
+        <li>{t('Fill in the blanks (by hand, or give the file and docs/csv-import.md to an agent).')}</li>
+        <li>{t('Upload it here. You see what would change before anything is saved.')}</li>
       </ol>
       <div className="row">
         <button className="btn" onClick={() => download('/api/admin/missing.csv', 'signature-missing.csv').catch((e) => toast(e.message, 'error'))}>
-          <Download size={14} /> Download missing list
+          <Download size={14} /> {t('Download missing list')}
         </button>
         <button className="btn primary" disabled={busy} onClick={() => fileRef.current?.click()}>
-          <Upload size={14} /> {file ? 'Choose another file' : 'Choose CSV file'}
+          <Upload size={14} /> {file ? t('Choose another file') : t('Choose CSV file')}
         </button>
         <input
           ref={fileRef}
@@ -104,14 +105,14 @@ export function ImportCsv({ onClose }: { onClose: (changed: number) => void }) {
         />
       </div>
 
-      {busy && !result && <div className="small muted">Checking…</div>}
+      {busy && !result && <div className="small muted">{t('Checking…')}</div>}
       {result && file && (
         <div className="stack tight">
           <div className="small">
-            <strong>{file.name}</strong>: {result.totals.update} to update · {result.totals.unchanged} unchanged
-            {result.totals.error > 0 && <span style={{ color: 'var(--danger)' }}> · {result.totals.error} with problems (skipped)</span>}
+            <strong>{file.name}</strong>: {t('{n} to update', { n: result.totals.update })} · {t('{n} unchanged', { n: result.totals.unchanged })}
+            {result.totals.error > 0 && <span style={{ color: 'var(--danger)' }}> · {t('{n} with problems (skipped)', { n: result.totals.error })}</span>}
           </div>
-          {result.ignoredColumns.length > 0 && <div className="xs muted">Not imported (for reference only): {result.ignoredColumns.join(', ')}</div>}
+          {result.ignoredColumns.length > 0 && <div className="xs muted">{t('Not imported (for reference only): {columns}', { columns: result.ignoredColumns.join(', ') })}</div>}
           {shown.length > 0 && (
             <div className="table-wrap" style={{ maxHeight: 280, overflow: 'auto', border: '1px solid var(--line)', borderRadius: 'var(--r-sm)' }}>
               <table className="data">
@@ -122,7 +123,7 @@ export function ImportCsv({ onClose }: { onClose: (changed: number) => void }) {
                         {r.line}
                       </td>
                       <td>
-                        <div className="name">{r.name ?? (r.upn || '(no upn)')}</div>
+                        <div className="name">{r.name ?? (r.upn || t('(no upn)'))}</div>
                         <div className="tags" style={{ marginTop: 4 }}>
                           {r.status === 'error' && <span className="tag danger">{r.error}</span>}
                           {Object.entries(r.changes).map(([k, v]) => (
@@ -143,16 +144,16 @@ export function ImportCsv({ onClose }: { onClose: (changed: number) => void }) {
               </table>
             </div>
           )}
-          <p className="xs muted">Only missing details are filled in, saved as corrections. Values that are already set are kept; Entra isn’t changed.</p>
+          <p className="xs muted">{t('Only missing details are filled in, saved as corrections. Values that are already set are kept; Entra isn’t changed.')}</p>
         </div>
       )}
 
       <div className="row end">
         <button type="button" className="btn ghost" onClick={() => onClose(0)}>
-          Cancel
+          {t('Cancel')}
         </button>
         <button type="button" className="btn primary" disabled={busy || !result || result.totals.update === 0} onClick={run}>
-          Import {result?.totals.update ? `${result.totals.update} ${result.totals.update === 1 ? 'person' : 'people'}` : ''}
+          {result?.totals.update ? tn(result.totals.update, 'Import {n} person', 'Import {n} people') : t('Import')}
         </button>
       </div>
     </Modal>

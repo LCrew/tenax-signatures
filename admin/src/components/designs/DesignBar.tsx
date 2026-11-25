@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Settings2, Star } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../lib/hooks';
+import { msg, t, tx } from '../../lib/i18n';
 import type { Design, MetaOverrides } from '../../lib/types';
 import { Field, Modal, Segmented } from '../ui';
 import { type Asset, BannerPicker } from './BannerPicker';
@@ -30,23 +31,23 @@ export function DesignBar({
 
   return (
     <div className="design-bar">
-      <div className="design-chips" role="tablist" aria-label={`${companyName} designs`}>
+      <div className="design-chips" role="tablist" aria-label={t('{company} designs', { company: companyName })}>
         {designs.map((d) => (
           <button key={d.id} role="tab" aria-selected={d.id === activeId} className="design-chip" onClick={() => onSelect(d.id)}>
-            {d.isDefault && <Star size={12} aria-label="default" />}
+            {d.isDefault && <Star size={12} aria-label={t('default')} />}
             {d.name}
-            {d.format === 'image' && <span className="tag">Image</span>}
-            {d.purpose === 'service' && !/service/i.test(d.name) && <span className="tag">Service</span>}
-            {d.purpose === 'person' && !d.selectable && !d.isDefault && <span className="tag" title="Only admins can assign it">Assigned only</span>}
+            {d.format === 'image' && <span className="tag">{t('Image')}</span>}
+            {d.purpose === 'service' && !/service/i.test(d.name) && <span className="tag">{t('Service')}</span>}
+            {d.purpose === 'person' && !d.selectable && !d.isDefault && <span className="tag" title={t('Only admins can assign it')}>{t('Assigned only')}</span>}
           </button>
         ))}
         <button className="btn ghost sm" onClick={() => setCreating(true)}>
-          <Plus size={14} /> New design
+          <Plus size={14} /> {t('New design')}
         </button>
       </div>
       {active && (
-        <button className="btn ghost sm" onClick={() => setEditing(active)} title="Name, default, who can choose it, remove">
-          <Settings2 size={14} /> Design settings
+        <button className="btn ghost sm" onClick={() => setEditing(active)} title={t('Name, default, who can choose it, remove')}>
+          <Settings2 size={14} /> {t('Design settings')}
         </button>
       )}
       <NewDesignModal open={creating} onClose={() => setCreating(false)} company={company} designs={designs} activeId={activeId} onCreated={(id) => onChanged(id)} />
@@ -80,7 +81,7 @@ function NewDesignModal({
   async function create() {
     try {
       const d = await api.post<Design>('/api/admin/designs', { company, name, purpose, selectable, copyFrom });
-      toast(`${d.name} created as a copy. Change its layout and wording, then save.`);
+      toast(t('{name} created as a copy. Change its layout and wording, then save.', { name: d.name }));
       setName('');
       onCreated(d.id);
       onClose();
@@ -89,36 +90,36 @@ function NewDesignModal({
     }
   }
   return (
-    <Modal open={open} onClose={onClose} title="New design">
-      <Field label="Name" hint='e.g. "English" for English-speaking clients, or "Service"'>
+    <Modal open={open} onClose={onClose} title={t('New design')}>
+      <Field label={t('Name')} hint={t('e.g. "English" for English-speaking clients, or "Service"')}>
         <input type="text" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} autoFocus />
       </Field>
       <div className="stack tight">
-        <span className="small" style={{ fontWeight: 600 }}>For</span>
+        <span className="small" style={{ fontWeight: 600 }}>{t('For')}</span>
         <label className="check">
           <input type="radio" name="purpose" checked={purpose === 'person'} onChange={() => setPurpose('person')} />
           <span>
-            <strong>People</strong>
+            <strong>{t('People')}</strong>
             <br />
-            <span className="xs muted">A design employees use, for example an English version.</span>
+            <span className="xs muted">{t('A design employees use, for example an English version.')}</span>
           </span>
         </label>
         <label className="check">
           <input type="radio" name="purpose" checked={purpose === 'service'} onChange={() => setPurpose('service')} />
           <span>
-            <strong>Service accounts</strong>
+            <strong>{t('Service accounts')}</strong>
             <br />
-            <span className="xs muted">For shared and service mailboxes (info@, serviss@). Only admins assign it; people can’t choose it.</span>
+            <span className="xs muted">{t('For shared and service mailboxes (info@, serviss@). Only admins assign it; people can’t choose it.')}</span>
           </span>
         </label>
       </div>
       {purpose === 'person' && (
         <label className="check">
           <input type="checkbox" checked={selectable} onChange={(e) => setSelectable(e.target.checked)} />
-          <span>People can choose it themselves (My signature and the Signatures button in Outlook)</span>
+          <span>{t('People can choose it themselves (My signature and the Signatures button in Outlook)')}</span>
         </label>
       )}
-      <Field label="Start as a copy of">
+      <Field label={t('Start as a copy of')}>
         <select value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)}>
           {designs.map((d) => (
             <option key={d.id} value={d.id}>
@@ -129,10 +130,10 @@ function NewDesignModal({
       </Field>
       <div className="row end">
         <button className="btn ghost" onClick={onClose}>
-          Cancel
+          {t('Cancel')}
         </button>
         <button className="btn primary" disabled={!name.trim()} onClick={create}>
-          Create design
+          {t('Create design')}
         </button>
       </div>
     </Modal>
@@ -164,34 +165,34 @@ function DesignSettingsModal({ design, onClose, onChanged, onUseImage }: { desig
     }
   };
   return (
-    <Modal open={!!design} onClose={onClose} title={`${design.name} settings`}>
-      <Field label="Name">
+    <Modal open={!!design} onClose={onClose} title={t('{name} settings', { name: design.name })}>
+      <Field label={t('Name')}>
         <input type="text" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} />
       </Field>
       {design.purpose === 'person' ? (
         <label className="check">
           <input type="checkbox" checked={selectable} onChange={(e) => setSelectable(e.target.checked)} />
-          <span>People can choose it themselves</span>
+          <span>{t('People can choose it themselves')}</span>
         </label>
       ) : (
-        <p className="xs muted">Service design: only admins assign it, to service accounts and shared mailboxes.</p>
+        <p className="xs muted">{t('Service design: only admins assign it, to service accounts and shared mailboxes.')}</p>
       )}
       <div className="row end">
-        <button className="btn primary" onClick={() => run(() => api.put(`/api/admin/designs/${design.id}`, { name, selectable }), 'Design settings saved')}>
-          Save settings
+        <button className="btn primary" onClick={() => run(() => api.put(`/api/admin/designs/${design.id}`, { name, selectable }), t('Design settings saved'))}>
+          {t('Save settings')}
         </button>
       </div>
       <div className="callout row">
         {design.format === 'image' ? (
           <>
-            <span style={{ flex: '1 1 220px' }}>This design is one image rendered from an SVG template.</span>
-            <button className="btn sm" onClick={() => run(() => api.put(`/api/admin/designs/${design.id}`, { format: 'html' }), 'Back to the designer layouts')}>
-              Use designer layouts
+            <span style={{ flex: '1 1 220px' }}>{t('This design is one image rendered from an SVG template.')}</span>
+            <button className="btn sm" onClick={() => run(() => api.put(`/api/admin/designs/${design.id}`, { format: 'html' }), t('Back to the designer layouts'))}>
+              {t('Use designer layouts')}
             </button>
           </>
         ) : (
           <>
-            <span style={{ flex: '1 1 220px' }}>Use a single image made from an SVG file instead (e.g. a designer’s signature card).</span>
+            <span style={{ flex: '1 1 220px' }}>{t('Use a single image made from an SVG file instead (e.g. a designer’s signature card).')}</span>
             <button
               className="btn sm"
               onClick={() => {
@@ -199,27 +200,27 @@ function DesignSettingsModal({ design, onClose, onChanged, onUseImage }: { desig
                 onClose();
               }}
             >
-              Use an SVG image
+              {t('Use an SVG image')}
             </button>
           </>
         )}
       </div>
       {!design.isDefault && design.purpose === 'person' && (
         <div className="callout row">
-          <span style={{ flex: '1 1 220px' }}>Make {design.name} the company default: everyone without a choice or assignment gets it.</span>
-          <button className="btn sm" onClick={() => run(() => api.put(`/api/admin/designs/${design.id}`, { isDefault: true }), `${design.name} is now the default`)}>
-            <Star size={13} /> Make default
+          <span style={{ flex: '1 1 220px' }}>{t('Make {name} the company default: everyone without a choice or assignment gets it.', { name: design.name })}</span>
+          <button className="btn sm" onClick={() => run(() => api.put(`/api/admin/designs/${design.id}`, { isDefault: true }), t('{name} is now the default', { name: design.name }))}>
+            <Star size={13} /> {t('Make default')}
           </button>
         </div>
       )}
       {!design.isDefault && (
         <div className="stack tight">
-          <h3>Remove design</h3>
-          <p className="xs muted">People and mailboxes using it switch to their next option (usually the default). Its versions stay in the history.</p>
+          <h3>{t('Remove design')}</h3>
+          <p className="xs muted">{t('People and mailboxes using it switch to their next option (usually the default). Its versions stay in the history.')}</p>
           <div className="row" style={{ flexWrap: 'nowrap' }}>
-            <input type="text" placeholder={`Type ${design.name} to confirm`} value={confirm} onChange={(e) => setConfirm(e.target.value)} />
-            <button className="btn danger" disabled={confirm.trim() !== design.name} onClick={() => run(() => api.del(`/api/admin/designs/${design.id}`), `${design.name} removed`)}>
-              Remove
+            <input type="text" placeholder={t('Type {name} to confirm', { name: design.name })} value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+            <button className="btn danger" disabled={confirm.trim() !== design.name} onClick={() => run(() => api.del(`/api/admin/designs/${design.id}`), t('{name} removed', { name: design.name }))}>
+              {t('Remove')}
             </button>
           </div>
         </div>
@@ -231,9 +232,9 @@ function DesignSettingsModal({ design, onClose, onChanged, onUseImage }: { desig
 /** Per-design wording on top of the company's Brand and footer (e.g. English closing line and notice). */
 export type TitleLanguage = 'lv' | 'en' | 'bilingual';
 export const TITLE_LABELS: Record<TitleLanguage, string> = {
-  bilingual: 'Latvian and English',
-  lv: 'Latvian only',
-  en: 'English only',
+  bilingual: msg('Latvian and English'),
+  lv: msg('Latvian only'),
+  en: msg('English only'),
 };
 
 type BannerChoice = 'language' | 'none' | 'fixed';
@@ -287,14 +288,14 @@ export function WordingForm({
         <strong className="small">{label}</strong>
         <div className="segmented" role="group" aria-label={label}>
           <button type="button" aria-pressed={!own} onClick={() => toggle(false)}>
-            Company’s
+            {t('Company’s')}
           </button>
           <button type="button" aria-pressed={own} onClick={() => toggle(true)}>
-            This design’s own
+            {t('This design’s own')}
           </button>
         </div>
       </div>
-      {own ? input : <p className="xs muted">{companyValue ? `“${companyValue}”` : 'Empty, so it’s left out'}</p>}
+      {own ? input : <p className="xs muted">{companyValue ? t('“{text}”', { text: companyValue }) : t('Empty, so it’s left out')}</p>}
       {own && note && <p className="xs muted">{note}</p>}
     </div>
   );
@@ -302,49 +303,50 @@ export function WordingForm({
   return (
     <div className="stack loose">
       <section className="stack">
-        <h3>Job titles</h3>
+        <h3>{t('Job titles')}</h3>
         <Field
-          label="Shown in this design"
-          hint="Estonian and Lithuanian colleagues always get their own-language title with the English one, except on English-only designs."
+          label={t('Shown in this design')}
+          hint={t('Estonian and Lithuanian colleagues always get their own-language title with the English one, except on English-only designs.')}
         >
           <select value={language ?? ''} onChange={(e) => onLanguageChange((e.target.value || null) as TitleLanguage | null)}>
-            <option value="">Same as Settings{globalLanguage ? ` (${TITLE_LABELS[globalLanguage]})` : ''}</option>
+            <option value="">{globalLanguage ? t('Same as Settings ({value})', { value: t(TITLE_LABELS[globalLanguage]) }) : t('Same as Settings')}</option>
             {(Object.keys(TITLE_LABELS) as TitleLanguage[]).map((l) => (
               <option key={l} value={l}>
-                {TITLE_LABELS[l]}
-                {l === 'en' ? ' (Latvian when there’s no English title)' : ''}
+                {l === 'en' ? t('{label} (Latvian when there’s no English title)', { label: t(TITLE_LABELS[l]) }) : t(TITLE_LABELS[l])}
               </option>
             ))}
           </select>
         </Field>
         {(language ?? globalLanguage) === 'en' && (
-          <p className="xs muted">English only: everyone on this design gets the English closing line and banner from {companyName} › Languages and banners.</p>
+          <p className="xs muted">{t('English only: everyone on this design gets the English closing line and banner from {company} › Languages and banners.', { company: companyName })}</p>
         )}
       </section>
 
       <section className="stack">
-        <h3>Wording</h3>
+        <h3>{t('Wording')}</h3>
         <p className="small muted">
-          Logo, colours, websites and address come from <strong>Brand and footer</strong>, closing lines from{' '}
-          <strong>Languages and banners</strong>. Give this design its own wording only where it must differ.
+          {tx('Logo, colours, websites and address come from {brand}, closing lines from {languages}. Give this design its own wording only where it must differ.', {
+            brand: <strong>{t('Brand and footer')}</strong>,
+            languages: <strong>{t('Languages and banners')}</strong>,
+          })}
         </p>
         {row(
-          'Closing line',
+          t('Closing line'),
           value.greeting !== undefined,
           (own) => setTop('greeting', own ? companyMeta?.greeting ?? '' : undefined),
-          <input type="text" value={value.greeting ?? ''} maxLength={200} placeholder="e.g. Best regards," onChange={(e) => setTop('greeting', e.target.value)} />,
+          <input type="text" value={value.greeting ?? ''} maxLength={200} placeholder={t('e.g. Best regards,')} onChange={(e) => setTop('greeting', e.target.value)} />,
           companyMeta?.greeting ?? '',
-          'Replaces the Latvian closing line on this design. Estonian and Lithuanian colleagues keep theirs from Languages and banners. Left empty, nobody on this design gets one.',
+          t('Replaces the Latvian closing line on this design. Estonian and Lithuanian colleagues keep theirs from Languages and banners. Left empty, nobody on this design gets one.'),
         )}
         {row(
-          'Company line',
+          t('Company line'),
           footer.companyLine !== undefined,
           (own) => setFooter('companyLine', own ? companyMeta?.footer?.companyLine ?? '' : undefined),
           <input type="text" value={footer.companyLine ?? ''} maxLength={200} onChange={(e) => setFooter('companyLine', e.target.value)} />,
           companyMeta?.footer?.companyLine ?? '',
         )}
         {row(
-          'Confidentiality notice',
+          t('Confidentiality notice'),
           footer.confidential !== undefined,
           (own) => setFooter('confidential', own ? companyMeta?.footer?.confidential ?? '' : undefined),
           <textarea rows={3} style={{ fontFamily: 'var(--font)', fontSize: 'var(--t-sm)' }} value={footer.confidential ?? ''} maxLength={3000} onChange={(e) => setFooter('confidential', e.target.value)} />,
@@ -354,31 +356,28 @@ export function WordingForm({
 
       <section className="stack">
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <h3>Promo banner</h3>
+          <h3>{t('Promo banner')}</h3>
           <Segmented<BannerChoice>
-            label="Promo banner in this design"
+            label={t('Promo banner in this design')}
             value={bannerChoice}
             options={[
-              { value: 'language', label: 'Each person’s language banner' },
-              { value: 'none', label: 'No banner' },
-              ...(bannerChoice === 'fixed' ? [{ value: 'fixed' as const, label: 'One banner for everyone' }] : []),
+              { value: 'language', label: t('Each person’s language banner') },
+              { value: 'none', label: t('No banner') },
+              ...(bannerChoice === 'fixed' ? [{ value: 'fixed' as const, label: t('One banner for everyone') }] : []),
             ]}
             onChange={(v) => setTop('banner', v === 'language' ? undefined : null)}
           />
         </div>
         {bannerChoice === 'language' && (
           <p className="small muted">
-            People get the banner of their signature language, set in {companyName} › Languages and banners. New messages
-            only.
+            {t('People get the banner of their signature language, set in {company} › Languages and banners. New messages only.', { company: companyName })}
           </p>
         )}
-        {bannerChoice === 'none' && <p className="small muted">Nobody on this design gets a promo banner, whatever their language.</p>}
+        {bannerChoice === 'none' && <p className="small muted">{t('Nobody on this design gets a promo banner, whatever their language.')}</p>}
         {bannerChoice === 'fixed' && (
           <>
             <div className="callout warn">
-              This design shows this banner instead of the Latvian one. Estonian and Lithuanian colleagues still get their
-              own language’s banner where one is set. Switch to “Each person’s language banner” to manage banners only under
-              Languages and banners.
+              {t('This design shows this banner instead of the Latvian one. Estonian and Lithuanian colleagues still get their own language’s banner where one is set. Switch to “Each person’s language banner” to manage banners only under Languages and banners.')}
             </div>
             <BannerPicker company={company} assets={assets} onUploaded={onUploaded} allowNone={false} value={value.banner ?? null} onChange={(b) => setTop('banner', b)} />
           </>

@@ -1,3 +1,5 @@
+import { msg, t } from './i18n';
+
 export type ComposeType = 'newMail' | 'reply' | 'forward';
 export type TemplateKind = 'new' | 'reply' | 'meta' | 'image' | 'wording';
 
@@ -43,7 +45,8 @@ export interface Banner {
 export type PersonLanguage = 'et' | 'lt';
 /** Latvian is the company language; 'en' = designs set to English only. */
 export type SignatureLocale = 'lv' | 'en' | PersonLanguage;
-export const LOCALE_NAMES: Record<SignatureLocale, string> = { lv: 'Latvian', en: 'English', et: 'Estonian', lt: 'Lithuanian' };
+/** English names; translate where shown: t(LOCALE_NAMES[l]). */
+export const LOCALE_NAMES: Record<SignatureLocale, string> = { lv: msg('Latvian'), en: msg('English'), et: msg('Estonian'), lt: msg('Lithuanian') };
 /** Closing line used for Estonian and Lithuanian colleagues until the company sets its own. */
 export const STANDARD_GREETINGS: Record<PersonLanguage, string> = { et: 'Lugupidamisega,', lt: 'Pagarbiai,' };
 
@@ -131,21 +134,21 @@ export interface UserSummary {
 
 export type SkipReason = 'guest' | 'disabled' | 'unlicensed' | 'noMailbox' | 'mailboxOff';
 
-/** Why Microsoft 365 keeps an account out of signatures, and what would change that. */
+/** Why Microsoft 365 keeps an account out of signatures, and what would change that. English; translate where shown with t(). */
 export const SKIP_REASONS: Record<SkipReason, { label: string; fix: string }> = {
-  guest: { label: 'Guest account', fix: 'Guests from other organisations never get a signature.' },
+  guest: { label: msg('Guest account'), fix: msg('Guests from other organisations never get a signature.') },
   disabled: {
-    label: 'Sign-in blocked',
-    fix: 'Unblock sign-in for this account in the Microsoft 365 admin center. If people only send from this address, add it under Shared mailboxes instead.',
+    label: msg('Sign-in blocked'),
+    fix: msg('Unblock sign-in for this account in the Microsoft 365 admin center. If people only send from this address, add it under Shared mailboxes instead.'),
   },
-  unlicensed: { label: 'No licence', fix: 'Assign a licence that includes Exchange Online (e.g. Microsoft 365 Business Standard or Premium).' },
+  unlicensed: { label: msg('No licence'), fix: msg('Assign a licence that includes Exchange Online (e.g. Microsoft 365 Business Standard or Premium).') },
   noMailbox: {
-    label: 'No mailbox in its licences',
-    fix: 'Its licences (Power BI, Teams Exploratory, Fabric…) don’t include Exchange Online. Assign one that does.',
+    label: msg('No mailbox in its licences'),
+    fix: msg('Its licences (Power BI, Teams Exploratory, Fabric…) don’t include Exchange Online. Assign one that does.'),
   },
   mailboxOff: {
-    label: 'Exchange Online off',
-    fix: 'Its licence includes Exchange Online, but the plan isn’t active: tick Exchange Online under Licences and apps, or check the subscription hasn’t expired.',
+    label: msg('Exchange Online off'),
+    fix: msg('Its licence includes Exchange Online, but the plan isn’t active: tick Exchange Online under Licences and apps, or check the subscription hasn’t expired.'),
   },
 };
 
@@ -252,20 +255,26 @@ export interface LocalAccount {
   lastLoginAt: string | null;
 }
 
+/** English field names; translate where shown: t(FIELD_LABELS[f]). */
 export const FIELD_LABELS: Record<string, string> = {
-  displayName: 'Name',
-  jobTitleLv: 'Job title (LV)',
-  jobTitleEn: 'Job title (EN)',
-  mobilePhone: 'Mobile',
-  officePhone: 'Office phone',
-  email: 'Email',
-  department: 'Department',
-  company: 'Company',
-  hideMobile: 'Hide mobile',
-  address: 'Address',
-  language: 'Signature language',
+  displayName: msg('Name'),
+  jobTitleLv: msg('Job title (LV)'),
+  jobTitleEn: msg('Job title (EN)'),
+  mobilePhone: msg('Mobile'),
+  officePhone: msg('Office phone'),
+  email: msg('Email'),
+  department: msg('Department'),
+  company: msg('Company'),
+  hideMobile: msg('Hide mobile'),
+  address: msg('Address'),
+  language: msg('Signature language'),
 };
 
-/** Label of the own-language job title field (jobTitleLv) for a person's signature language. */
-export const ownTitleLabel = (language: PersonLanguage | null | undefined) =>
-  `Job title (${language ? LOCALE_NAMES[language] : 'Latvian'})`;
+const OWN_TITLE: Record<'lv' | PersonLanguage, string> = {
+  lv: msg('Job title (Latvian)'),
+  et: msg('Job title (Estonian)'),
+  lt: msg('Job title (Lithuanian)'),
+};
+
+/** Label of the own-language job title field (jobTitleLv) for a person's signature language, translated. */
+export const ownTitleLabel = (language: PersonLanguage | null | undefined) => t(OWN_TITLE[language ?? 'lv']);

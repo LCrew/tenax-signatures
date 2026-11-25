@@ -1,3 +1,5 @@
+import { t } from './i18n';
+
 /** Promo banners are shown at most 600px wide; stored at twice that so they stay sharp on high-resolution screens. */
 export const BANNER_MAX_SHOWN = 600;
 export const BANNER_MAX_STORED = 1200;
@@ -23,7 +25,7 @@ export function resizeBanner<B extends { width: number; height: number }>(banner
  */
 export async function prepareBanner(file: File): Promise<File> {
   if (file.type === 'image/gif' || /\.gif$/i.test(file.name)) {
-    if (file.size > BANNER_MAX_BYTES) throw new Error(`This GIF is ${MB(file.size)}. GIF banners can’t be made smaller here: keep them under 1 MB.`);
+    if (file.size > BANNER_MAX_BYTES) throw new Error(t('This GIF is {size}. GIF banners can’t be made smaller here: keep them under 1 MB.', { size: MB(file.size) }));
     return file;
   }
   const img = await load(file);
@@ -51,7 +53,7 @@ export async function prepareBanner(file: File): Promise<File> {
     const jpg = await encode(canvas, 'image/jpeg', quality);
     if (jpg.size <= BANNER_MAX_BYTES) return new File([jpg], `${stem}.jpg`, { type: 'image/jpeg' });
   }
-  throw new Error('This banner is still over 1 MB after compressing. Export it smaller and try again.');
+  throw new Error(t('This banner is still over 1 MB after compressing. Export it smaller and try again.'));
 }
 
 function load(file: File): Promise<HTMLImageElement> {
@@ -64,12 +66,12 @@ function load(file: File): Promise<HTMLImageElement> {
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('This image can’t be read. Upload a PNG, JPEG or GIF.'));
+      reject(new Error(t('This image can’t be read. Upload a PNG, JPEG or GIF.')));
     };
     img.src = url;
   });
 }
 
 function encode(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> {
-  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('The banner couldn’t be compressed'))), type, quality));
+  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error(t('The banner couldn’t be compressed')))), type, quality));
 }

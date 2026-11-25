@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { LangSwitch } from '../components/LangSwitch';
 import { Check, Terminal } from 'lucide-react';
 import { ApiError, api } from '../lib/api';
 import { useApp, useAsync, useToast } from '../lib/hooks';
@@ -10,16 +11,17 @@ import { CompanyGroupsEditor } from '../components/CompanyGroupsEditor';
 import { AddinSteps } from '../components/AddinSteps';
 import { LetterPreview } from '../components/LetterPreview';
 import { passwordProblem } from '../lib/password';
+import { msg, t, tx } from '../lib/i18n';
 
 const STEPS = [
-  'Unlock setup',
-  'Create your admin account',
-  'Server address',
-  'Connect Entra ID',
-  'Companies and groups',
-  'Signature options',
-  'Check a signature',
-  'Roll out the Outlook add-in',
+  msg('Unlock setup'),
+  msg('Create your admin account'),
+  msg('Server address'),
+  msg('Connect Entra ID'),
+  msg('Companies and groups'),
+  msg('Signature options'),
+  msg('Check a signature'),
+  msg('Roll out the Outlook add-in'),
 ];
 
 export function Setup() {
@@ -53,13 +55,13 @@ export function Setup() {
       null,
       null,
       <AddressStep key="a" settings={s} next={async () => { await reload(); await go(3); }} />,
-      <StepFrame key="d" title="Connect Entra ID" lead="The service reads names, titles and phone numbers from Entra ID. It never writes to it. You can start with demo data and connect the tenant later in Settings.">
+      <StepFrame key="d" title={t('Connect Entra ID')} lead={t('The service reads names, titles and phone numbers from Entra ID. It never writes to it. You can start with demo data and connect the tenant later in Settings.')}>
         <DirectoryForm settings={s} onSaved={async (_n, out) => { setScript(out); await reload(); await go(4); }} />
-        <Nav back={() => go(2)} skip={() => go(4)} skipLabel="Skip for now" />
+        <Nav back={() => go(2)} skip={() => go(4)} skipLabel={t('Skip for now')} />
       </StepFrame>,
-      <StepFrame key="c" title="Companies and groups" lead="Each person gets their company's signature based on the security group they're in. Rename companies, point them at the right groups, and set the order that settles overlaps.">
-        {script?.groups && <div className="callout ok">Group IDs from the setup script are filled in. Check them, then save.</div>}
-        <CompaniesLoader>{(companies) => <CompanyGroupsEditor companies={companies} settings={s} prefill={script?.groups} saveLabel="Save and continue" onSaved={async () => { await reload(); await go(5); }} />}</CompaniesLoader>
+      <StepFrame key="c" title={t('Companies and groups')} lead={t("Each person gets their company's signature based on the security group they're in. Rename companies, point them at the right groups, and set the order that settles overlaps.")}>
+        {script?.groups && <div className="callout ok">{t('Group IDs from the setup script are filled in. Check them, then save.')}</div>}
+        <CompaniesLoader>{(companies) => <CompanyGroupsEditor companies={companies} settings={s} prefill={script?.groups} saveLabel={t('Save and continue')} onSaved={async () => { await reload(); await go(5); }} />}</CompaniesLoader>
         <Nav back={() => go(3)} />
       </StepFrame>,
       <OptionsStep key="o" settings={s} back={() => go(4)} next={async () => { await reload(); await go(6); }} />,
@@ -74,8 +76,8 @@ export function Setup() {
         <div className="brand">
           <Mark />
           <div>
-            Signatures
-            <small>First-time setup</small>
+            {t('Signatures')}
+            <small>{t('First-time setup')}</small>
           </div>
         </div>
         <ol className="steps">
@@ -85,7 +87,7 @@ export function Setup() {
             const inner = (
               <>
                 <span className="dot">{i < step ? <Check size={14} /> : i + 1}</span>
-                <span className="label" style={{ paddingTop: 4 }}>{label}</span>
+                <span className="label" style={{ paddingTop: 4 }}>{t(label)}</span>
               </>
             );
             return (
@@ -101,8 +103,9 @@ export function Setup() {
             );
           })}
         </ol>
+        <LangSwitch />
         <p className="xs muted" style={{ marginTop: 'auto' }}>
-          Everything here can be changed later in Settings. Your progress is saved as you go.
+          {t('Everything here can be changed later in Settings. Your progress is saved as you go.')}
         </p>
       </aside>
       <main className="setup-main">{body}</main>
@@ -127,12 +130,12 @@ function StepFrame({ title, lead, children }: { title: string; lead: ReactNode; 
   );
 }
 
-function Nav({ back, next, nextLabel = 'Continue', skip, skipLabel, busy }: { back?: () => void; next?: () => void; nextLabel?: string; skip?: () => void; skipLabel?: string; busy?: boolean }) {
+function Nav({ back, next, nextLabel, skip, skipLabel, busy }: { back?: () => void; next?: () => void; nextLabel?: string; skip?: () => void; skipLabel?: string; busy?: boolean }) {
   return (
     <div className="setup-foot">
       {back ? (
         <button type="button" className="btn ghost" onClick={back}>
-          Back
+          {t('Back')}
         </button>
       ) : (
         <span />
@@ -145,7 +148,7 @@ function Nav({ back, next, nextLabel = 'Continue', skip, skipLabel, busy }: { ba
         )}
         {next && (
           <button type="button" className="btn primary" onClick={next} disabled={busy}>
-            {nextLabel}
+            {nextLabel ?? t('Continue')}
           </button>
         )}
       </div>
@@ -171,27 +174,26 @@ function UnlockStep({ code, setCode, next }: { code: string; setCode: (c: string
     }
   }
   return (
-    <StepFrame title="Welcome" lead="This console sets up company email signatures for everyone at Tenax Grupa. First, prove you have access to the server: it printed a one-time setup code when it started.">
+    <StepFrame title={t('Welcome')} lead={t('This console sets up company email signatures for everyone at Tenax Grupa. First, prove you have access to the server: it printed a one-time setup code when it started.')}>
       <ol className="instructions">
         <li>
           <div className="stack tight" style={{ width: '100%' }}>
-            <span>On the Docker host, show the container log:</span>
+            <span>{t('On the Docker host, show the container log:')}</span>
             <CodeBlock>docker compose logs signature | grep "Setup code"</CodeBlock>
           </div>
         </li>
         <li>
           <span>
-            Copy the code from the box that says <em>First launch</em>. It works once, and only until the first admin account
-            exists.
+            {tx('Copy the code from the box that says {box}. It works once, and only until the first admin account exists.', { box: <em>First launch</em> })}
           </span>
         </li>
       </ol>
       <form onSubmit={submit} className="stack" style={{ maxWidth: 380 }}>
-        <Field label="Setup code" error={error}>
+        <Field label={t('Setup code')} error={error}>
           <input type="text" className="setup-code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" autoFocus autoComplete="one-time-code" spellCheck={false} aria-invalid={!!error} />
         </Field>
         <button className="btn primary lg" disabled={busy || code.trim().length < 4}>
-          <Terminal size={16} /> {busy ? 'Checking…' : 'Unlock setup'}
+          <Terminal size={16} /> {busy ? t('Checking…') : t('Unlock setup')}
         </button>
       </form>
     </StepFrame>
@@ -207,7 +209,7 @@ function AdminStep({ code, back }: { code: string; back: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const problem = password ? passwordProblem(password) : null;
-  const mismatch = confirm && confirm !== password ? "The passwords don't match" : null;
+  const mismatch = confirm && confirm !== password ? t("The passwords don't match") : null;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -223,20 +225,20 @@ function AdminStep({ code, back }: { code: string; back: () => void }) {
     }
   }
   return (
-    <StepFrame title="Create your admin account" lead="This local account always works, even if Microsoft sign-in is misconfigured. Keep it as a break-glass login and store the password in your password manager.">
+    <StepFrame title={t('Create your admin account')} lead={t('This local account always works, even if Microsoft sign-in is misconfigured. Keep it as a break-glass login and store the password in your password manager.')}>
       <form onSubmit={submit} className="stack" style={{ maxWidth: 420 }}>
-        <Field label="Username">
+        <Field label={t('Username')}>
           <input type="text" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required minLength={3} />
         </Field>
-        <Field label="Password" hint="At least 12 characters, mixing letters with numbers or symbols" error={problem}>
+        <Field label={t('Password')} hint={t('At least 12 characters, mixing letters with numbers or symbols')} error={problem}>
           <input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required aria-invalid={!!problem} />
         </Field>
-        <Field label="Repeat password" error={mismatch}>
+        <Field label={t('Repeat password')} error={mismatch}>
           <input type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required aria-invalid={!!mismatch} />
         </Field>
         {error && <div className="callout danger" role="alert">{error}</div>}
         <button className="btn primary lg" disabled={busy || !!problem || !!mismatch || !password || !confirm}>
-          {busy ? 'Creating…' : 'Create account and continue'}
+          {busy ? t('Creating…') : t('Create account and continue')}
         </button>
       </form>
       <Nav back={back} />
@@ -250,7 +252,7 @@ function AddressStep({ settings, next }: { settings: Settings; next: () => Promi
   const [url, setUrl] = useState(settings.publicUrl);
   const [busy, setBusy] = useState(false);
   const here = window.location.origin;
-  const invalid = !/^https:\/\/[^/]+$/.test(url.replace(/\/+$/, '')) ? 'Use https:// and a host name only, e.g. https://sig.tenax.lv' : null;
+  const invalid = !/^https:\/\/[^/]+$/.test(url.replace(/\/+$/, '')) ? t('Use https:// and a host name only, e.g. https://sig.tenax.lv') : null;
 
   async function save() {
     setBusy(true);
@@ -264,33 +266,32 @@ function AddressStep({ settings, next }: { settings: Settings; next: () => Promi
     }
   }
   return (
-    <StepFrame title="Server address" lead="Outlook downloads the add-in and logo images from this address, so it must be reachable over HTTPS by everyone who sends email.">
+    <StepFrame title={t('Server address')} lead={t('Outlook downloads the add-in and logo images from this address, so it must be reachable over HTTPS by everyone who sends email.')}>
       <div className="stack" style={{ maxWidth: 520 }}>
-        <Field label="Public address" error={invalid}>
+        <Field label={t('Public address')} error={invalid}>
           <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} aria-invalid={!!invalid} />
         </Field>
         {here !== url.replace(/\/+$/, '') && (
           <div className="callout">
-            You're using this console at <code>{here}</code>. That's fine for setup. Point DNS for the public address at this
-            server and terminate TLS in front of it (reverse proxy or load balancer) before the pilot.
+            {tx("You're using this console at {here}. That's fine for setup. Point DNS for the public address at this server and terminate TLS in front of it (reverse proxy or load balancer) before the pilot.", { here: <code>{here}</code> })}
           </div>
         )}
       </div>
-      <Nav next={save} busy={busy || !!invalid} nextLabel="Save and continue" />
+      <Nav next={save} busy={busy || !!invalid} nextLabel={t('Save and continue')} />
     </StepFrame>
   );
 }
 
 // ───────── Step 6 ─────────
 const SELF_FIELDS: { key: string; label: string }[] = [
-  { key: 'jobTitleEn', label: 'English job title' },
-  { key: 'hideMobile', label: 'Hide mobile number' },
-  { key: 'mobilePhone', label: 'Mobile number' },
-  { key: 'jobTitleLv', label: 'Latvian job title' },
-  { key: 'address', label: 'Address line (e.g. another office)' },
+  { key: 'jobTitleEn', label: msg('English job title') },
+  { key: 'hideMobile', label: msg('Hide mobile number') },
+  { key: 'mobilePhone', label: msg('Mobile number') },
+  { key: 'jobTitleLv', label: msg('Latvian job title') },
+  { key: 'address', label: msg('Address line (e.g. another office)') },
 ];
 
-export function SignatureOptions({ settings, onSaved, saveLabel = 'Save options' }: { settings: Settings; onSaved: () => void; saveLabel?: string }) {
+export function SignatureOptions({ settings, onSaved, saveLabel }: { settings: Settings; onSaved: () => void; saveLabel?: string }) {
   const toast = useToast();
   const [language, setLanguage] = useState(settings.language);
   const [enabled, setEnabled] = useState(settings.selfServiceEnabled);
@@ -300,7 +301,7 @@ export function SignatureOptions({ settings, onSaved, saveLabel = 'Save options'
     setBusy(true);
     try {
       await api.put('/api/admin/settings', { language, selfServiceEnabled: enabled, selfServiceFields: fields });
-      toast('Signature options saved');
+      toast(t('Signature options saved'));
       onSaved();
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -311,12 +312,12 @@ export function SignatureOptions({ settings, onSaved, saveLabel = 'Save options'
   return (
     <div className="stack loose">
       <section className="stack">
-        <h3>Job title language</h3>
+        <h3>{t('Job title language')}</h3>
         {(
           [
-            ['bilingual', 'Latvian and English', 'Both titles, English on its own line when set'],
-            ['lv', 'Latvian only', 'English titles are ignored'],
-            ['en', 'English only', 'Falls back to the Latvian title when no English one is set'],
+            ['bilingual', t('Latvian and English'), t('Both titles, English on its own line when set')],
+            ['lv', t('Latvian only'), t('English titles are ignored')],
+            ['en', t('English only'), t('Falls back to the Latvian title when no English one is set')],
           ] as const
         ).map(([v, label, hint]) => (
           <label key={v} className="check">
@@ -330,13 +331,13 @@ export function SignatureOptions({ settings, onSaved, saveLabel = 'Save options'
         ))}
       </section>
       <section className="stack">
-        <h3>Self-service</h3>
+        <h3>{t('Self-service')}</h3>
         <label className="check">
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
           <span>
-            <strong>Let people edit parts of their own signature</strong>
+            <strong>{t('Let people edit parts of their own signature')}</strong>
             <br />
-            <span className="muted xs">People sign in with Microsoft at this address and edit the fields you tick on their My signature page. Everyone can always view their own signature.</span>
+            <span className="muted xs">{t('People sign in with Microsoft at this address and edit the fields you tick on their My signature page. Everyone can always view their own signature.')}</span>
           </span>
         </label>
         {enabled && (
@@ -344,7 +345,7 @@ export function SignatureOptions({ settings, onSaved, saveLabel = 'Save options'
             {SELF_FIELDS.map((f) => (
               <label key={f.key} className="check">
                 <input type="checkbox" checked={fields.includes(f.key)} onChange={(e) => setFields(e.target.checked ? [...fields, f.key] : fields.filter((x) => x !== f.key))} />
-                {f.label}
+                {t(f.label)}
               </label>
             ))}
           </div>
@@ -352,7 +353,7 @@ export function SignatureOptions({ settings, onSaved, saveLabel = 'Save options'
       </section>
       <div className="row">
         <button type="button" className="btn primary" onClick={save} disabled={busy}>
-          {busy ? 'Saving…' : saveLabel}
+          {busy ? t('Saving…') : saveLabel ?? t('Save options')}
         </button>
       </div>
     </div>
@@ -361,8 +362,8 @@ export function SignatureOptions({ settings, onSaved, saveLabel = 'Save options'
 
 function OptionsStep({ settings, back, next }: { settings: Settings; back: () => void; next: () => void }) {
   return (
-    <StepFrame title="Signature options" lead="Choose the job title language and whether people can adjust their own signature.">
-      <SignatureOptions settings={settings} onSaved={next} saveLabel="Save and continue" />
+    <StepFrame title={t('Signature options')} lead={t('Choose the job title language and whether people can adjust their own signature.')}>
+      <SignatureOptions settings={settings} onSaved={next} saveLabel={t('Save and continue')} />
       <Nav back={back} />
     </StepFrame>
   );
@@ -378,23 +379,23 @@ function PreviewStep({ back, next }: { back: () => void; next: () => void }) {
   const person = users.data?.find((u) => u.upn === selected);
 
   return (
-    <StepFrame title="Check a signature" lead="Pick a few people and look at their signature. You can change the designs in the Designs page after setup.">
+    <StepFrame title={t('Check a signature')} lead={t('Pick a few people and look at their signature. You can change the designs in the Designs page after setup.')}>
       {users.error ? (
         <div className="callout danger">
-          Couldn't load people: {users.error.message}. Go back and test the directory connection.
+          {t("Couldn't load people: {error}. Go back and test the directory connection.", { error: users.error.message })}
         </div>
       ) : !users.data ? (
-        <Loading what="Loading people" />
+        <Loading what={t('Loading people')} />
       ) : users.data.length === 0 ? (
-        <div className="callout warn">The directory returned no licensed users. Check the Graph permissions from the Entra step.</div>
+        <div className="callout warn">{t('The directory returned no licensed users. Check the Graph permissions from the Entra step.')}</div>
       ) : (
         <div className="stack">
-          <Field label="Person">
+          <Field label={t('Person')}>
             <select value={selected} onChange={(e) => setUpn(e.target.value)}>
               {users.data.map((u) => (
                 <option key={u.upn} value={u.upn}>
                   {u.displayName ?? u.upn} · {u.companyName}
-                  {u.missing.length ? ` (missing ${u.missing.length})` : ''}
+                  {u.missing.length ? ' ' + t('(missing {n})', { n: u.missing.length }) : ''}
                 </option>
               ))}
             </select>
@@ -423,15 +424,14 @@ function FinishStep({ settings, back }: { settings: Settings; back: () => void }
     }
   }
   return (
-    <StepFrame title="Roll out the Outlook add-in" lead="The add-in inserts the signature automatically in new Outlook, classic Outlook, Outlook on the web, Mac and mobile. Start with the pilot group.">
+    <StepFrame title={t('Roll out the Outlook add-in')} lead={t('The add-in inserts the signature automatically in new Outlook, classic Outlook, Outlook on the web, Mac and mobile. Start with the pilot group.')}>
       {settings.directoryMode === 'mock' && (
         <div className="callout warn">
-          You're still on demo data. The add-in needs the Entra connection to identify real people, so connect it in
-          Settings before uploading the manifest.
+          {t("You're still on demo data. The add-in needs the Entra connection to identify real people, so connect it in Settings before uploading the manifest.")}
         </div>
       )}
       <AddinSteps settings={settings} />
-      <Nav back={back} next={finish} busy={busy} nextLabel="Finish setup" />
+      <Nav back={back} next={finish} busy={busy} nextLabel={t('Finish setup')} />
     </StepFrame>
   );
 }

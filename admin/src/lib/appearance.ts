@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { msg } from './i18n';
 
 /*
   Theme and surface for the console.
@@ -15,12 +16,12 @@ export type Surface = 'glass' | 'solid';
 export type Appearance = { theme: ThemePref; surface: Surface };
 
 export const THEMES: { value: ThemePref; label: string; note?: string }[] = [
-  { value: 'system', label: 'Match system', note: 'Light or dark, as your device is set' },
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-  { value: 'blue', label: 'Blue' },
-  { value: 'green', label: 'Green' },
-  { value: 'neon', label: 'Neon' },
+  { value: 'system', label: msg('Match system'), note: msg('Light or dark, as your device is set') },
+  { value: 'light', label: msg('Light') },
+  { value: 'dark', label: msg('Dark') },
+  { value: 'blue', label: msg('Blue') },
+  { value: 'green', label: msg('Green') },
+  { value: 'neon', label: msg('Neon') },
 ];
 
 /** Page colour per theme, also used for the browser's theme-color. */

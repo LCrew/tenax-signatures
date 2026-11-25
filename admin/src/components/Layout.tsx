@@ -1,11 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode, type RefObject } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Activity, Building2, ChevronRight, Ellipsis, Gauge, Inbox, LogOut, Palette, PenLine, Settings, UserRound, Users } from 'lucide-react';
+import { Activity, Building2, ChevronRight, Ellipsis, Gauge, Inbox, Languages, LogOut, Palette, PenLine, Settings, UserRound, Users } from 'lucide-react';
 import { api, setMockUser } from '../lib/api';
 import { entraAccount, signOutMicrosoft } from '../lib/auth';
 import { useApp, useCompanies } from '../lib/hooks';
 import { withViewTransition } from '../lib/appearance';
+import { t } from '../lib/i18n';
 import { AppearanceSheet } from './Appearance';
+import { LangSwitch } from './LangSwitch';
 import { Modal } from './ui';
 
 export function Mark({ size = 28 }: { size?: number }) {
@@ -50,17 +52,17 @@ export function Layout() {
   useEffect(() => setMore(false), [loc.pathname]);
 
   const main: Item[] = [
-    { to: '/', label: 'Overview', icon: <Gauge size={18} />, end: true },
-    { to: '/people', label: 'People', icon: <Users size={18} /> },
-    { to: '/designs', label: 'Designs', icon: <PenLine size={18} /> },
+    { to: '/', label: t('Overview'), icon: <Gauge size={18} />, end: true },
+    { to: '/people', label: t('People'), icon: <Users size={18} /> },
+    { to: '/designs', label: t('Designs'), icon: <PenLine size={18} /> },
   ];
-  const mine: Item[] = session?.kind !== 'local' ? [{ to: '/my-signature', label: 'My signature', icon: <UserRound size={18} /> }] : [];
+  const mine: Item[] = session?.kind !== 'local' ? [{ to: '/my-signature', label: t('My signature'), icon: <UserRound size={18} /> }] : [];
   const setup: Item[] = session?.isAdmin
     ? [
-        { to: '/companies', label: 'Companies & groups', icon: <Building2 size={18} /> },
-        { to: '/mailboxes', label: 'Shared mailboxes', icon: <Inbox size={18} /> },
-        { to: '/settings', label: 'Settings', icon: <Settings size={18} /> },
-        { to: '/activity', label: 'Activity', icon: <Activity size={18} /> },
+        { to: '/companies', label: t('Companies & groups'), icon: <Building2 size={18} /> },
+        { to: '/mailboxes', label: t('Shared mailboxes'), icon: <Inbox size={18} /> },
+        { to: '/settings', label: t('Settings'), icon: <Settings size={18} /> },
+        { to: '/activity', label: t('Activity'), icon: <Activity size={18} /> },
       ]
     : [];
 
@@ -98,10 +100,10 @@ export function Layout() {
 
   const tags = (
     <>
-      {config.directoryMode === 'mock' && <span className="tag warn">Demo directory</span>}
+      {config.directoryMode === 'mock' && <span className="tag warn">{t('Demo directory')}</span>}
       {!session?.isAdmin && (session?.editorOf?.length ?? 0) > 0 && (
-        <span className="tag action" title="You can edit these companies' designs and their people's signature details">
-          Editor: {session!.editorOf!.map(nameOf).join(', ')}
+        <span className="tag action" title={t("You can edit these companies' designs and their people's signature details")}>
+          {t('Editor: {companies}', { companies: session!.editorOf!.map(nameOf).join(', ') })}
         </span>
       )}
     </>
@@ -113,18 +115,18 @@ export function Layout() {
       </span>
       <div className="account__text">
         <strong>{session?.name}</strong>
-        <span className="xs muted">{session?.kind === 'local' ? 'Local account' : session?.upn}</span>
+        <span className="xs muted">{session?.kind === 'local' ? t('Local account') : session?.upn}</span>
       </div>
     </div>
   );
 
   return (
     <div className="shell">
-      <aside className="sidebar" aria-label="Main navigation">
+      <aside className="sidebar" aria-label={t('Main navigation')}>
         <div className="brand">
           <Mark size={32} />
           <div>
-            Signatures
+            {t('Signatures')}
             <small>Tenax Grupa</small>
           </div>
         </div>
@@ -136,7 +138,7 @@ export function Layout() {
           ))}
           {setup.length > 0 && (
             <>
-              <div className="nav-group-label">Setup</div>
+              <div className="nav-group-label">{t('Setup')}</div>
               {setup.map((i) => (
                 <NavLink key={i.to} to={i.to} onClick={(e) => go(e, i.to)}>
                   {i.icon} {i.label}
@@ -148,12 +150,15 @@ export function Layout() {
         <div className="sidebar-foot">
           <div className="tags">{tags}</div>
           {account}
-          <div className="row" style={{ gap: 4 }}>
+          <div className="row" style={{ gap: 4, flexWrap: 'nowrap', justifyContent: 'space-between' }}>
             <button className="btn ghost sm" onClick={() => setAppearance(true)}>
-              <Palette size={15} /> Appearance
+              <Palette size={15} /> {t('Appearance')}
             </button>
+            <LangSwitch />
+          </div>
+          <div className="row" style={{ gap: 4 }}>
             <button className="btn ghost sm" onClick={signOut}>
-              <LogOut size={15} /> Sign out
+              <LogOut size={15} /> {t('Sign out')}
             </button>
           </div>
         </div>
@@ -168,7 +173,7 @@ export function Layout() {
         </main>
       </div>
 
-      <nav className="bnav" aria-label="Main navigation">
+      <nav className="bnav" aria-label={t('Main navigation')}>
         <span className="bnav__pill" style={{ transform: `translateX(${tab * 100}%)` }} aria-hidden />
         {main.map((i) => (
           <NavLink key={i.to} to={i.to} end={i.end} onClick={(e) => go(e, i.to)}>
@@ -178,11 +183,11 @@ export function Layout() {
         ))}
         <button type="button" className={tab === 3 ? 'active' : undefined} aria-haspopup="dialog" onClick={() => setMore(true)}>
           <Ellipsis size={18} />
-          <span>More</span>
+          <span>{t('More')}</span>
         </button>
       </nav>
 
-      <Modal open={more} onClose={() => setMore(false)} title="More" variant="sheet" size="auto">
+      <Modal open={more} onClose={() => setMore(false)} title={t('More')} variant="sheet" size="auto">
         {mine.length > 0 && (
           <div className="options">
             {mine.map((i) => (
@@ -196,7 +201,7 @@ export function Layout() {
         )}
         {setup.length > 0 && (
           <section className="stack tight">
-            <h3 className="section-label">Setup</h3>
+            <h3 className="section-label">{t('Setup')}</h3>
             <div className="options">
               {setup.map((i) => (
                 <NavLink key={i.to} to={i.to} className="option">
@@ -221,12 +226,17 @@ export function Layout() {
               }}
             >
               <Palette size={18} />
-              <span className="option__text">Appearance</span>
+              <span className="option__text">{t('Appearance')}</span>
               <ChevronRight className="option__chev" size={18} aria-hidden />
             </button>
+            <div className="option">
+              <Languages size={18} />
+              <span className="option__text">{t('Language')}</span>
+              <LangSwitch />
+            </div>
             <button type="button" className="option danger" onClick={signOut}>
               <LogOut size={18} />
-              <span className="option__text">Sign out</span>
+              <span className="option__text">{t('Sign out')}</span>
             </button>
           </div>
         </section>

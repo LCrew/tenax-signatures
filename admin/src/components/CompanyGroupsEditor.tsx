@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../lib/hooks';
+import { t } from '../lib/i18n';
 import type { Company, Settings } from '../lib/types';
 import { Field, Modal } from './ui';
 import { GroupPicker } from './GroupPicker';
@@ -17,7 +18,7 @@ export function CompanyGroupsEditor({
   settings,
   prefill,
   onSaved,
-  saveLabel = 'Save companies and groups',
+  saveLabel,
 }: {
   companies: Company[];
   settings: Settings;
@@ -38,7 +39,7 @@ export function CompanyGroupsEditor({
   async function remove(c: Draft) {
     try {
       await api.del(`/api/admin/companies/${c.key}`);
-      toast(`${c.displayName} removed. Its people now get the default company’s signature until they’re in another company group.`);
+      toast(t('{company} removed. Its people now get the default company’s signature until they’re in another company group.', { company: c.displayName }));
       setRemoving(null);
       setConfirmText('');
       onSaved();
@@ -93,7 +94,7 @@ export function CompanyGroupsEditor({
         excludeGroupName: exclude.name,
         excludeGroupId: exclude.id,
       });
-      toast('Companies and groups saved');
+      toast(t('Companies and groups saved'));
       onSaved();
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -109,12 +110,12 @@ export function CompanyGroupsEditor({
           <div key={c.key} className="panel">
             <div className="panel-head">
               <strong>{c.displayName || c.key}</strong>
-              <span className="tag">Priority {i + 1}</span>
+              <span className="tag">{t('Priority {n}', { n: i + 1 })}</span>
               <span className="spacer" />
-              <button type="button" className="btn ghost sm" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move ${c.displayName} up`}>
+              <button type="button" className="btn ghost sm" onClick={() => move(i, -1)} disabled={i === 0} aria-label={t('Move {name} up', { name: c.displayName })}>
                 <ArrowUp size={14} />
               </button>
-              <button type="button" className="btn ghost sm" onClick={() => move(i, 1)} disabled={i === rows.length - 1} aria-label={`Move ${c.displayName} down`}>
+              <button type="button" className="btn ghost sm" onClick={() => move(i, 1)} disabled={i === rows.length - 1} aria-label={t('Move {name} down', { name: c.displayName })}>
                 <ArrowDown size={14} />
               </button>
               <button
@@ -122,45 +123,47 @@ export function CompanyGroupsEditor({
                 className="btn ghost sm danger"
                 onClick={() => setRemoving(c)}
                 disabled={c.key === defaultCompany}
-                title={c.key === defaultCompany ? 'This is the default company. Choose another default below first.' : `Remove ${c.displayName}`}
-                aria-label={`Remove ${c.displayName}`}
+                title={c.key === defaultCompany ? t('This is the default company. Choose another default below first.') : t('Remove {name}', { name: c.displayName })}
+                aria-label={t('Remove {name}', { name: c.displayName })}
               >
                 <Trash2 size={14} />
               </button>
             </div>
             <div className="panel-body stack">
               <div className="grid-2">
-                <Field label="Short name" hint="Shown in signatures and in this console">
+                <Field label={t('Short name')} hint={t('Shown in signatures and in this console')}>
                   <input type="text" value={c.displayName} onChange={(e) => update(c.key, { displayName: e.target.value })} />
                 </Field>
-                <Field label="Legal name" hint='Used in the footer, e.g. SIA "Tenax"'>
+                <Field label={t('Legal name')} hint={t('Used in the footer, e.g. SIA "Tenax"')}>
                   <input type="text" value={c.legalName} onChange={(e) => update(c.key, { legalName: e.target.value })} />
                 </Field>
               </div>
-              <GroupPicker label="Security" name={c.groupName} id={c.groupId} onChange={(g) => update(c.key, { groupName: g.name, groupId: g.id })} />
-              <p className="xs muted">Members get {c.displayName || 'this company'}’s signature.</p>
+              <GroupPicker label={t('Security group name')} name={c.groupName} id={c.groupId} onChange={(g) => update(c.key, { groupName: g.name, groupId: g.id })} />
+              <p className="xs muted">
+                {c.displayName ? t('Members get {company}’s signature.', { company: c.displayName }) : t('Members get this company’s signature.')}
+              </p>
               <GroupPicker
-                label="Signature editors"
+                label={t('Signature editors group name')}
                 name={c.editorGroupName ?? ''}
                 id={c.editorGroupId ?? ''}
                 onChange={(g) => update(c.key, { editorGroupName: g.name, editorGroupId: g.id })}
               />
               <p className="xs muted">
-                Members can edit {c.displayName || 'this company'}’s design, brand details and its people’s signature details, and nothing
-                else: no other companies, no settings. Leave the ID empty if nobody outside IT should edit it.
+                {c.displayName
+                  ? t('Members can edit {company}’s design, brand details and its people’s signature details, and nothing else: no other companies, no settings. Leave the ID empty if nobody outside IT should edit it.', { company: c.displayName })
+                  : t('Members can edit this company’s design, brand details and its people’s signature details, and nothing else: no other companies, no settings. Leave the ID empty if nobody outside IT should edit it.')}
               </p>
             </div>
           </div>
         ))}
         <p className="xs muted">
-          When someone is in more than one company group, the company higher in this list wins, and they're flagged on the
-          Overview page so you can fix their membership.
+          {t("When someone is in more than one company group, the company higher in this list wins, and they're flagged on the Overview page so you can fix their membership.")}
         </p>
       </section>
 
       <section className="stack">
-        <h3>People in no company group</h3>
-        <Field label="Use this company's signature" hint="They're also listed on the Overview page so you can add them to the right group.">
+        <h3>{t('People in no company group')}</h3>
+        <Field label={t("Use this company's signature")} hint={t("They're also listed on the Overview page so you can add them to the right group.")}>
           <select value={defaultCompany} onChange={(e) => setDefaultCompany(e.target.value)}>
             {rows.map((c) => (
               <option key={c.key} value={c.key}>
@@ -172,38 +175,36 @@ export function CompanyGroupsEditor({
       </section>
 
       <section className="stack">
-        <h3>Access groups</h3>
-        <GroupPicker label="IT administrators" name={admins.name} id={admins.id} onChange={(g) => setAdmins(g)} />
-        <p className="xs muted">Full access to everything: all companies, groups, settings and accounts. Keep this to your IT team.</p>
-        <GroupPicker label="Pilot" name={pilot.name} id={pilot.id} onChange={(g) => setPilot(g)} />
-        <p className="xs muted">Assign the Outlook add-in to this group first. Everyone else keeps their current signature until you roll out.</p>
-        <GroupPicker label="Excluded accounts" name={exclude.name} id={exclude.id} onChange={(g) => setExclude(g)} />
+        <h3>{t('Access groups')}</h3>
+        <GroupPicker label={t('IT administrators group name')} name={admins.name} id={admins.id} onChange={(g) => setAdmins(g)} />
+        <p className="xs muted">{t('Full access to everything: all companies, groups, settings and accounts. Keep this to your IT team.')}</p>
+        <GroupPicker label={t('Pilot group name')} name={pilot.name} id={pilot.id} onChange={(g) => setPilot(g)} />
+        <p className="xs muted">{t('Assign the Outlook add-in to this group first. Everyone else keeps their current signature until you roll out.')}</p>
+        <GroupPicker label={t('Excluded accounts group name')} name={exclude.name} id={exclude.id} onChange={(g) => setExclude(g)} />
         <p className="xs muted">
-          Service accounts, scanners, test and room mailboxes: members get no signature and don’t appear in People or the
-          report. Single accounts can also be excluded from their person page.
+          {t('Service accounts, scanners, test and room mailboxes: members get no signature and don’t appear in People or the report. Single accounts can also be excluded from their person page.')}
         </p>
       </section>
 
       <div className="row">
         <button type="button" className="btn primary" onClick={save} disabled={busy}>
-          {busy ? 'Saving…' : saveLabel}
+          {busy ? t('Saving…') : (saveLabel ?? t('Save companies and groups'))}
         </button>
       </div>
 
-      <Modal open={!!removing} onClose={() => { setRemoving(null); setConfirmText(''); }} title={`Remove ${removing?.displayName ?? ''}?`}>
+      <Modal open={!!removing} onClose={() => { setRemoving(null); setConfirmText(''); }} title={t('Remove {company}?', { company: removing?.displayName ?? '' })}>
         <p>
-          People in its group will get the default company’s signature until they’re added to another company group.
-          Its designs stay in the version history, but the company and its editors group mapping are removed.
+          {t('People in its group will get the default company’s signature until they’re added to another company group. Its designs stay in the version history, but the company and its editors group mapping are removed.')}
         </p>
-        <Field label={`Type ${removing?.displayName ?? ''} to confirm`}>
+        <Field label={t('Type {name} to confirm', { name: removing?.displayName ?? '' })}>
           <input type="text" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} autoFocus />
         </Field>
         <div className="row end">
           <button className="btn ghost" onClick={() => { setRemoving(null); setConfirmText(''); }}>
-            Keep it
+            {t('Keep it')}
           </button>
           <button className="btn danger" disabled={confirmText.trim() !== removing?.displayName} onClick={() => removing && remove(removing)}>
-            Remove company
+            {t('Remove company')}
           </button>
         </div>
       </Modal>

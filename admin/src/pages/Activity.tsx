@@ -3,62 +3,63 @@ import { api } from '../lib/api';
 import { useAsync } from '../lib/hooks';
 import type { AuditEntry, TelemetryEvent } from '../lib/types';
 import { ErrorNote, Loading, PageHead, Segmented } from '../components/ui';
+import { dateLocale, msg, t } from '../lib/i18n';
 
 const ACTIONS: Record<string, string> = {
-  login: 'Signed in',
-  'login.failed': 'Failed sign-in',
-  'overrides.update': 'Corrected signature details',
-  'overrides.self': 'Edited own signature',
-  'template.save': 'Saved a design version',
-  'template.restore': 'Restored a design version',
-  'template.reload': 'Reloaded designs from disk',
-  'company.update': 'Changed a company',
-  'company.create': 'Added a company',
-  'company.delete': 'Removed a company',
-  'mailbox.create': 'Added a shared mailbox',
-  'mailbox.update': 'Changed a shared mailbox',
-  'mailbox.delete': 'Removed a shared mailbox',
-  'settings.update': 'Changed settings',
-  'settings.directory': 'Changed the Entra connection',
-  'setup.admin.created': 'Created the first admin',
-  'setup.complete': 'Finished setup',
-  'setup.restart': 'Reopened the setup wizard',
-  'user.exclude': 'Excluded an account from signatures',
-  'design.create': 'Created a design',
-  'design.update': 'Changed a design',
-  'design.delete': 'Removed a design',
-  'design.self': 'Chose their signature design',
-  'greeting.self': 'Changed their closing line',
-  'design.image': 'Saved an image (SVG) design',
-  'font.upload': 'Uploaded a font',
-  'font.delete': 'Removed a font',
-  'user.include': 'Included an account in signatures again',
-  'cache.clear': 'Cleared the cache',
-  'asset.upload': 'Uploaded an image',
-  'account.create': 'Added a local account',
-  'account.password': 'Changed a password',
-  'account.delete': 'Removed a local account',
+  login: msg('Signed in'),
+  'login.failed': msg('Failed sign-in'),
+  'overrides.update': msg('Corrected signature details'),
+  'overrides.self': msg('Edited own signature'),
+  'template.save': msg('Saved a design version'),
+  'template.restore': msg('Restored a design version'),
+  'template.reload': msg('Reloaded designs from disk'),
+  'company.update': msg('Changed a company'),
+  'company.create': msg('Added a company'),
+  'company.delete': msg('Removed a company'),
+  'mailbox.create': msg('Added a shared mailbox'),
+  'mailbox.update': msg('Changed a shared mailbox'),
+  'mailbox.delete': msg('Removed a shared mailbox'),
+  'settings.update': msg('Changed settings'),
+  'settings.directory': msg('Changed the Entra connection'),
+  'setup.admin.created': msg('Created the first admin'),
+  'setup.complete': msg('Finished setup'),
+  'setup.restart': msg('Reopened the setup wizard'),
+  'user.exclude': msg('Excluded an account from signatures'),
+  'design.create': msg('Created a design'),
+  'design.update': msg('Changed a design'),
+  'design.delete': msg('Removed a design'),
+  'design.self': msg('Chose their signature design'),
+  'greeting.self': msg('Changed their closing line'),
+  'design.image': msg('Saved an image (SVG) design'),
+  'font.upload': msg('Uploaded a font'),
+  'font.delete': msg('Removed a font'),
+  'user.include': msg('Included an account in signatures again'),
+  'cache.clear': msg('Cleared the cache'),
+  'asset.upload': msg('Uploaded an image'),
+  'account.create': msg('Added a local account'),
+  'account.password': msg('Changed a password'),
+  'account.delete': msg('Removed a local account'),
 };
 
 export function ActivityPage() {
   const [view, setView] = useState<'changes' | 'addin'>('changes');
   const audit = useAsync(() => api.get<AuditEntry[]>('/api/admin/audit?limit=300'));
   const telemetry = useAsync(() => api.get<TelemetryEvent[]>('/api/admin/telemetry'));
-  const fmt = (iso: string) => new Date(iso).toLocaleString('lv-LV', { dateStyle: 'short', timeStyle: 'short' });
+  const fmt = (iso: string) => new Date(iso).toLocaleString(dateLocale(), { dateStyle: 'short', timeStyle: 'short' });
 
   return (
     <>
       <PageHead
-        title="Activity"
-        lead="Every change made in this console, and failures reported by Outlook clients. Add-in errors are reported anonymously by the client, so treat their text as unverified."
+        title={t('Activity')}
+        lead={t('Every change made in this console, and failures reported by Outlook clients. Add-in errors are reported anonymously by the client, so treat their text as unverified.')}
         actions={
           <Segmented
-            label="View"
+            label={t('View')}
             value={view}
             onChange={setView}
             options={[
-              { value: 'changes', label: 'Changes' },
-              { value: 'addin', label: 'Add-in errors' },
+              { value: 'changes', label: t('Changes') },
+              { value: 'addin', label: t('Add-in errors') },
             ]}
           />
         }
@@ -73,10 +74,10 @@ export function ActivityPage() {
             <table className="data">
               <thead>
                 <tr>
-                  <th>When</th>
-                  <th>Who</th>
-                  <th>What</th>
-                  <th>Target</th>
+                  <th>{t('When')}</th>
+                  <th>{t('Who')}</th>
+                  <th>{t('What')}</th>
+                  <th>{t('Target')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -84,7 +85,7 @@ export function ActivityPage() {
                   <tr key={a.id}>
                     <td className="sub" style={{ whiteSpace: 'nowrap' }}>{fmt(a.at)}</td>
                     <td>{a.actor}</td>
-                    <td>{a.action === 'login.failed' ? <span className="tag danger">{ACTIONS[a.action]}</span> : ACTIONS[a.action] ?? a.action}</td>
+                    <td>{a.action === 'login.failed' ? <span className="tag danger">{t(ACTIONS[a.action])}</span> : ACTIONS[a.action] ? t(ACTIONS[a.action]) : a.action}</td>
                     <td className="sub">{a.target}</td>
                   </tr>
                 ))}
@@ -97,29 +98,29 @@ export function ActivityPage() {
       ) : !telemetry.data ? (
         <Loading />
       ) : telemetry.data.length === 0 ? (
-        <div className="panel empty">No failures reported. The add-in reports here when it can't insert a signature.</div>
+        <div className="panel empty">{t("No failures reported. The add-in reports here when it can't insert a signature.")}</div>
       ) : (
         <div className="panel table-wrap">
           <table className="data">
             <thead>
               <tr>
-                <th>When</th>
-                <th>User</th>
-                <th>Stage</th>
-                <th>Message</th>
-                <th>Client</th>
+                <th>{t('When')}</th>
+                <th>{t('User')}</th>
+                <th>{t('Stage')}</th>
+                <th>{t('Message')}</th>
+                <th>{t('Client')}</th>
               </tr>
             </thead>
             <tbody>
-              {telemetry.data.map((t) => (
-                <tr key={t.id}>
-                  <td className="sub" style={{ whiteSpace: 'nowrap' }}>{fmt(t.at)}</td>
-                  <td>{t.upn ?? <span className="muted">unknown</span>}</td>
+              {telemetry.data.map((ev) => (
+                <tr key={ev.id}>
+                  <td className="sub" style={{ whiteSpace: 'nowrap' }}>{fmt(ev.at)}</td>
+                  <td>{ev.upn ?? <span className="muted">{t('unknown')}</span>}</td>
                   <td>
-                    <span className="tag danger">{t.stage ?? t.event}</span>
+                    <span className="tag danger">{ev.stage ?? ev.event}</span>
                   </td>
-                  <td className="sub">{t.message}</td>
-                  <td className="sub">{[t.host, t.platform].filter(Boolean).join(' ')}</td>
+                  <td className="sub">{ev.message}</td>
+                  <td className="sub">{[ev.host, ev.platform].filter(Boolean).join(' ')}</td>
                 </tr>
               ))}
             </tbody>

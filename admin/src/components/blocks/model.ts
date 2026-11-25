@@ -1,5 +1,7 @@
 // Mirrors api/src/services/blocks.ts (the server validates and compiles; this is only for editing).
 
+import { msg } from '../../lib/i18n';
+
 export type ColorToken = 'primary' | 'text' | 'name' | 'title' | 'muted' | 'rule';
 export type BlockColor = ColorToken | string;
 
@@ -62,12 +64,12 @@ export const FONTS = {
 export type FontKey = keyof typeof FONTS;
 
 export const TOKEN_LABELS: Record<ColorToken, string> = {
-  primary: 'Brand',
-  text: 'Text',
-  name: 'Name',
-  title: 'Job title',
-  muted: 'Secondary',
-  rule: 'Lines',
+  primary: msg('Brand'),
+  text: msg('Text'),
+  name: msg('Name'),
+  title: msg('Job title'),
+  muted: msg('Secondary'),
+  rule: msg('Lines'),
 };
 
 /** Same defaults the compiler applies, so the editor shows what a block will really look like. */
@@ -92,22 +94,22 @@ export interface BlockInfo {
 }
 
 export const BLOCK_INFO: Record<BlockType, BlockInfo> = {
-  name: { label: 'Name', hint: 'Full name from the directory', zones: ['main'], source: 'Person' },
-  jobTitleLv: { label: 'Job title', hint: 'In the person’s language: Latvian, Estonian or Lithuanian', zones: ['main'], source: 'Person' },
-  jobTitleEn: { label: 'English job title', hint: 'English job title, if set', zones: ['main'], source: 'Person' },
-  department: { label: 'Department', hint: 'From the directory', zones: ['main'], source: 'Person' },
-  mobile: { label: 'Mobile', hint: 'With a label such as "M:"', zones: ['main'], source: 'Person' },
-  officePhone: { label: 'Office phone', hint: 'With a label such as "T:"', zones: ['main'], source: 'Person' },
-  email: { label: 'Email', hint: 'Clickable email address', zones: ['main'], source: 'Person' },
-  websites: { label: 'Websites', hint: 'From Brand and footer', zones: ['main', 'footer'], source: 'Brand' },
-  companyLine: { label: 'Company line', hint: 'e.g. SIA “TENAPORS”', zones: ['main', 'footer'], source: 'Brand' },
-  registration: { label: 'Registration no.', hint: 'Only shown when set', zones: ['main', 'footer'], source: 'Brand' },
-  address: { label: 'Address', hint: 'From Brand and footer', zones: ['main', 'footer'], source: 'Brand' },
-  text: { label: 'Text', hint: 'Any fixed text you type', repeatable: true, zones: ['main', 'footer'] },
-  spacer: { label: 'Space', hint: 'Empty vertical space', repeatable: true, zones: ['main', 'footer'] },
-  divider: { label: 'Line', hint: 'Horizontal line', repeatable: true, zones: ['main', 'footer'] },
-  banner: { label: 'Promo banner', hint: 'Image under the signature, picked below or from this design’s Wording', zones: ['footer'], source: 'Brand' },
-  confidential: { label: 'Confidentiality notice', hint: 'Small print from Brand and footer', zones: ['main', 'footer'], source: 'Brand' },
+  name: { label: msg('Name'), hint: msg('Full name from the directory'), zones: ['main'], source: 'Person' },
+  jobTitleLv: { label: msg('Job title'), hint: msg('In the person’s language: Latvian, Estonian or Lithuanian'), zones: ['main'], source: 'Person' },
+  jobTitleEn: { label: msg('English job title'), hint: msg('English job title, if set'), zones: ['main'], source: 'Person' },
+  department: { label: msg('Department'), hint: msg('From the directory'), zones: ['main'], source: 'Person' },
+  mobile: { label: msg('Mobile'), hint: msg('With a label such as "M:"'), zones: ['main'], source: 'Person' },
+  officePhone: { label: msg('Office phone'), hint: msg('With a label such as "T:"'), zones: ['main'], source: 'Person' },
+  email: { label: msg('Email'), hint: msg('Clickable email address'), zones: ['main'], source: 'Person' },
+  websites: { label: msg('Websites'), hint: msg('From Brand and footer'), zones: ['main', 'footer'], source: 'Brand' },
+  companyLine: { label: msg('Company line'), hint: msg('e.g. SIA “TENAPORS”'), zones: ['main', 'footer'], source: 'Brand' },
+  registration: { label: msg('Registration no.'), hint: msg('Only shown when set'), zones: ['main', 'footer'], source: 'Brand' },
+  address: { label: msg('Address'), hint: msg('From Brand and footer'), zones: ['main', 'footer'], source: 'Brand' },
+  text: { label: msg('Text'), hint: msg('Any fixed text you type'), repeatable: true, zones: ['main', 'footer'] },
+  spacer: { label: msg('Space'), hint: msg('Empty vertical space'), repeatable: true, zones: ['main', 'footer'] },
+  divider: { label: msg('Line'), hint: msg('Horizontal line'), repeatable: true, zones: ['main', 'footer'] },
+  banner: { label: msg('Promo banner'), hint: msg('Image under the signature, picked below or from this design’s Wording'), zones: ['footer'], source: 'Brand' },
+  confidential: { label: msg('Confidentiality notice'), hint: msg('Small print from Brand and footer'), zones: ['main', 'footer'], source: 'Brand' },
 };
 
 export function newBlock(type: BlockType): Block {

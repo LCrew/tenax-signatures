@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Search } from 'lucide-react';
 import { api } from '../lib/api';
+import { t } from '../lib/i18n';
 
 interface Group {
   id: string;
@@ -11,7 +12,7 @@ const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isGuid = (s: string) => GUID.test(s);
 export const isPlaceholderGuid = (s: string) => /^0{8}-0{4}-0{4}-0{4}-/.test(s);
 
-/** Group name + object ID pair, with a lookup against Entra so nobody has to copy GUIDs by hand. */
+/** Group name + object ID pair, with a lookup against Entra so nobody has to copy GUIDs by hand. `label` is the whole field label ("Pilot group name"). */
 export function GroupPicker({
   name,
   id,
@@ -33,7 +34,7 @@ export function GroupPicker({
     try {
       const r = await api.get<Group[]>(`/api/admin/directory/groups?search=${encodeURIComponent(name)}`);
       setResults(r);
-      if (r.length === 0) setErr(`No group named like "${name}" in the directory.`);
+      if (r.length === 0) setErr(t('No group named like "{name}" in the directory.', { name }));
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -41,17 +42,17 @@ export function GroupPicker({
     }
   }
 
-  const idProblem = id && !isGuid(id) ? 'Object IDs look like 8-4-4-4-12 hex characters' : isPlaceholderGuid(id) ? 'Placeholder ID: replace with the real object ID' : null;
+  const idProblem = id && !isGuid(id) ? t('Object IDs look like 8-4-4-4-12 hex characters') : isPlaceholderGuid(id) ? t('Placeholder ID: replace with the real object ID') : null;
 
   return (
     <div className="stack tight">
       <div className="grid-2">
         <label className="field">
-          {label} group name
+          {label}
           <input type="text" value={name} onChange={(e) => onChange({ name: e.target.value, id })} />
         </label>
         <label className="field">
-          Object ID
+          {t('Object ID')}
           <div className="row" style={{ flexWrap: 'nowrap' }}>
             <input
               type="text"
@@ -61,8 +62,8 @@ export function GroupPicker({
               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
               onChange={(e) => onChange({ name, id: e.target.value.trim() })}
             />
-            <button type="button" className="btn" onClick={find} disabled={searching || name.trim().length < 2} title="Look up this group name in Entra ID">
-              <Search size={14} /> {searching ? 'Finding' : 'Find'}
+            <button type="button" className="btn" onClick={find} disabled={searching || name.trim().length < 2} title={t('Look up this group name in Entra ID')}>
+              <Search size={14} /> {searching ? t('Finding') : t('Find')}
             </button>
           </div>
           {idProblem && <span className={isPlaceholderGuid(id) ? 'hint' : 'error-text'} style={isPlaceholderGuid(id) ? { color: 'var(--warn)' } : undefined}>{idProblem}</span>}
@@ -70,7 +71,7 @@ export function GroupPicker({
       </div>
       {err && <div className="xs" style={{ color: 'var(--warn)' }}>{err}</div>}
       {results && results.length > 0 && (
-        <div className="panel" role="listbox" aria-label="Matching groups">
+        <div className="panel" role="listbox" aria-label={t('Matching groups')}>
           {results.map((g) => (
             <button
               key={g.id}

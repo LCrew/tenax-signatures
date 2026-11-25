@@ -3,6 +3,7 @@ import { RefreshCw, Upload } from 'lucide-react';
 import { api } from '../../lib/api';
 import { prepareBanner, resizeBanner } from '../../lib/banner';
 import { useApp, useAsync, useDebounced, useImageRatio, useToast } from '../../lib/hooks';
+import { t, tn, tx } from '../../lib/i18n';
 import type { Design, UserSummary } from '../../lib/types';
 import { LetterPreview } from '../LetterPreview';
 import { Field } from '../ui';
@@ -81,7 +82,7 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
   };
 
   async function upload(file: File) {
-    if (file.size > 5 * 1024 * 1024) return toast('The SVG is larger than 5 MB', 'error');
+    if (file.size > 5 * 1024 * 1024) return toast(t('The SVG is larger than 5 MB'), 'error');
     try {
       const r = await api.post<{ svg: string; suggested: Config; bytes: { uploaded: number; cleaned: number } } & Info>(`/api/admin/designs/${design.id}/image/analyze`, { svg: await file.text() });
       setSvg(r.svg);
@@ -89,7 +90,7 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
       // A new SVG keeps the promo banner that was already picked.
       setCfg((c) => ({ ...r.suggested, banner: c?.banner ?? null }));
       setDirty(true);
-      toast(`SVG read: ${r.textFields.length} text fields found. Check the mapping, then save.`);
+      toast(tn(r.textFields.length, 'SVG read: {n} text field found. Check the mapping, then save.', 'SVG read: {n} text fields found. Check the mapping, then save.'));
     } catch (e) {
       toast((e as Error).message, 'error');
     }
@@ -123,14 +124,14 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
       await api.post(`/api/admin/assets/${design.company}`, { name, dataBase64 });
       pickBanner(name, URL.createObjectURL(file));
       await assets.reload();
-      toast('Banner uploaded');
+      toast(t('Banner uploaded'));
     } catch (e) {
       toast((e as Error).message, 'error');
     }
   }
 
   async function redetectCrop() {
-    if (!svg) return toast('Upload the SVG again to detect the card edges', 'error');
+    if (!svg) return toast(t('Upload the SVG again to detect the card edges'), 'error');
     const r = await api.post<{ suggested: Config }>(`/api/admin/designs/${design.id}/image/analyze`, { svg });
     update((c) => ({ ...c, crop: r.suggested.crop }));
   }
@@ -158,7 +159,7 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
     setSaving(true);
     try {
       const r = await api.post<{ version: number; missingFonts: string[] }>(`/api/admin/designs/${design.id}/image`, { ...cfg, ...(svg ? { svg } : {}), note: note || undefined });
-      toast(`Saved (version ${r.version}). New emails use this image.`);
+      toast(t('Saved (version {version}). New emails use this image.', { version: r.version }));
       setNote('');
       onSaved();
       await current.reload();
@@ -193,10 +194,10 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
     <div className="split">
       <section className="panel">
         <div className="panel-head">
-          <h3>Image signature</h3>
+          <h3>{t('Image signature')}</h3>
           <span className="spacer" />
           <label className="btn sm">
-            <Upload size={14} /> {cfg ? 'Replace SVG' : 'Upload SVG'}
+            <Upload size={14} /> {cfg ? t('Replace SVG') : t('Upload SVG')}
             <input type="file" accept=".svg,image/svg+xml" className="visually-hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
           </label>
         </div>
@@ -204,26 +205,25 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
           {!cfg ? (
             <div className="stack">
               <p className="small muted">
-                Upload the SVG of the signature (for example exported from Inkscape or Illustrator, with real text, not
-                outlines). Each person gets their own image with their name, title and phone filled in. Email apps don’t
-                show SVG, so it’s sent as a sharp PNG.
+                {t('Upload the SVG of the signature (for example exported from Inkscape or Illustrator, with real text, not outlines). Each person gets their own image with their name, title and phone filled in. Email apps don’t show SVG, so it’s sent as a sharp PNG.')}
               </p>
               <button className="btn ghost sm" style={{ alignSelf: 'flex-start' }} onClick={onLeave}>
-                Back to the designer layouts
+                {t('Back to the designer layouts')}
               </button>
             </div>
           ) : (
             <>
               {missing.length > 0 && (
                 <div className="callout warn">
-                  Missing fonts: <strong>{missing.join(', ')}</strong>. A similar font is used until {session?.isAdmin ? 'you upload them in Settings › Fonts' : 'IT uploads them (Settings › Fonts)'}.
+                  {session?.isAdmin
+                    ? tx('Missing fonts: {fonts}. A similar font is used until you upload them in Settings › Fonts.', { fonts: <strong>{missing.join(', ')}</strong> })
+                    : tx('Missing fonts: {fonts}. A similar font is used until IT uploads them (Settings › Fonts).', { fonts: <strong>{missing.join(', ')}</strong> })}
                 </div>
               )}
               <section className="stack">
-                <h3>Text in the image</h3>
+                <h3>{t('Text in the image')}</h3>
                 <p className="xs muted">
-                  Each line can mix fixed text and person details. A line whose details are all empty (for example no mobile)
-                  is left out and the lines below move up. Click a line, then a detail below to insert it.
+                  {t('Each line can mix fixed text and person details. A line whose details are all empty (for example no mobile) is left out and the lines below move up. Click a line, then a detail below to insert it.')}
                 </p>
                 <div className="tags">
                   {(info?.placeholders ?? []).map((p) => (
@@ -232,14 +232,14 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
                     </button>
                   ))}
                 </div>
-                {(info?.textFields ?? []).map((t) => {
-                  const m = cfg.fields[t.id];
+                {(info?.textFields ?? []).map((tf) => {
+                  const m = cfg.fields[tf.id];
                   return (
-                    <div key={t.id} className="wording-row">
+                    <div key={tf.id} className="wording-row">
                       <div className="row" style={{ justifyContent: 'space-between' }}>
-                        <strong className="small">“{t.lines.map((l) => l.text).join(' / ').slice(0, 60)}”</strong>
+                        <strong className="small">“{tf.lines.map((l) => l.text).join(' / ').slice(0, 60)}”</strong>
                         <span className="xs muted">
-                          {t.family || 'default font'} {t.weight} · {round(t.size)}px
+                          {tf.family || t('default font')} {tf.weight} · {round(tf.size)}px
                         </span>
                       </div>
                       {m ? (
@@ -249,22 +249,22 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
                               <input
                                 type="text"
                                 value={line}
-                                aria-label={`Line ${i + 1}`}
-                                onFocus={(e) => (focused.current = { id: t.id, line: i, el: e.currentTarget })}
-                                onChange={(e) => update((c) => ({ ...c, fields: { ...c.fields, [t.id]: { ...m, lines: m.lines.map((x, j) => (j === i ? e.target.value : x)) } } }))}
+                                aria-label={t('Line {n}', { n: i + 1 })}
+                                onFocus={(e) => (focused.current = { id: tf.id, line: i, el: e.currentTarget })}
+                                onChange={(e) => update((c) => ({ ...c, fields: { ...c.fields, [tf.id]: { ...m, lines: m.lines.map((x, j) => (j === i ? e.target.value : x)) } } }))}
                               />
-                              <button type="button" className="icon-btn" aria-label="Remove line" onClick={() => update((c) => ({ ...c, fields: { ...c.fields, [t.id]: { ...m, lines: m.lines.filter((_, j) => j !== i) } } }))}>
+                              <button type="button" className="icon-btn" aria-label={t('Remove line')} onClick={() => update((c) => ({ ...c, fields: { ...c.fields, [tf.id]: { ...m, lines: m.lines.filter((_, j) => j !== i) } } }))}>
                                 ×
                               </button>
                             </div>
                           ))}
                           <div className="row">
-                            <button type="button" className="btn ghost sm" onClick={() => update((c) => ({ ...c, fields: { ...c.fields, [t.id]: { ...m, lines: [...m.lines, ''] } } }))}>
-                              + Line
+                            <button type="button" className="btn ghost sm" onClick={() => update((c) => ({ ...c, fields: { ...c.fields, [tf.id]: { ...m, lines: [...m.lines, ''] } } }))}>
+                              {t('+ Line')}
                             </button>
                             <label className="check xs">
-                              <input type="checkbox" checked={m.shrinkToFit} onChange={(e) => update((c) => ({ ...c, fields: { ...c.fields, [t.id]: { ...m, shrinkToFit: e.target.checked } } }))} />
-                              Make smaller if too long to fit
+                              <input type="checkbox" checked={m.shrinkToFit} onChange={(e) => update((c) => ({ ...c, fields: { ...c.fields, [tf.id]: { ...m, shrinkToFit: e.target.checked } } }))} />
+                              {t('Make smaller if too long to fit')}
                             </label>
                             <span className="spacer" />
                             <button
@@ -272,20 +272,20 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
                               className="btn ghost sm"
                               onClick={() =>
                                 update((c) => {
-                                  const { [t.id]: _drop, ...rest } = c.fields;
+                                  const { [tf.id]: _drop, ...rest } = c.fields;
                                   return { ...c, fields: rest };
                                 })
                               }
                             >
-                              Keep the original text
+                              {t('Keep the original text')}
                             </button>
                           </div>
                         </>
                       ) : (
                         <div className="row">
-                          <span className="xs muted">Shown exactly as in the SVG.</span>
-                          <button type="button" className="btn ghost sm" onClick={() => update((c) => ({ ...c, fields: { ...c.fields, [t.id]: { lines: t.lines.map((l) => l.text), shrinkToFit: t.lines.length === 1 } } }))}>
-                            Fill with person details
+                          <span className="xs muted">{t('Shown exactly as in the SVG.')}</span>
+                          <button type="button" className="btn ghost sm" onClick={() => update((c) => ({ ...c, fields: { ...c.fields, [tf.id]: { lines: tf.lines.map((l) => l.text), shrinkToFit: tf.lines.length === 1 } } }))}>
+                            {t('Fill with person details')}
                           </button>
                         </div>
                       )}
@@ -294,38 +294,38 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
                 })}
               </section>
               <section className="stack">
-                <h3>Image</h3>
+                <h3>{t('Image')}</h3>
                 <div className="grid-2">
-                  <Field label="Shown width (px)" hint="Rendered at twice this size for sharp screens">
+                  <Field label={t('Shown width (px)')} hint={t('Rendered at twice this size for sharp screens')}>
                     <input type="number" min={200} max={800} value={cfg.width} onChange={(e) => update((c) => ({ ...c, width: Number(e.target.value) || 500 }))} />
                   </Field>
-                  <Field label="Link when clicked" hint="Full https:// address; empty = not clickable">
+                  <Field label={t('Link when clicked')} hint={t('Full https:// address; empty = not clickable')}>
                     <input type="url" value={cfg.link} placeholder="https://www.varenogroup.lv" onChange={(e) => update((c) => ({ ...c, link: e.target.value.trim() }))} />
                   </Field>
                 </div>
                 <details>
                   <summary className="small" style={{ cursor: 'pointer', fontWeight: 600 }}>
-                    Crop (part of the SVG that’s used)
+                    {t('Crop (part of the SVG that’s used)')}
                   </summary>
                   <div className="ctl-grid" style={{ marginTop: 10 }}>
                     {(['x', 'y', 'width', 'height'] as const).map((k) => (
-                      <Field key={k} label={k}>
+                      <Field key={k} label={k === 'width' ? t('width') : k === 'height' ? t('height') : k}>
                         <input type="number" step="0.5" value={round(cfg.crop[k])} onChange={(e) => update((c) => ({ ...c, crop: { ...c.crop, [k]: Number(e.target.value) } }))} />
                       </Field>
                     ))}
                   </div>
-                  <button type="button" className="btn ghost sm" style={{ marginTop: 8 }} onClick={redetectCrop} disabled={!svg} title={svg ? '' : 'Available right after an upload'}>
-                    <RefreshCw size={13} /> Detect the card edges again
+                  <button type="button" className="btn ghost sm" style={{ marginTop: 8 }} onClick={redetectCrop} disabled={!svg} title={svg ? '' : t('Available right after an upload')}>
+                    <RefreshCw size={13} /> {t('Detect the card edges again')}
                   </button>
                 </details>
               </section>
               <section className="stack">
-                <h3>Promo banner</h3>
-                <p className="xs muted">Shown under the image in new messages only, never in replies. Bigger images are scaled down to 1200px wide (shown at up to 600px) and kept under 1 MB.</p>
+                <h3>{t('Promo banner')}</h3>
+                <p className="xs muted">{t('Shown under the image in new messages only, never in replies. Bigger images are scaled down to 1200px wide (shown at up to 600px) and kept under 1 MB.')}</p>
                 <div className="logo-pick" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))' }}>
                   <button type="button" aria-pressed={!banner} onClick={() => update((c) => ({ ...c, banner: null }))}>
-                    <span style={{ height: 36, display: 'grid', placeItems: 'center' }}>None</span>
-                    No banner
+                    <span style={{ height: 36, display: 'grid', placeItems: 'center' }}>{t('None')}</span>
+                    {t('No banner')}
                   </button>
                   {banners.map((a) => (
                     <button key={a.name} type="button" aria-pressed={banner?.file === a.name} onClick={() => pickBanner(a.name, a.localUrl)} title={a.name}>
@@ -334,19 +334,19 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
                     </button>
                   ))}
                   <label className="btn" style={{ height: 'auto', minHeight: 72, flexDirection: 'column' }}>
-                    <Upload size={16} /> Upload banner
+                    <Upload size={16} /> {t('Upload banner')}
                     <input type="file" accept="image/png,image/jpeg,image/gif" className="visually-hidden" onChange={(e) => e.target.files?.[0] && uploadBanner(e.target.files[0])} />
                   </label>
                 </div>
                 {banner && (
                   <div className="grid-2">
-                    <Field label="Link when clicked" hint="Optional, must start with https://">
+                    <Field label={t('Link when clicked')} hint={t('Optional, must start with https://')}>
                       <input type="url" value={banner.link ?? ''} onChange={(e) => update((c) => ({ ...c, banner: { ...banner, link: e.target.value.trim() } }))} />
                     </Field>
-                    <Field label="Description" hint="Read out by screen readers and shown when images are blocked">
+                    <Field label={t('Description')} hint={t('Read out by screen readers and shown when images are blocked')}>
                       <input type="text" value={banner.alt ?? ''} onChange={(e) => update((c) => ({ ...c, banner: { ...banner, alt: e.target.value } }))} />
                     </Field>
-                    <Field label="Shown width (px)">
+                    <Field label={t('Shown width (px)')}>
                       <input
                         type="number"
                         min={50}
@@ -362,26 +362,25 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
                 )}
               </section>
               <p className="xs muted">
-                The same image is used for new emails and replies. Contact details are also written into the image’s
-                alternative text for screen readers and when images are blocked.
+                {t('The same image is used for new emails and replies. Contact details are also written into the image’s alternative text for screen readers and when images are blocked.')}
               </p>
             </>
           )}
         </div>
         {cfg && (
           <div className="panel-body row save-bar">
-            <input type="text" placeholder="What changed? (optional)" value={note} onChange={(e) => setNote(e.target.value)} style={{ flex: '1 1 200px' }} aria-label="Version note" />
+            <input type="text" placeholder={t('What changed? (optional)')} value={note} onChange={(e) => setNote(e.target.value)} style={{ flex: '1 1 200px' }} aria-label={t('Version note')} />
             <button className="btn primary" disabled={(!dirty && !svg) || saving || !!preview.error} onClick={save}>
-              {saving ? 'Saving…' : 'Save version'}
+              {saving ? t('Saving…') : t('Save version')}
             </button>
           </div>
         )}
       </section>
 
       <div className="sticky stack">
-        <Field label="Preview as">
+        <Field label={t('Preview as')}>
           <select value={as} onChange={(e) => setAs(e.target.value)}>
-            <option value="">Sample person (all fields filled)</option>
+            <option value="">{t('Sample person (all fields filled)')}</option>
             {users.map((u) => (
               <option key={u.upn} value={u.upn}>
                 {u.displayName ?? u.upn}
@@ -389,7 +388,7 @@ export function ImageDesignEditor({ design, users, onSaved, onLeave, reloadKey =
             ))}
           </select>
         </Field>
-        <LetterPreview html={html} error={preview.error?.message} loading={preview.loading} type="newMail" caption={banner ? 'New messages (replies without the banner)' : 'New messages and replies'} />
+        <LetterPreview html={html} error={preview.error?.message} loading={preview.loading} type="newMail" caption={banner ? t('New messages (replies without the banner)') : t('New messages and replies')} />
       </div>
     </div>
   );

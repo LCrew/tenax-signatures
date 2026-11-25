@@ -23,7 +23,8 @@
 :root[data-surface="glass"] .auth-side { background: var(--glass); border: 1px solid var(--glass-edge); box-shadow: var(--glass-shine); }
 .auth-side .brand { padding: 0; }
 .auth-side .mail { max-width: 460px; width: 100%; animation: rise-far .7s var(--ease) .15s both; }
-.auth-form { display: flex; align-items: center; justify-content: center; padding: 48px; }
+.auth-form { position: relative; display: flex; align-items: center; justify-content: center; padding: 48px; }
+.auth-form .auth-lang { position: absolute; top: calc(20px + env(safe-area-inset-top)); right: 20px; }
 .auth-form .inner { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 22px; animation: rise-in .5s var(--ease) both; }
 .auth-form h1 { font-size: 44px; }
 .auth-form .btn.lg { width: 100%; }

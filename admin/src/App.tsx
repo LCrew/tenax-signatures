@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { api } from './lib/api';
 import { initEntra } from './lib/auth';
 import { AppCtx, ToastProvider } from './lib/hooks';
+import { msg, t, useLang } from './lib/i18n';
 import type { PublicConfig, SessionInfo } from './lib/types';
 import { Layout } from './components/Layout';
 import { Loading } from './components/ui';
@@ -19,6 +20,7 @@ import { ActivityPage } from './pages/Activity';
 import { MySignature } from './pages/MySignature';
 
 export function App() {
+  useLang(); // the whole console re-renders in the new language
   const [config, setConfig] = useState<PublicConfig | null>(null);
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [fatal, setFatal] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export function App() {
       setConfig(cfg);
       setSession(s);
     } catch {
-      setFatal("The signature service isn't responding. Check that the container is running.");
+      setFatal(msg("The signature service isn't responding. Check that the container is running."));
     }
   }, []);
 
@@ -42,8 +44,8 @@ export function App() {
     return () => window.removeEventListener('sig:unauthorized', onUnauthorized);
   }, [refresh]);
 
-  if (fatal) return <div className="main"><div className="callout danger">{fatal}</div></div>;
-  if (!config) return <Loading what="Starting" />;
+  if (fatal) return <div className="main"><div className="callout danger">{t(fatal)}</div></div>;
+  if (!config) return <Loading what={t('Starting')} />;
 
   const signedIn = !!session;
   const admin = session?.isAdmin; // IT administrators

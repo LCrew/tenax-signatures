@@ -7,6 +7,7 @@ import { FIELD_LABELS, ownTitleLabel, type ComposeType, type PersonLanguage } fr
 import { LetterPreview } from '../components/LetterPreview';
 import { Mark, signOut } from '../components/Layout';
 import { ErrorNote, Loading, Segmented } from '../components/ui';
+import { msg, t, tx } from '../lib/i18n';
 
 interface Me {
   upn: string;
@@ -28,11 +29,12 @@ interface Me {
   selfService: { enabled: boolean; fields: string[] };
 }
 
+/** English; translate where shown: t(HINTS[f]). */
 const HINTS: Record<string, string> = {
-  jobTitleEn: 'Shown under your Latvian title',
-  jobTitleLv: 'Replaces the title from the company directory',
-  mobilePhone: 'Replaces the number from the company directory',
-  address: 'Replaces the company address, e.g. if you work at another office',
+  jobTitleEn: msg('Shown under your Latvian title'),
+  jobTitleLv: msg('Replaces the title from the company directory'),
+  mobilePhone: msg('Replaces the number from the company directory'),
+  address: msg('Replaces the company address, e.g. if you work at another office'),
 };
 
 /** What each person sees after signing in with Microsoft: their own signature, and the parts they may change. */
@@ -72,7 +74,7 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
     setSaving(true);
     try {
       await api.put('/api/me/overrides', clean);
-      toast('Saved. Your next new message in Outlook uses it.');
+      toast(t('Saved. Your next new message in Outlook uses it.'));
       await me.reload();
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -91,7 +93,7 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     };
-    const fail = (e: unknown) => toast(`Couldn't copy: ${(e as Error)?.message ?? 'the browser blocked it'}. Select the preview and copy it instead.`, 'error');
+    const fail = (e: unknown) => toast(t("Couldn't copy: {reason}. Select the preview and copy it instead.", { reason: (e as Error)?.message ?? t('the browser blocked it') }), 'error');
     const toText = (h: string) => new DOMParser().parseFromString(h, 'text/html').body.innerText;
 
     // Called synchronously in the click: a ClipboardItem may hold promises, so this also works if the prefetch
@@ -102,7 +104,7 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
         'text/html': html.then((h) => new Blob([h], { type: 'text/html' })),
         'text/plain': html.then((h) => new Blob([toText(h)], { type: 'text/plain' })),
       });
-      navigator.clipboard.write([item]).then(done, () => (real.data && legacyCopy(real.data) ? done() : fail(new Error('the browser blocked clipboard access'))));
+      navigator.clipboard.write([item]).then(done, () => (real.data && legacyCopy(real.data) ? done() : fail(new Error(t('the browser blocked clipboard access')))));
     } catch (e) {
       if (real.data && legacyCopy(real.data)) done();
       else fail(e);
@@ -110,11 +112,11 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
   }
 
   const body = me.data?.excluded ? (
-    <div className="callout">Your account is excluded from company signatures, so Outlook doesn’t add one. Ask IT if that’s a mistake.</div>
+    <div className="callout">{t('Your account is excluded from company signatures, so Outlook doesn’t add one. Ask IT if that’s a mistake.')}</div>
   ) : me.error ? (
     <ErrorNote error={me.error} retry={me.reload} />
   ) : !me.data ? (
-    <Loading what="Loading your signature" />
+    <Loading what={t('Loading your signature')} />
   ) : (
     <div className="split">
       <div className="stack loose">
@@ -122,12 +124,12 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
         <GreetingEditor me={me.data} draft={greetingDraft} setDraft={setGreetingDraft} dirty={greetingDirty} onSaved={me.reload} />
         <section className="panel">
           <div className="panel-head">
-            <h3>Your details</h3>
+            <h3>{t('Your details')}</h3>
           </div>
           <div className="panel-body" style={{ paddingTop: 4, paddingBottom: 4 }}>
-            <ReadOnlyRow label="Name" value={me.data.fields.displayName as string} source={me.data.sources.displayName} />
+            <ReadOnlyRow label={t('Name')} value={me.data.fields.displayName as string} source={me.data.sources.displayName} />
             {(['jobTitleLv', 'jobTitleEn', 'mobilePhone', 'address'] as const).map((f) => {
-              const label = f === 'jobTitleLv' ? ownTitleLabel(me.data!.fields.language as PersonLanguage | null) : FIELD_LABELS[f];
+              const label = f === 'jobTitleLv' ? ownTitleLabel(me.data!.fields.language as PersonLanguage | null) : t(FIELD_LABELS[f]);
               return editable.includes(f) ? (
                 <div className="field-row" key={f}>
                   <label className="k" htmlFor={`me-${f}`}>
@@ -139,31 +141,31 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
                         id={`me-${f}`}
                         type="text"
                         value={(draft[f] as string) ?? ''}
-                        placeholder={entraFor(me.data!, f) ?? (f === 'jobTitleEn' ? 'e.g. Sales Manager' : 'Not set')}
+                        placeholder={entraFor(me.data!, f) ?? (f === 'jobTitleEn' ? t('e.g. {example}', { example: 'Sales Manager' }) : t('Not set'))}
                         onChange={(e) => setDraft((d) => ({ ...d, [f]: e.target.value }))}
                       />
                       {draft[f] ? (
-                        <button type="button" className="btn ghost sm" title={f === 'address' ? 'Use the company address' : 'Use the company directory value'} onClick={() => setDraft((d) => ({ ...d, [f]: null }))}>
+                        <button type="button" className="btn ghost sm" title={f === 'address' ? t('Use the company address') : t('Use the company directory value')} onClick={() => setDraft((d) => ({ ...d, [f]: null }))}>
                           <Undo2 size={14} />
                         </button>
                       ) : null}
                     </div>
-                    <div className="entra">{HINTS[f]}</div>
+                    <div className="entra">{t(HINTS[f])}</div>
                   </div>
                 </div>
               ) : (
                 <ReadOnlyRow key={f} label={label} value={((me.data!.fields[f] as string) || (f === 'address' ? me.data!.defaultAddress : null)) ?? null} source={me.data!.sources[f]} />
               );
             })}
-            <ReadOnlyRow label="Office phone" value={me.data.fields.officePhone as string} source={me.data.sources.officePhone} />
-            <ReadOnlyRow label="Email" value={me.data.fields.email as string} source="entra" />
-            <ReadOnlyRow label="Company" value={me.data.companyName} source="entra" />
+            <ReadOnlyRow label={t('Office phone')} value={me.data.fields.officePhone as string} source={me.data.sources.officePhone} />
+            <ReadOnlyRow label={t('Email')} value={me.data.fields.email as string} source="entra" />
+            <ReadOnlyRow label={t('Company')} value={me.data.companyName} source="entra" />
             {editable.includes('hideMobile') && (
               <div className="field-row">
-                <span className="k">Privacy</span>
+                <span className="k">{t('Privacy')}</span>
                 <label className="check" style={{ paddingTop: 8 }}>
                   <input type="checkbox" checked={draft.hideMobile === true} onChange={(e) => setDraft((d) => ({ ...d, hideMobile: e.target.checked ? true : null }))} />
-                  Leave my mobile number out
+                  {t('Leave my mobile number out')}
                 </label>
               </div>
             )}
@@ -172,20 +174,18 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
             <div className="panel-body row" style={{ borderTop: '1px solid var(--line)' }}>
               <span className="spacer" />
               <button className="btn ghost" disabled={!dirty || saving} onClick={() => setDraft(me.data!.overrides ?? {})}>
-                Discard
+                {t('Discard')}
               </button>
               <button className="btn primary" disabled={!dirty || saving} onClick={save}>
-                {saving ? 'Saving…' : 'Save my signature'}
+                {saving ? t('Saving…') : t('Save my signature')}
               </button>
             </div>
           )}
         </section>
         <p className="small muted">
           {editable.length === 0
-            ? 'Your details come from the company directory. '
-            : 'Everything else comes from the company directory. '}
-          If your name, title, phone or company is wrong, ask IT to correct it there. That fixes it everywhere, not just
-          in your signature.
+            ? t('Your details come from the company directory. If your name, title, phone or company is wrong, ask IT to correct it there. That fixes it everywhere, not just in your signature.')
+            : t('Everything else comes from the company directory. If your name, title, phone or company is wrong, ask IT to correct it there. That fixes it everywhere, not just in your signature.')}
         </p>
       </div>
 
@@ -199,11 +199,11 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
           from={{ name: (draft.displayName as string) || (me.data.fields.displayName as string) || me.data.upn, email: me.data.upn }}
         />
         <div className="row">
-          <button className="btn" onClick={copy} disabled={dirty || !real.data} title={dirty ? 'Save first, then copy' : undefined}>
-            {copied ? <Check size={14} /> : <ClipboardCopy size={14} />} {copied ? 'Copied' : 'Copy signature'}
+          <button className="btn" onClick={copy} disabled={dirty || !real.data} title={dirty ? t('Save first, then copy') : undefined}>
+            {copied ? <Check size={14} /> : <ClipboardCopy size={14} />} {copied ? t('Copied') : t('Copy signature')}
           </button>
           <span className="xs muted" style={{ flex: '1 1 220px' }}>
-            Outlook adds this automatically. Copy it only for apps where it doesn't appear.
+            {t("Outlook adds this automatically. Copy it only for apps where it doesn't appear.")}
           </span>
         </div>
       </div>
@@ -215,8 +215,8 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
       <>
         <header className="page-head">
           <div>
-            <h1>My signature</h1>
-            <p>How your own signature looks in Outlook.</p>
+            <h1>{t('My signature')}</h1>
+            <p>{t('How your own signature looks in Outlook.')}</p>
           </div>
         </header>
         {body}
@@ -229,23 +229,23 @@ export function MySignature({ embedded = false }: { embedded?: boolean }) {
     <div className="self-page">
       <header className="self-bar">
         <Mark size={26} />
-        <strong>My email signature</strong>
+        <strong>{t('My email signature')}</strong>
         <span className="spacer" />
         <span className="small muted self-who">{session?.upn ?? session?.name}</span>
         {session?.isAdmin && (
           <Link className="btn ghost sm" to="/">
-            Admin console
+            {t('Admin console')}
           </Link>
         )}
         <button className="btn ghost sm" onClick={signOut}>
-          <LogOut size={14} /> Sign out
+          <LogOut size={14} /> {t('Sign out')}
         </button>
       </header>
       <main className="main" style={{ margin: '0 auto' }}>
         <header className="page-head">
           <div>
-            <h1>Hi, {firstName(session?.name)}</h1>
-            <p>This is the signature Outlook adds to your emails{me.data ? ` as ${me.data.companyName}` : ''}.</p>
+            <h1>{firstName(session?.name) ? t('Hi, {name}', { name: firstName(session?.name) }) : t('Hi there')}</h1>
+            <p>{me.data ? t('This is the signature Outlook adds to your emails as {company}.', { company: me.data.companyName }) : t('This is the signature Outlook adds to your emails.')}</p>
           </div>
         </header>
         {body}
@@ -259,8 +259,8 @@ function ReadOnlyRow({ label, value, source }: { label: string; value: string | 
     <div className="field-row">
       <span className="k">{label}</span>
       <div style={{ paddingTop: 8 }}>
-        {value ? value : <span className="muted">Not set, so this line is left out</span>}
-        {source === 'override' && <span className="tag action" style={{ marginLeft: 8 }}>Corrected</span>}
+        {value ? value : <span className="muted">{t('Not set, so this line is left out')}</span>}
+        {source === 'override' && <span className="tag action" style={{ marginLeft: 8 }}>{t('Corrected')}</span>}
       </div>
     </div>
   );
@@ -307,7 +307,7 @@ function normalize(o: Record<string, unknown>, fields: string[]) {
 }
 
 function firstName(name?: string) {
-  return (name ?? '').split(/\s+/)[0] || 'there';
+  return (name ?? '').split(/\s+/)[0];
 }
 
 /** Choose which of the company's signatures is your default (if there's more than one and IT hasn't locked it). */
@@ -318,7 +318,7 @@ function DesignPicker({ me, onChanged }: { me: Me; onChanged: () => void }) {
   if (me.designLocked) {
     return (
       <div className="callout">
-        Your signature design is <strong>{me.design?.name}</strong>, set by your administrator.
+        {tx('Your signature design is {name}, set by your administrator.', { name: <strong>{me.design?.name}</strong> })}
       </div>
     );
   }
@@ -327,7 +327,7 @@ function DesignPicker({ me, onChanged }: { me: Me; onChanged: () => void }) {
     setBusy(true);
     try {
       await api.put('/api/me/design', { design: id });
-      toast(`${designs.find((d) => d.id === id)?.name} is now your default signature`);
+      toast(t('{name} is now your default signature', { name: designs.find((d) => d.id === id)?.name ?? '' }));
       onChanged();
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -337,13 +337,13 @@ function DesignPicker({ me, onChanged }: { me: Me; onChanged: () => void }) {
   };
   return (
     <section className="stack tight">
-      <h3>Your signature</h3>
-      <p className="small muted">Outlook adds this one automatically. You can switch for a single email with the Signatures button in Outlook.</p>
-      <div className="design-cards" role="radiogroup" aria-label="Your signature design">
+      <h3>{t('Your signature')}</h3>
+      <p className="small muted">{t('Outlook adds this one automatically. You can switch for a single email with the Signatures button in Outlook.')}</p>
+      <div className="design-cards" role="radiogroup" aria-label={t('Your signature design')}>
         {designs.map((d) => (
           <button key={d.id} type="button" role="radio" aria-checked={d.selected} className="design-card" disabled={busy} onClick={() => !d.selected && pick(d.id)}>
             <strong>{d.name}</strong>
-            <span>{d.selected ? 'Your default' : 'Use as default'}</span>
+            <span>{d.selected ? t('Your default') : t('Use as default')}</span>
           </button>
         ))}
       </div>
@@ -375,7 +375,7 @@ function GreetingEditor({
     setSaving(true);
     try {
       await api.put('/api/me/greeting', { greeting: value });
-      toast(value === null ? 'Using the company closing line' : value === '' ? 'No closing line from now on' : 'Closing line saved');
+      toast(value === null ? t('Using the company closing line') : value === '' ? t('No closing line from now on') : t('Closing line saved'));
       onSaved();
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -387,34 +387,34 @@ function GreetingEditor({
   return (
     <section className="panel">
       <div className="panel-head">
-        <h3>Closing line</h3>
+        <h3>{t('Closing line')}</h3>
         <span className="spacer" />
-        <span className="xs muted">Shown above your signature</span>
+        <span className="xs muted">{t('Shown above your signature')}</span>
       </div>
       <div className="panel-body stack tight">
         <Segmented<'default' | 'own' | 'none'>
-          label="Closing line"
+          label={t('Closing line')}
           value={mode}
           onChange={(m) => setDraft(m === 'default' ? null : m === 'none' ? '' : value && value !== '' ? value : def || 'Ar cieņu,')}
           options={[
-            { value: 'default', label: 'Company default' },
-            { value: 'own', label: 'My own' },
-            { value: 'none', label: 'None' },
+            { value: 'default', label: t('Company default') },
+            { value: 'own', label: t('My own') },
+            { value: 'none', label: t('None') },
           ]}
         />
         {mode === 'own' && (
-          <input type="text" maxLength={120} value={value ?? ''} placeholder="e.g. Ar cieņu, / Best regards," onChange={(e) => setDraft(e.target.value)} aria-label="Your closing line" />
+          <input type="text" maxLength={120} value={value ?? ''} placeholder={t('e.g. {example}', { example: 'Ar cieņu, / Best regards,' })} onChange={(e) => setDraft(e.target.value)} aria-label={t('Your closing line')} />
         )}
         <p className="xs muted">
-          {mode === 'default' ? (def ? `Your company uses “${def}”.` : 'Your company doesn’t add a closing line.') : mode === 'none' ? 'Nothing is added above your signature.' : 'Used in every new email and reply.'}
+          {mode === 'default' ? (def ? t('Your company uses “{line}”.', { line: def }) : t('Your company doesn’t add a closing line.')) : mode === 'none' ? t('Nothing is added above your signature.') : t('Used in every new email and reply.')}
         </p>
         {dirty && (
           <div className="row end">
             <button className="btn ghost sm" onClick={() => setDraft(undefined)}>
-              Discard
+              {t('Discard')}
             </button>
             <button className="btn primary sm" disabled={saving || (mode === 'own' && !value?.trim())} onClick={save}>
-              {saving ? 'Saving…' : 'Save closing line'}
+              {saving ? t('Saving…') : t('Save closing line')}
             </button>
           </div>
         )}

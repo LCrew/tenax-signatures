@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Check, Copy, X } from 'lucide-react';
+import { dateLocale, t } from '../lib/i18n';
 
 export function PageHead({ title, lead, actions }: { title: string; lead?: ReactNode; actions?: ReactNode }) {
   return (
@@ -32,7 +33,7 @@ export function CompanyName({ name, color }: { name: string; color?: string }) {
   );
 }
 
-export function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) {
+export function CopyButton({ text, label }: { text: string; label?: string }) {
   const [done, setDone] = useState(false);
   return (
     <button
@@ -44,7 +45,7 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
         setTimeout(() => setDone(false), 1500);
       }}
     >
-      {done ? <Check size={14} /> : <Copy size={14} />} {done ? 'Copied' : label}
+      {done ? <Check size={14} /> : <Copy size={14} />} {done ? t('Copied') : label ?? t('Copy')}
     </button>
   );
 }
@@ -115,7 +116,7 @@ export function Modal({
         <div className="sheet__inner">
           <header className="sheet__head">
             <h2>{title}</h2>
-            <button type="button" className="rb dk sm" aria-label="Close" onClick={() => ref.current?.close()}>
+            <button type="button" className="rb dk sm" aria-label={t('Close')} onClick={() => ref.current?.close()}>
               <X size={20} />
             </button>
           </header>
@@ -146,8 +147,8 @@ export function Toggle({ checked, onChange, children, disabled }: { checked: boo
   );
 }
 
-export function Loading({ what = 'Loading' }: { what?: string }) {
-  return <div className="loading" aria-busy="true">{what}…</div>;
+export function Loading({ what }: { what?: string }) {
+  return <div className="loading" aria-busy="true">{what ?? t('Loading')}…</div>;
 }
 
 export function ErrorNote({ error, retry }: { error: Error; retry?: () => void }) {
@@ -156,7 +157,7 @@ export function ErrorNote({ error, retry }: { error: Error; retry?: () => void }
       <span>{error.message}</span>
       {retry && (
         <button className="btn sm" onClick={retry}>
-          Try again
+          {t('Try again')}
         </button>
       )}
     </div>
@@ -164,10 +165,10 @@ export function ErrorNote({ error, retry }: { error: Error; retry?: () => void }
 }
 
 export function timeAgo(iso: string | null | undefined): string {
-  if (!iso) return 'never';
+  if (!iso) return t('never');
   const s = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
-  return new Date(iso).toLocaleDateString('lv-LV', { year: 'numeric', month: 'short', day: 'numeric' });
+  if (s < 60) return t('just now');
+  if (s < 3600) return t('{n} min ago', { n: Math.floor(s / 60) });
+  if (s < 86400) return t('{n} h ago', { n: Math.floor(s / 3600) });
+  return new Date(iso).toLocaleDateString(dateLocale(), { year: 'numeric', month: 'short', day: 'numeric' });
 }

@@ -1,6 +1,7 @@
 import { Check } from 'lucide-react';
 import { Modal, Segmented } from './ui';
 import { THEMES, setSurface, setTheme, useAppearance, type Surface, type ThemePref } from '../lib/appearance';
+import { t } from '../lib/i18n';
 
 /** Two-colour dot previewing a theme: its page colour and its main colour. */
 const DOTS: Record<ThemePref, [string, string]> = {
@@ -21,17 +22,17 @@ export function ThemeDot({ theme }: { theme: ThemePref }) {
 export function AppearanceSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { theme, surface } = useAppearance();
   return (
-    <Modal open={open} onClose={onClose} title="Appearance" variant="sheet" size="auto">
+    <Modal open={open} onClose={onClose} title={t('Appearance')} variant="sheet" size="auto">
       <section className="stack tight">
-        <h3 className="section-label" id="appearance-theme">Theme</h3>
+        <h3 className="section-label" id="appearance-theme">{t('Theme')}</h3>
         <div className="options" role="radiogroup" aria-labelledby="appearance-theme">
-          {THEMES.map((t) => (
-            <label key={t.value} className="option">
-              <input type="radio" name="appearance-theme" className="visually-hidden" checked={theme === t.value} onChange={() => setTheme(t.value)} />
-              <ThemeDot theme={t.value} />
+          {THEMES.map((th) => (
+            <label key={th.value} className="option">
+              <input type="radio" name="appearance-theme" className="visually-hidden" checked={theme === th.value} onChange={() => setTheme(th.value)} />
+              <ThemeDot theme={th.value} />
               <span className="option__text">
-                <span>{t.label}</span>
-                {t.value === 'system' && <small>Recommended</small>}
+                <span>{t(th.label)}</span>
+                {th.value === 'system' && <small>{t('Recommended')}</small>}
               </span>
               <Check className="option__check" size={18} aria-hidden />
             </label>
@@ -39,19 +40,19 @@ export function AppearanceSheet({ open, onClose }: { open: boolean; onClose: () 
         </div>
       </section>
       <section className="stack tight">
-        <h3 className="section-label" id="appearance-surface">Surfaces</h3>
+        <h3 className="section-label" id="appearance-surface">{t('Surfaces')}</h3>
         <Segmented<Surface>
           value={surface}
           onChange={setSurface}
-          label="Surfaces"
+          label={t('Surfaces')}
           options={[
-            { value: 'glass', label: 'Glass' },
-            { value: 'solid', label: 'Solid' },
+            { value: 'glass', label: t('Glass') },
+            { value: 'solid', label: t('Solid') },
           ]}
         />
-        <p className="xs muted">Glass lets the page’s colour show through panels and bars. Solid keeps every panel plain and opaque.</p>
+        <p className="xs muted">{t('Glass lets the page’s colour show through panels and bars. Solid keeps every panel plain and opaque.')}</p>
       </section>
-      <p className="xs muted">Saved in this browser only. Signature previews always show the email on white, as recipients see it.</p>
+      <p className="xs muted">{t('Saved in this browser only. Signature previews always show the email on white, as recipients see it.')}</p>
     </Modal>
   );
 }

@@ -4,6 +4,7 @@ import { api, download } from '../lib/api';
 import { useApp, useAsync, useCompanies, useToast } from '../lib/hooks';
 import { FIELD_LABELS, type Report, type TelemetryEvent } from '../lib/types';
 import { CompanyName, ErrorNote, Loading, PageHead, timeAgo } from '../components/ui';
+import { t, tn, tx } from '../lib/i18n';
 
 export function Overview() {
   const toast = useToast();
@@ -17,13 +18,13 @@ export function Overview() {
 
   const r = report.data;
   const issues = r?.rows.filter((u) => u.conflict || u.companySource === 'default' || u.missing.length > 0) ?? [];
-  const recentErrors = (telemetry.data ?? []).filter((t) => Date.now() - new Date(t.at).getTime() < 24 * 3600_000);
+  const recentErrors = (telemetry.data ?? []).filter((ev) => Date.now() - new Date(ev.at).getTime() < 24 * 3600_000);
 
   return (
     <>
       <PageHead
-        title="Overview"
-        lead="How complete everyone's signature data is. Fix gaps in on-premises AD where you can; corrections here are a stopgap."
+        title={t('Overview')}
+        lead={t("How complete everyone's signature data is. Fix gaps in on-premises AD where you can; corrections here are a stopgap.")}
         actions={
           <>
             {it && <button
@@ -31,50 +32,50 @@ export function Overview() {
               onClick={async () => {
                 await api.post('/api/admin/cache/clear');
                 await report.reload();
-                toast('Reloaded from the directory');
+                toast(t('Reloaded from the directory'));
               }}
             >
-              <RefreshCw size={14} /> Refresh from directory
+              <RefreshCw size={14} /> {t('Refresh from directory')}
             </button>}
             <button className="btn primary" onClick={() => download('/api/admin/report.csv', 'signature-report.csv').catch((e) => toast(e.message, 'error'))}>
-              <Download size={14} /> Download CSV
+              <Download size={14} /> {t('Download CSV')}
             </button>
           </>
         }
       />
       {report.error && <ErrorNote error={report.error} retry={report.reload} />}
       {!r ? (
-        !report.error && <Loading what="Building report" />
+        !report.error && <Loading what={t('Building report')} />
       ) : (
         <div className="stack loose">
           <div className="stats">
             <div className="stat">
               <div className="n">{r.total}</div>
-              <div className="l">people with a mailbox licence</div>
+              <div className="l">{tn(r.total, 'person with a mailbox licence', 'people with a mailbox licence')}</div>
             </div>
             <div className="stat">
               <div className="n">{r.total ? Math.round((r.complete / r.total) * 100) : 0}%</div>
-              <div className="l">have every signature field</div>
+              <div className="l">{t('have every signature field')}</div>
             </div>
             <div className="stat">
               <div className="n" style={{ color: r.conflicts ? 'var(--warn)' : undefined }}>{r.conflicts}</div>
-              <div className="l">in more than one company group</div>
+              <div className="l">{t('in more than one company group')}</div>
             </div>
             <div className="stat">
               <div className="n" style={{ color: r.defaulted ? 'var(--warn)' : undefined }}>{r.defaulted}</div>
-              <div className="l">in no company group</div>
+              <div className="l">{t('in no company group')}</div>
             </div>
           </div>
           {it && (
             <p className="small muted" style={{ marginTop: -12 }}>
-              Counting people with an Exchange mailbox licence.{' '}
+              {t('Counting people with an Exchange mailbox licence.')}{' '}
               {r.excluded ? (
-                <>
-                  {r.excluded} {r.excluded === 1 ? 'account is' : 'accounts are'} excluded (service accounts etc.), see{' '}
-                  <Link to="/people">People › Excluded</Link>.
-                </>
+                // tn picks and translates the sentence; tx then puts the link in.
+                tx(tn(r.excluded, '{n} account is excluded (service accounts etc.), see {link}.', '{n} accounts are excluded (service accounts etc.), see {link}.'), {
+                  link: <Link to="/people">{t('People › Excluded')}</Link>,
+                })
               ) : (
-                'Exclude service accounts from their person page or with the exclusion group.'
+                t('Exclude service accounts from their person page or with the exclusion group.')
               )}
             </p>
           )}
@@ -82,17 +83,17 @@ export function Overview() {
           <div className="two-col">
             <section className="panel">
               <div className="panel-head">
-                <h3>Missing fields</h3>
+                <h3>{t('Missing fields')}</h3>
               </div>
               <div className="panel-body stack tight">
                 {Object.keys(r.missingByField).length === 0 ? (
-                  <p className="muted">Nothing missing. Every signature is complete.</p>
+                  <p className="muted">{t('Nothing missing. Every signature is complete.')}</p>
                 ) : (
                   Object.entries(r.missingByField)
                     .sort((a, b) => b[1] - a[1])
                     .map(([f, n]) => (
                       <div className="bar-row" key={f}>
-                        <span>{FIELD_LABELS[f] ?? f}</span>
+                        <span>{FIELD_LABELS[f] ? t(FIELD_LABELS[f]) : f}</span>
                         <div className="bar" aria-hidden>
                           <span style={{ width: `${(n / r.total) * 100}%` }} />
                         </div>
@@ -104,7 +105,7 @@ export function Overview() {
             </section>
             <section className="panel">
               <div className="panel-head">
-                <h3>People per company</h3>
+                <h3>{t('People per company')}</h3>
               </div>
               <div className="panel-body stack tight">
                 {companies.map((c) => (
@@ -122,19 +123,19 @@ export function Overview() {
 
           <section>
             <div className="section-title">
-              <h2>Needs attention</h2>
-              <p>{issues.length} {issues.length === 1 ? 'person' : 'people'}</p>
+              <h2>{t('Needs attention')}</h2>
+              <p>{tn(issues.length, '{n} person', '{n} people')}</p>
             </div>
             <div className="panel table-wrap">
               {issues.length === 0 ? (
-                <div className="empty">No conflicts, no one without a company, no missing fields.</div>
+                <div className="empty">{t('No conflicts, no one without a company, no missing fields.')}</div>
               ) : (
                 <table className="data">
                   <thead>
                     <tr>
-                      <th>Person</th>
-                      <th>Company</th>
-                      <th>Problem</th>
+                      <th>{t('Person')}</th>
+                      <th>{t('Company')}</th>
+                      <th>{t('Problem')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -151,10 +152,10 @@ export function Overview() {
                         </td>
                         <td>
                           <div className="tags">
-                            {u.conflict && <span className="tag warn">In {u.candidates.length} company groups</span>}
-                            {u.companySource === 'default' && <span className="tag warn">No company group</span>}
+                            {u.conflict && <span className="tag warn">{t('In {n} company groups', { n: u.candidates.length })}</span>}
+                            {u.companySource === 'default' && <span className="tag warn">{t('No company group')}</span>}
                             {u.missing.map((m) => (
-                              <span key={m} className="tag">No {FIELD_LABELS[m]?.toLowerCase() ?? m}</span>
+                              <span key={m} className="tag">{t('No {field}', { field: FIELD_LABELS[m] ? t(FIELD_LABELS[m]).toLowerCase() : m })}</span>
                             ))}
                           </div>
                         </td>
@@ -168,25 +169,25 @@ export function Overview() {
 
           {it && <section>
             <div className="section-title">
-              <h2>Outlook add-in errors</h2>
-              <p>Last 24 hours</p>
+              <h2>{t('Outlook add-in errors')}</h2>
+              <p>{t('Last 24 hours')}</p>
             </div>
             <div className="panel">
               {recentErrors.length === 0 ? (
-                <div className="empty">No failures reported by Outlook clients.</div>
+                <div className="empty">{t('No failures reported by Outlook clients.')}</div>
               ) : (
                 <div className="table-wrap">
                   <table className="data">
                     <tbody>
-                      {recentErrors.slice(0, 10).map((t) => (
-                        <tr key={t.id}>
-                          <td className="sub" style={{ whiteSpace: 'nowrap' }}>{timeAgo(t.at)}</td>
-                          <td>{t.upn ?? 'unknown user'}</td>
+                      {recentErrors.slice(0, 10).map((ev) => (
+                        <tr key={ev.id}>
+                          <td className="sub" style={{ whiteSpace: 'nowrap' }}>{timeAgo(ev.at)}</td>
+                          <td>{ev.upn ?? t('unknown user')}</td>
                           <td>
-                            <span className="tag danger">{t.stage ?? t.event}</span>
+                            <span className="tag danger">{ev.stage ?? ev.event}</span>
                           </td>
-                          <td className="sub">{t.message}</td>
-                          <td className="sub">{[t.host, t.platform].filter(Boolean).join(' ')}</td>
+                          <td className="sub">{ev.message}</td>
+                          <td className="sub">{[ev.host, ev.platform].filter(Boolean).join(' ')}</td>
                         </tr>
                       ))}
                     </tbody>

@@ -6,6 +6,7 @@ import { useApp, useAsync, useCompanies, useDebounced, useToast } from '../lib/h
 import { FIELD_LABELS, LOCALE_NAMES, SKIP_REASONS, STANDARD_GREETINGS, ownTitleLabel, type ComposeType, type Design, type Overrides, type PersonLanguage, type UserDetail } from '../lib/types';
 import { CompanyName, ErrorNote, Field, Loading, Modal, PageHead, timeAgo } from '../components/ui';
 import { LetterPreview } from '../components/LetterPreview';
+import { t, tn, tx } from '../lib/i18n';
 
 const TEXT_FIELDS = ['displayName', 'jobTitleLv', 'jobTitleEn', 'mobilePhone', 'officePhone', 'department', 'address'] as const;
 type TextField = (typeof TEXT_FIELDS)[number];
@@ -53,7 +54,7 @@ export function Person() {
     setSaving(true);
     try {
       await api.put(`/api/admin/users/${encodeURIComponent(upn)}/overrides`, normalize(draft));
-      toast('Corrections saved. Outlook picks them up on the next new message.');
+      toast(t('Corrections saved. Outlook picks them up on the next new message.'));
       await user.reload();
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -67,15 +68,15 @@ export function Person() {
   return (
     <>
       <Link to="/people" className="btn ghost sm" style={{ marginBottom: 12, paddingLeft: 0 }}>
-        <ArrowLeft size={14} /> People
+        <ArrowLeft size={14} /> {t('People')}
       </Link>
       <PageHead
         title={u.displayName ?? u.upn}
         lead={
           <span className="row" style={{ gap: 8 }}>
             {u.upn} <CompanyName name={u.companyName} color={company?.color} />
-            {u.isAdmin && <span className="tag action">Admin</span>}
-            {u.isPilot && <span className="tag">Pilot</span>}
+            {u.isAdmin && <span className="tag action">{t('Admin')}</span>}
+            {u.isPilot && <span className="tag">{t('Pilot')}</span>}
           </span>
         }
       />
@@ -83,35 +84,35 @@ export function Person() {
       {session?.isAdmin && (u.skipped.length === 0 || u.excluded) && <ExclusionBar user={u} onChanged={user.reload} />}
       {u.conflict && (
         <div className="callout warn" style={{ marginBottom: 20 }}>
-          In {u.candidates.length} company groups ({u.candidates.join(', ')}). Using {u.companyName} because it's higher in
-          the priority list. {session?.isAdmin ? 'Pick their company below to settle it for this person, or remove them from the other group in AD.' : 'IT can settle this by choosing their company.'}
+          {tn(u.candidates.length, "In {n} company group ({groups}). Using {company} because it's higher in the priority list.", "In {n} company groups ({groups}). Using {company} because it's higher in the priority list.", { groups: u.candidates.join(', '), company: u.companyName })}{' '}
+          {session?.isAdmin ? t('Pick their company below to settle it for this person, or remove them from the other group in AD.') : t('IT can settle this by choosing their company.')}
         </div>
       )}
       <div className="split">
         <section className="panel">
           <div className="panel-head">
-            <h3>Signature details</h3>
+            <h3>{t('Signature details')}</h3>
             <span className="spacer" />
-            <span className="xs muted">Empty means "use Entra ID"</span>
+            <span className="xs muted">{t('Empty means "use Entra ID"')}</span>
           </div>
           <div className="panel-body" style={{ paddingTop: 4, paddingBottom: 4 }}>
             <div className="field-row">
               <label className="k" htmlFor="f-language">
-                Signature language
+                {t('Signature language')}
               </label>
               <div>
                 <select id="f-language" value={draft.language ?? ''} onChange={(e) => set('language', (e.target.value || null) as PersonLanguage | null)}>
-                  <option value="">Latvian (company language)</option>
+                  <option value="">{t('Latvian (company language)')}</option>
                   {(['et', 'lt'] as PersonLanguage[]).map((l) => (
                     <option key={l} value={l}>
-                      {LOCALE_NAMES[l]}
+                      {t(LOCALE_NAMES[l])}
                     </option>
                   ))}
                 </select>
                 <div className="entra">
                   {draft.language
-                    ? `${LOCALE_NAMES[draft.language]} job title with the English one under it (except on English-only designs), and the ${LOCALE_NAMES[draft.language]} closing line and banner from Designs › Languages and banners. Company details stay as in Latvia.`
-                    : 'For Estonian and Lithuanian colleagues: they get their own-language job title, closing line and banner.'}
+                    ? t('{language} job title with the English one under it (except on English-only designs), and the {language} closing line and banner from Designs › Languages and banners. Company details stay as in Latvia.', { language: t(LOCALE_NAMES[draft.language]) })
+                    : t('For Estonian and Lithuanian colleagues: they get their own-language job title, closing line and banner.')}
                 </div>
               </div>
             </div>
@@ -121,36 +122,36 @@ export function Person() {
               return (
                 <div className="field-row" key={f}>
                   <label className="k" htmlFor={`f-${f}`}>
-                    {f === 'jobTitleLv' ? ownTitleLabel(draft.language) : FIELD_LABELS[f]}
+                    {f === 'jobTitleLv' ? ownTitleLabel(draft.language) : t(FIELD_LABELS[f])}
                   </label>
                   <div>
                     <div className="row" style={{ flexWrap: 'nowrap' }}>
-                      <input id={`f-${f}`} type="text" value={ov} placeholder={ev ?? (f === 'jobTitleEn' ? 'Not in Entra; set here' : f === 'address' ? 'No company address: line is left out' : 'Empty in Entra: line is left out')} onChange={(e) => set(f, e.target.value)} />
+                      <input id={`f-${f}`} type="text" value={ov} placeholder={ev ?? (f === 'jobTitleEn' ? t('Not in Entra; set here') : f === 'address' ? t('No company address: line is left out') : t('Empty in Entra: line is left out'))} onChange={(e) => set(f, e.target.value)} />
                       {ov && (
-                        <button type="button" className="btn ghost sm" onClick={() => set(f, null)} title={f === 'address' ? 'Use the company address' : 'Use the Entra value'}>
+                        <button type="button" className="btn ghost sm" onClick={() => set(f, null)} title={f === 'address' ? t('Use the company address') : t('Use the Entra value')}>
                           <Undo2 size={14} />
                         </button>
                       )}
                     </div>
                     <div className="entra">
-                      {ov ? <span className="tag action">Correction</span> : ev ? <span className="tag">{f === 'address' ? 'Company address' : 'From Entra'}</span> : f !== 'address' && <span className="tag danger">Missing</span>}
-                      {ov && ev && <span>{f === 'address' ? 'Company address' : 'Entra says'}: {ev}</span>}
+                      {ov ? <span className="tag action">{t('Correction')}</span> : ev ? <span className="tag">{f === 'address' ? t('Company address') : t('From Entra')}</span> : f !== 'address' && <span className="tag danger">{t('Missing')}</span>}
+                      {ov && ev && <span>{f === 'address' ? t('Company address') : t('Entra says')}: {ev}</span>}
                     </div>
                   </div>
                 </div>
               );
             })}
             <div className="field-row">
-              <span className="k">Email</span>
+              <span className="k">{t('Email')}</span>
               <div style={{ paddingTop: 8 }}>
-                {u.entra.mail ?? u.upn} <span className="xs muted">· always from Entra</span>
+                {u.entra.mail ?? u.upn} <span className="xs muted">· {t('always from Entra')}</span>
               </div>
             </div>
             {session?.isAdmin && <div className="field-row">
-              <label className="k" htmlFor="f-company">Company</label>
+              <label className="k" htmlFor="f-company">{t('Company')}</label>
               <div>
                 <select id="f-company" value={draft.company ?? ''} onChange={(e) => set('company', e.target.value || null)}>
-                  <option value="">From group membership</option>
+                  <option value="">{t('From group membership')}</option>
                   {companies.map((c) => (
                     <option key={c.key} value={c.key}>
                       {c.displayName}
@@ -159,69 +160,73 @@ export function Person() {
                 </select>
                 <div className="entra">
                   {u.companySource === 'group'
-                    ? `From group membership${u.candidates.length > 1 ? ` (in ${u.candidates.length} company groups)` : ''}. Pick a company to override it; their signature then uses that company’s designs.`
+                    ? u.candidates.length > 1
+                      ? tn(u.candidates.length, 'From group membership (in {n} company group). Pick a company to override it; their signature then uses that company’s designs.', 'From group membership (in {n} company groups). Pick a company to override it; their signature then uses that company’s designs.')
+                      : t('From group membership. Pick a company to override it; their signature then uses that company’s designs.')
                     : u.companySource === 'default'
-                      ? 'In no company group, so the default company is used. Pick a company to set it.'
-                      : `Set by an admin, overriding group membership${u.candidates.length ? ` (groups: ${u.candidates.join(', ')})` : ''}. Choose “From group membership” to undo.`}
+                      ? t('In no company group, so the default company is used. Pick a company to set it.')
+                      : u.candidates.length
+                        ? t('Set by an admin, overriding group membership (groups: {groups}). Choose “From group membership” to undo.', { groups: u.candidates.join(', ') })
+                        : t('Set by an admin, overriding group membership. Choose “From group membership” to undo.')}
                 </div>
               </div>
             </div>}
             <DesignRow user={u} draft={draft} set={set} />
             <div className="field-row">
-              <label className="k" htmlFor="f-greeting">Closing line</label>
+              <label className="k" htmlFor="f-greeting">{t('Closing line')}</label>
               <div>
                 <select
                   id="f-greeting-mode"
-                  aria-label="Closing line"
+                  aria-label={t('Closing line')}
                   value={draft.greeting == null ? 'default' : draft.greeting === '' ? 'none' : 'own'}
                   onChange={(e) => set('greeting', e.target.value === 'default' ? null : e.target.value === 'none' ? '' : draft.greeting || (draft.language ? STANDARD_GREETINGS[draft.language] : 'Ar cieņu,'))}
                 >
-                  <option value="default">Company default{draft.language ? ` (${LOCALE_NAMES[draft.language]})` : ''}</option>
-                  <option value="own">Own text</option>
-                  <option value="none">None</option>
+                  <option value="default">{t('Company default')}{draft.language ? ` (${t(LOCALE_NAMES[draft.language])})` : ''}</option>
+                  <option value="own">{t('Own text')}</option>
+                  <option value="none">{t('None')}</option>
                 </select>
                 {draft.greeting != null && draft.greeting !== '' && (
                   <input id="f-greeting" type="text" maxLength={120} style={{ marginTop: 8 }} value={draft.greeting} onChange={(e) => set('greeting', e.target.value)} />
                 )}
-                <div className="entra">The person can also change this themselves in My signature.</div>
+                <div className="entra">{t('The person can also change this themselves in My signature.')}</div>
               </div>
             </div>
             <div className="field-row">
-              <span className="k">Privacy</span>
+              <span className="k">{t('Privacy')}</span>
               <label className="check" style={{ paddingTop: 8 }}>
                 <input type="checkbox" checked={draft.hideMobile === true} onChange={(e) => set('hideMobile', e.target.checked ? true : null)} />
-                Leave the mobile number out of the signature
+                {t('Leave the mobile number out of the signature')}
               </label>
             </div>
           </div>
           <div className="panel-body row" style={{ borderTop: '1px solid var(--line)' }}>
             <span className="xs muted">
-              {u.overrides?.updatedAt ? `Last corrected ${timeAgo(u.overrides.updatedAt)} by ${u.overrides.updatedBy}` : 'No corrections yet'}
+              {u.overrides?.updatedAt ? t('Last corrected {when} by {who}', { when: timeAgo(u.overrides.updatedAt), who: u.overrides.updatedBy ?? '' }) : t('No corrections yet')}
             </span>
             <span className="spacer" />
             <button className="btn ghost" disabled={!dirty || saving} onClick={() => setDraft(saved)}>
-              Discard
+              {t('Discard')}
             </button>
             <button className="btn primary" disabled={!dirty || saving} onClick={save}>
-              {saving ? 'Saving…' : 'Save corrections'}
+              {saving ? t('Saving…') : t('Save corrections')}
             </button>
           </div>
         </section>
 
         <div className="sticky stack">
           <LetterPreview html={preview.data ?? null} error={preview.error?.message} loading={preview.loading} type={type} onTypeChange={setType} from={{ name: draft.displayName || u.displayName || u.upn, email: u.entra.mail ?? u.upn }} />
-          {dirty && <p className="xs muted">Preview shows unsaved changes.</p>}
+          {dirty && <p className="xs muted">{t('Preview shows unsaved changes.')}</p>}
           {u.history.length > 0 && (
             <section className="panel">
               <div className="panel-head">
-                <h3>History</h3>
+                <h3>{t('History')}</h3>
               </div>
               <ul className="history panel-body" style={{ paddingTop: 4, paddingBottom: 4 }}>
                 {u.history.map((h) => (
                   <li key={h.id} style={{ gridTemplateColumns: '1fr auto' }}>
                     <span>
-                      {h.action === 'overrides.self' ? 'Edited by themselves' : `Corrected by ${h.actor}`}
-                      <span className="xs muted"> · {changedFields(h.before, h.after).join(', ') || 'no field changes'}</span>
+                      {h.action === 'overrides.self' ? t('Edited by themselves') : t('Corrected by {who}', { who: h.actor })}
+                      <span className="xs muted"> · {changedFields(h.before, h.after).join(', ') || t('no field changes')}</span>
                     </span>
                     <span className="xs muted">{timeAgo(h.at)}</span>
                   </li>
@@ -261,7 +266,7 @@ function changedFields(before: unknown, after: unknown): string[] {
   const a = (after ?? {}) as Record<string, unknown>;
   return Object.keys(FIELD_LABELS)
     .filter((k) => (b[k] ?? null) !== (a[k] ?? null))
-    .map((k) => FIELD_LABELS[k].toLowerCase());
+    .map((k) => t(FIELD_LABELS[k]).toLowerCase());
 }
 
 /** Accounts Microsoft 365 keeps out of signatures (People › Skipped): why, and what would change that. */
@@ -269,19 +274,21 @@ function SkippedNote({ user: u }: { user: UserDetail }) {
   if (u.sharedMailbox) {
     return (
       <div className="callout" style={{ marginBottom: 20 }}>
-        A shared mailbox, so it's not in People ({u.skipped.map((r) => SKIP_REASONS[r].label.toLowerCase()).join(', ')}). That's expected: the
-        signature people get when sending from it is set under <Link to="/mailboxes">Shared mailboxes</Link>.
+        {tx("A shared mailbox, so it's not in People ({reasons}). That's expected: the signature people get when sending from it is set under {link}.", {
+          reasons: u.skipped.map((r) => t(SKIP_REASONS[r].label).toLowerCase()).join(', '),
+          link: <Link to="/mailboxes">{t('Shared mailboxes')}</Link>,
+        })}
       </div>
     );
   }
   return (
     <div className="callout warn" style={{ marginBottom: 20 }}>
-      Not in People: Microsoft 365 keeps this account out of signatures.
+      {t('Not in People: Microsoft 365 keeps this account out of signatures.')}
       <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
         {u.skipped.map((r) => (
           <li key={r}>
-            <strong>{SKIP_REASONS[r].label}.</strong> {SKIP_REASONS[r].fix}
-            {r === 'mailboxOff' && u.entra.exchangeStatus && ` Microsoft 365 reports the plan as “${u.entra.exchangeStatus}”.`}
+            <strong>{t(SKIP_REASONS[r].label)}.</strong> {t(SKIP_REASONS[r].fix)}
+            {r === 'mailboxOff' && u.entra.exchangeStatus && ` ${t('Microsoft 365 reports the plan as “{status}”.', { status: u.entra.exchangeStatus })}`}
           </li>
         ))}
       </ul>
@@ -297,7 +304,7 @@ function ExclusionBar({ user: u, onChanged }: { user: UserDetail; onChanged: () 
   const set = async (excluded: boolean) => {
     try {
       await api.put(`/api/admin/users/${encodeURIComponent(u.upn)}/exclusion`, { excluded, reason: reason || undefined });
-      toast(excluded ? `${u.displayName ?? u.upn} is excluded from signatures` : `${u.displayName ?? u.upn} gets a signature again`);
+      toast(excluded ? t('{name} is excluded from signatures', { name: u.displayName ?? u.upn }) : t('{name} gets a signature again', { name: u.displayName ?? u.upn }));
       setOpen(false);
       setReason('');
       onChanged();
@@ -310,12 +317,14 @@ function ExclusionBar({ user: u, onChanged }: { user: UserDetail; onChanged: () 
       <div className="callout row" style={{ marginBottom: 20 }}>
         <span style={{ flex: '1 1 260px' }}>
           {u.excluded.by === 'group'
-            ? 'Excluded from signatures because this account is in the exclusion group. Remove it from that group in Entra to include it again.'
-            : `Excluded from signatures${u.excluded.reason ? ` (${u.excluded.reason})` : ''} by ${u.excluded.excludedBy}, ${timeAgo(u.excluded.excludedAt)}. Outlook inserts nothing for this account.`}
+            ? t('Excluded from signatures because this account is in the exclusion group. Remove it from that group in Entra to include it again.')
+            : u.excluded.reason
+              ? t('Excluded from signatures ({reason}) by {who}, {when}. Outlook inserts nothing for this account.', { reason: u.excluded.reason, who: u.excluded.excludedBy, when: timeAgo(u.excluded.excludedAt) })
+              : t('Excluded from signatures by {who}, {when}. Outlook inserts nothing for this account.', { who: u.excluded.excludedBy, when: timeAgo(u.excluded.excludedAt) })}
         </span>
         {u.excluded.by === 'manual' && (
           <button className="btn sm" onClick={() => set(false)}>
-            Include again
+            {t('Include again')}
           </button>
         )}
       </div>
@@ -325,23 +334,22 @@ function ExclusionBar({ user: u, onChanged }: { user: UserDetail; onChanged: () 
     <>
       <div className="row" style={{ marginBottom: 16, marginTop: -8 }}>
         <button className="btn ghost sm" onClick={() => setOpen(true)}>
-          <Ban size={14} /> Exclude from signatures
+          <Ban size={14} /> {t('Exclude from signatures')}
         </button>
       </div>
-      <Modal open={open} onClose={() => setOpen(false)} title={`Exclude ${u.displayName ?? u.upn}?`}>
+      <Modal open={open} onClose={() => setOpen(false)} title={t('Exclude {name}?', { name: u.displayName ?? u.upn })}>
         <p>
-          For service accounts, scanners, test or room mailboxes. The account disappears from People, the Overview and the
-          report, and Outlook inserts no signature for it. You can include it again from People › Excluded.
+          {t('For service accounts, scanners, test or room mailboxes. The account disappears from People, the Overview and the report, and Outlook inserts no signature for it. You can include it again from People › Excluded.')}
         </p>
-        <Field label="Reason" hint="Optional, shown in People › Excluded">
-          <input type="text" value={reason} maxLength={200} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Scanner mailbox" />
+        <Field label={t('Reason')} hint={t('Optional, shown in People › Excluded')}>
+          <input type="text" value={reason} maxLength={200} onChange={(e) => setReason(e.target.value)} placeholder={t('e.g. Scanner mailbox')} />
         </Field>
         <div className="row end">
           <button className="btn ghost" onClick={() => setOpen(false)}>
-            Cancel
+            {t('Cancel')}
           </button>
           <button className="btn primary" onClick={() => set(true)}>
-            Exclude from signatures
+            {t('Exclude from signatures')}
           </button>
         </div>
       </Modal>
@@ -356,35 +364,35 @@ function DesignRow({ user: u, draft, set }: { user: UserDetail; draft: Overrides
   if (list.length < 2) return null;
   const chosen = u.overrides?.chosenDesign ? list.find((d) => d.id === u.overrides!.chosenDesign) : undefined;
   const sourceText: Record<string, string> = {
-    locked: 'Set by an admin and locked',
-    chosen: 'Their own choice',
-    assigned: 'Set by an admin; they may change it',
-    default: 'Company default',
+    locked: t('Set by an admin and locked'),
+    chosen: t('Their own choice'),
+    assigned: t('Set by an admin; they may change it'),
+    default: t('Company default'),
   };
   return (
     <div className="field-row">
       <label className="k" htmlFor="f-design">
-        Signature design
+        {t('Signature design')}
       </label>
       <div>
         <select id="f-design" value={draft.design ?? ''} onChange={(e) => set('design', e.target.value || null)}>
-          <option value="">{chosen ? `Their own choice (${chosen.name})` : 'Company default / their own choice'}</option>
+          <option value="">{chosen ? t('Their own choice ({name})', { name: chosen.name }) : t('Company default / their own choice')}</option>
           {list.map((d) => (
             <option key={d.id} value={d.id}>
               {d.name}
-              {d.isDefault ? ' (default)' : ''}
-              {d.purpose === 'service' ? ' (service)' : ''}
+              {d.isDefault ? ` (${t('default')})` : ''}
+              {d.purpose === 'service' ? ` (${t('service')})` : ''}
             </option>
           ))}
         </select>
         {draft.design && (
           <label className="check" style={{ marginTop: 8 }}>
             <input type="checkbox" checked={draft.designLocked === true} onChange={(e) => set('designLocked', e.target.checked)} />
-            Lock it (they can’t switch in Outlook or My signature)
+            {t('Lock it (they can’t switch in Outlook or My signature)')}
           </label>
         )}
         <div className="entra">
-          Now: {u.design?.name} · {sourceText[u.design?.source ?? 'default']}
+          {t('Now: {design}', { design: u.design?.name ?? '' })} · {sourceText[u.design?.source ?? 'default']}
         </div>
       </div>
     </div>

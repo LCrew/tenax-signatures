@@ -2,6 +2,7 @@ import { Upload } from 'lucide-react';
 import { api } from '../../lib/api';
 import { BANNER_MAX_SHOWN, prepareBanner, resizeBanner } from '../../lib/banner';
 import { useAsync, useImageRatio, useToast } from '../../lib/hooks';
+import { t } from '../../lib/i18n';
 import type { Banner } from '../../lib/types';
 import { Field } from '../ui';
 
@@ -25,7 +26,7 @@ function measured(file: string, url: string, prev: Banner | null): Promise<Banne
       const w = Math.min(BANNER_MAX_SHOWN, img.naturalWidth);
       resolve({ ...(prev ?? {}), file, width: w, height: Math.max(1, Math.round((img.naturalHeight * w) / img.naturalWidth)) });
     };
-    img.onerror = () => reject(new Error('This image can’t be read'));
+    img.onerror = () => reject(new Error(t('This image can’t be read')));
     img.src = url;
   });
 }
@@ -55,7 +56,7 @@ export function BannerPicker({
   value,
   onChange,
   allowNone = true,
-  label = 'Promo banner',
+  label,
 }: {
   company: string;
   assets: Asset[];
@@ -83,7 +84,7 @@ export function BannerPicker({
       onChange(await measured(saved.savedAs, url, value));
       URL.revokeObjectURL(url);
       onUploaded();
-      toast('Banner uploaded');
+      toast(t('Banner uploaded'));
     } catch (e) {
       toast((e as Error).message, 'error');
     }
@@ -91,11 +92,11 @@ export function BannerPicker({
 
   return (
     <div className="stack">
-      <div className="banner-grid" role="group" aria-label={label}>
+      <div className="banner-grid" role="group" aria-label={label ?? t('Promo banner')}>
         {allowNone && (
           <button type="button" className="banner-tile none" aria-pressed={!value} onClick={() => onChange(null)}>
-            <span className="banner-thumb">No banner</span>
-            <span className="banner-name">None</span>
+            <span className="banner-thumb">{t('No banner')}</span>
+            <span className="banner-name">{t('None')}</span>
           </button>
         )}
         {banners.map((a) => (
@@ -110,7 +111,7 @@ export function BannerPicker({
           <span className="banner-thumb">
             <Upload size={16} aria-hidden />
           </span>
-          <span className="banner-name">Upload banner</span>
+          <span className="banner-name">{t('Upload banner')}</span>
           <input
             type="file"
             accept="image/png,image/jpeg,image/gif"
@@ -125,13 +126,13 @@ export function BannerPicker({
       </div>
       {value && (
         <div className="grid-3">
-          <Field label="Link when clicked" hint="Optional, starts with https://">
+          <Field label={t('Link when clicked')} hint={t('Optional, starts with https://')}>
             <input type="url" value={value.link ?? ''} placeholder="https://" onChange={(e) => onChange({ ...value, link: e.target.value })} />
           </Field>
-          <Field label="Description" hint="Read out by screen readers and shown when images are blocked">
+          <Field label={t('Description')} hint={t('Read out by screen readers and shown when images are blocked')}>
             <input type="text" value={value.alt ?? ''} onChange={(e) => onChange({ ...value, alt: e.target.value })} />
           </Field>
-          <Field label="Shown width (px)" hint={`Up to ${BANNER_MAX_SHOWN}px; the height follows the image`}>
+          <Field label={t('Shown width (px)')} hint={t('Up to {max}px; the height follows the image', { max: BANNER_MAX_SHOWN })}>
             <input type="number" min={50} max={BANNER_MAX_SHOWN} value={value.width} onChange={(e) => onChange(resizeBanner(value, Number(e.target.value), ratio))} />
           </Field>
         </div>

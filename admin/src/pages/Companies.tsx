@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAsync, useToast } from '../lib/hooks';
+import { t } from '../lib/i18n';
 import type { Company, Settings } from '../lib/types';
 import { CompanyGroupsEditor } from '../components/CompanyGroupsEditor';
 import { ErrorNote, Field, Loading, Modal, PageHead } from '../components/ui';
@@ -15,11 +16,11 @@ export function Companies() {
   return (
     <>
       <PageHead
-        title="Companies and groups"
-        lead="Company names used in signatures, and the Entra security group that puts each person in a company."
+        title={t('Companies and groups')}
+        lead={t('Company names used in signatures, and the Entra security group that puts each person in a company.')}
         actions={
           <button className="btn" onClick={() => setAdding(true)}>
-            <Plus size={14} /> Add company
+            <Plus size={14} /> {t('Add company')}
           </button>
         }
       />
@@ -66,7 +67,7 @@ function AddCompany({ open, onClose, companies, onAdded }: { open: boolean; onCl
         priority: companies.length + 1,
         copyFrom,
       });
-      toast(`${displayName} added. Set its group, then adjust its design.`);
+      toast(t('{company} added. Set its group, then adjust its design.', { company: displayName }));
       setDisplayName('');
       setLegalName('');
       setKey('');
@@ -78,17 +79,17 @@ function AddCompany({ open, onClose, companies, onAdded }: { open: boolean; onCl
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Add a company">
-      <Field label="Short name">
+    <Modal open={open} onClose={onClose} title={t('Add a company')}>
+      <Field label={t('Short name')}>
         <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoFocus />
       </Field>
-      <Field label="Legal name" hint={`Defaults to SIA "${displayName || '…'}"`}>
+      <Field label={t('Legal name')} hint={t('Defaults to SIA "{name}"', { name: displayName || '…' })}>
         <input type="text" value={legalName} onChange={(e) => setLegalName(e.target.value)} />
       </Field>
-      <Field label="Key" hint="Lowercase ID used in folders and URLs. It can't be changed later.">
+      <Field label={t('Key')} hint={t("Lowercase ID used in folders and URLs. It can't be changed later.")}>
         <input type="text" className="mono" value={finalKey} onChange={(e) => setKey(e.target.value)} />
       </Field>
-      <Field label="Start from the design of">
+      <Field label={t('Start from the design of')}>
         <select value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)}>
           {companies.map((c) => (
             <option key={c.key} value={c.key}>
@@ -99,10 +100,10 @@ function AddCompany({ open, onClose, companies, onAdded }: { open: boolean; onCl
       </Field>
       <div className="row end">
         <button className="btn ghost" onClick={onClose}>
-          Cancel
+          {t('Cancel')}
         </button>
         <button className="btn primary" disabled={!displayName || !/^[a-z][a-z0-9-]{1,31}$/.test(finalKey)} onClick={add}>
-          Add company
+          {t('Add company')}
         </button>
       </div>
     </Modal>

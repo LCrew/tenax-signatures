@@ -32,6 +32,7 @@ import {
 } from './model';
 import { api } from '../../lib/api';
 import { useAsync } from '../../lib/hooks';
+import { t } from '../../lib/i18n';
 
 type Zone = 'main' | 'footer';
 
@@ -71,47 +72,47 @@ function BlockEditorInner({ doc, onChange, colors, kind }: Omit<Props, 'language
   return (
     <div className="stack loose">
       <section className="stack">
-        <h3>Layout</h3>
-        <div className="layout-cards" role="radiogroup" aria-label="Layout">
-          <LayoutCard active={doc.layout === 'side'} onClick={() => set({ layout: 'side' })} label="Logo beside text" art="side" />
-          <LayoutCard active={doc.layout === 'stacked'} onClick={() => set({ layout: 'stacked' })} label="Logo above text" art="stacked" />
-          <LayoutCard active={doc.layout === 'textOnly'} onClick={() => set({ layout: 'textOnly' })} label="Text only" art="textOnly" />
+        <h3>{t('Layout')}</h3>
+        <div className="layout-cards" role="radiogroup" aria-label={t('Layout')}>
+          <LayoutCard active={doc.layout === 'side'} onClick={() => set({ layout: 'side' })} label={t('Logo beside text')} art="side" />
+          <LayoutCard active={doc.layout === 'stacked'} onClick={() => set({ layout: 'stacked' })} label={t('Logo above text')} art="stacked" />
+          <LayoutCard active={doc.layout === 'textOnly'} onClick={() => set({ layout: 'textOnly' })} label={t('Text only')} art="textOnly" />
         </div>
         <div className="ctl-grid">
           {doc.layout === 'side' && (
-            <Ctl label="Align logo and text">
-              <div className="segmented" role="group" aria-label="Vertical alignment">
-                <button type="button" aria-pressed={doc.logo.valign === 'top'} onClick={() => set({ logo: { ...doc.logo, valign: 'top' } })} title="Top">
-                  <AlignVerticalJustifyStart size={14} /> Top
+            <Ctl label={t('Align logo and text')}>
+              <div className="segmented" role="group" aria-label={t('Vertical alignment')}>
+                <button type="button" aria-pressed={doc.logo.valign === 'top'} onClick={() => set({ logo: { ...doc.logo, valign: 'top' } })} title={t('Top')}>
+                  <AlignVerticalJustifyStart size={14} /> {t('Top')}
                 </button>
-                <button type="button" aria-pressed={doc.logo.valign === 'middle'} onClick={() => set({ logo: { ...doc.logo, valign: 'middle' } })} title="Middle">
-                  <AlignVerticalJustifyCenter size={14} /> Middle
+                <button type="button" aria-pressed={doc.logo.valign === 'middle'} onClick={() => set({ logo: { ...doc.logo, valign: 'middle' } })} title={t('Middle')}>
+                  <AlignVerticalJustifyCenter size={14} /> {t('Middle')}
                 </button>
               </div>
             </Ctl>
           )}
           {doc.layout !== 'textOnly' || doc.divider.show ? (
-            <Ctl label={doc.layout === 'textOnly' ? 'Space after bar' : 'Gap'}>
+            <Ctl label={doc.layout === 'textOnly' ? t('Space after bar') : t('Gap')}>
               <Stepper value={doc.logo.gap} min={0} max={40} unit="px" onChange={(v) => set({ logo: { ...doc.logo, gap: v ?? 12 } })} />
             </Ctl>
           ) : null}
-          <Ctl label="Maximum width">
+          <Ctl label={t('Maximum width')}>
             <Stepper value={doc.maxWidth} min={280} max={600} step={10} unit="px" onChange={(v) => set({ maxWidth: v ?? 500 })} />
           </Ctl>
         </div>
         <div className="ctl-grid">
-          <Ctl label={doc.layout === 'textOnly' ? 'Accent bar' : 'Divider line'}>
+          <Ctl label={doc.layout === 'textOnly' ? t('Accent bar') : t('Divider line')}>
             <label className="switch">
               <input type="checkbox" checked={doc.divider.show} onChange={(e) => set({ divider: { ...doc.divider, show: e.target.checked } })} />
-              <span>{doc.divider.show ? 'Shown' : 'Hidden'}</span>
+              <span>{doc.divider.show ? t('Shown') : t('Hidden')}</span>
             </label>
           </Ctl>
           {doc.divider.show && (
             <>
-              <Ctl label="Thickness">
+              <Ctl label={t('Thickness')}>
                 <Stepper value={doc.divider.thickness} min={1} max={6} unit="px" onChange={(v) => set({ divider: { ...doc.divider, thickness: v ?? 1 } })} />
               </Ctl>
-              <Ctl label="Colour" wide>
+              <Ctl label={t('Colour')} wide>
                 <ColorField value={doc.divider.color} colors={colors} onChange={(c) => set({ divider: { ...doc.divider, color: c ?? 'primary' } })} />
               </Ctl>
             </>
@@ -120,9 +121,9 @@ function BlockEditorInner({ doc, onChange, colors, kind }: Omit<Props, 'language
       </section>
 
       <section className="stack">
-        <h3>Text</h3>
+        <h3>{t('Text')}</h3>
         <div className="ctl-grid">
-          <Ctl label="Font">
+          <Ctl label={t('Font')}>
             <select
               value={doc.base.font}
               onChange={(e) => {
@@ -130,7 +131,7 @@ function BlockEditorInner({ doc, onChange, colors, kind }: Omit<Props, 'language
                 set({ base: { ...doc.base, font, fallback: font.startsWith('custom:') ? (doc.base.fallback ?? 'arial') : undefined } });
               }}
             >
-              <optgroup label="Email-safe (everyone sees these)">
+              <optgroup label={t('Email-safe (everyone sees these)')}>
                 {(Object.keys(FONTS) as FontKey[]).map((k) => (
                   <option key={k} value={k}>
                     {FONTS[k]}
@@ -138,7 +139,7 @@ function BlockEditorInner({ doc, onChange, colors, kind }: Omit<Props, 'language
                 ))}
               </optgroup>
               {families.length > 0 && (
-                <optgroup label="Uploaded fonts (only where installed)">
+                <optgroup label={t('Uploaded fonts (only where installed)')}>
                   {families.map((f) => (
                     <option key={f.family} value={`custom:${f.family}`}>
                       {f.family}
@@ -146,11 +147,11 @@ function BlockEditorInner({ doc, onChange, colors, kind }: Omit<Props, 'language
                   ))}
                 </optgroup>
               )}
-              {customFont && !families.some((f) => f.family === customFont) && <option value={doc.base.font}>{customFont} (not uploaded)</option>}
+              {customFont && !families.some((f) => f.family === customFont) && <option value={doc.base.font}>{t('{font} (not uploaded)', { font: customFont })}</option>}
             </select>
           </Ctl>
           {customFont && (
-            <Ctl label="If they don’t have it">
+            <Ctl label={t('If they don’t have it')}>
               <select value={doc.base.fallback ?? 'arial'} onChange={(e) => set({ base: { ...doc.base, fallback: e.target.value as FontKey } })}>
                 {(Object.keys(FONTS) as FontKey[]).map((k) => (
                   <option key={k} value={k}>
@@ -160,10 +161,10 @@ function BlockEditorInner({ doc, onChange, colors, kind }: Omit<Props, 'language
               </select>
             </Ctl>
           )}
-          <Ctl label="Base size">
+          <Ctl label={t('Base size')}>
             <Stepper value={doc.base.size} min={6} max={24} step={0.5} unit="pt" onChange={(v) => set({ base: { ...doc.base, size: v ?? 10 } })} />
           </Ctl>
-          <Ctl label={`Line spacing ${doc.base.lineHeight.toFixed(2)}×`}>
+          <Ctl label={t('Line spacing {value}×', { value: doc.base.lineHeight.toFixed(2) })}>
             <input
               type="range"
               min={1}
@@ -171,38 +172,39 @@ function BlockEditorInner({ doc, onChange, colors, kind }: Omit<Props, 'language
               step={0.05}
               value={doc.base.lineHeight}
               onChange={(e) => set({ base: { ...doc.base, lineHeight: Number(e.target.value) } })}
-              aria-label="Line spacing"
+              aria-label={t('Line spacing')}
             />
           </Ctl>
-          <Ctl label="Text colour" wide>
+          <Ctl label={t('Text colour')} wide>
             <ColorField value={doc.base.color} colors={colors} onChange={(c) => set({ base: { ...doc.base, color: c ?? 'text' } })} />
           </Ctl>
         </div>
         {customFont && (
           <p className="xs muted">
-            Email apps draw text with the reader’s own fonts. People who have {customFont} installed see it; everyone else sees{' '}
-            {FONTS[doc.base.fallback ?? 'arial']}. The preview here also uses this computer’s fonts. For an exact look everywhere, use an
-            image (SVG) design.
+            {t(
+              'Email apps draw text with the reader’s own fonts. People who have {font} installed see it; everyone else sees {fallback}. The preview here also uses this computer’s fonts. For an exact look everywhere, use an image (SVG) design.',
+              { font: customFont, fallback: FONTS[doc.base.fallback ?? 'arial'] },
+            )}
           </p>
         )}
         <label className="switch">
           <input type="checkbox" checked={doc.greeting.show} onChange={(e) => set({ greeting: { ...doc.greeting, show: e.target.checked } })} />
-          <span>Show the closing line above the signature (text is set in Brand and footer)</span>
+          <span>{t('Show the closing line above the signature (text is set in Brand and footer)')}</span>
         </label>
       </section>
 
       <section className="stack">
         <div className="section-title">
-          <h3>{doc.layout === 'textOnly' ? 'Signature lines' : 'Next to the logo'}</h3>
-          <p>Drag to reorder. Empty fields are left out automatically.</p>
+          <h3>{doc.layout === 'textOnly' ? t('Signature lines') : t('Next to the logo')}</h3>
+          <p>{t('Drag to reorder. Empty fields are left out automatically.')}</p>
         </div>
         <BlockList zone="main" doc={doc} blocks={doc.main} colors={colors} open={open} setOpen={setOpen} onChange={(main) => set({ main })} />
       </section>
 
       <section className="stack">
         <div className="section-title">
-          <h3>Below the signature</h3>
-          <p>{kind === 'reply' ? 'Usually empty for replies.' : 'Banner, small print and extra lines.'}</p>
+          <h3>{t('Below the signature')}</h3>
+          <p>{kind === 'reply' ? t('Usually empty for replies.') : t('Banner, small print and extra lines.')}</p>
         </div>
         <BlockList zone="footer" doc={doc} blocks={doc.footer} colors={colors} open={open} setOpen={setOpen} onChange={(footer) => set({ footer })} />
       </section>
@@ -244,7 +246,7 @@ function BlockList({
 
   return (
     <div className="blk-list" onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && setOver(null)}>
-      {blocks.length === 0 && <div className="blk-empty">Nothing here yet. Add a block below.</div>}
+      {blocks.length === 0 && <div className="blk-empty">{t('Nothing here yet. Add a block below.')}</div>}
       {blocks.map((b, i) => (
         <BlockRow
           key={b.id}
@@ -320,47 +322,48 @@ function BlockRow({
   dragProps: React.HTMLAttributes<HTMLDivElement> & { draggable: boolean };
 }) {
   const info = BLOCK_INFO[b.type];
+  const name = t(info.label);
   const eff = effectiveStyle(doc, b);
   const summary = hasStyle(b)
-    ? [`${eff.size}pt`, eff.bold && 'bold', eff.italic && 'italic', eff.uppercase && 'capitals'].filter(Boolean).join(' · ')
+    ? [`${eff.size}pt`, eff.bold && t('bold'), eff.italic && t('italic'), eff.uppercase && t('capitals')].filter(Boolean).join(' · ')
     : b.type === 'spacer'
       ? `${b.height}px`
       : b.type === 'divider'
-        ? `${b.thickness}px line`
+        ? t('{n}px line', { n: b.thickness })
         : '';
   const detail =
-    b.type === 'text' ? b.text || 'Empty text' : 'label' in b && b.label ? `“${b.label}”` : b.type === 'websites' ? (b.arrangement === 'inline' ? 'In one line' : 'One per line') : '';
+    b.type === 'text' ? b.text || t('Empty text') : 'label' in b && b.label ? `“${b.label}”` : b.type === 'websites' ? (b.arrangement === 'inline' ? t('In one line') : t('One per line')) : '';
 
   return (
     <div className={`blk-row ${expanded ? 'open' : ''} ${b.hidden ? 'is-hidden' : ''} ${dropBefore ? 'drop-before' : ''}`} {...dragProps}>
       <div className="blk-head">
-        <span className="blk-grip" aria-hidden title="Drag to reorder">
+        <span className="blk-grip" aria-hidden title={t('Drag to reorder')}>
           <GripVertical size={16} />
         </span>
         <button type="button" className="blk-title" onClick={onToggle} aria-expanded={expanded}>
           <span className="blk-name">
-            {info.label}
+            {name}
             {hasStyle(b) && eff.color && <span className="blk-dot" style={{ background: resolveColor(eff.color, colors) }} aria-hidden />}
           </span>
           <span className="blk-meta">
             {[summary, detail].filter(Boolean).join(' — ')}
-            {b.hidden && ' — hidden'}
+            {b.hidden && ` — ${t('hidden')}`}
           </span>
         </button>
         <div className="blk-actions">
-          <button type="button" className="icon-btn" onClick={onUp} disabled={!onUp} aria-label={`Move ${info.label} up`}>
+          <button type="button" className="icon-btn" onClick={onUp} disabled={!onUp} aria-label={t('Move {name} up', { name })}>
             <ArrowUp size={14} />
           </button>
-          <button type="button" className="icon-btn" onClick={onDown} disabled={!onDown} aria-label={`Move ${info.label} down`}>
+          <button type="button" className="icon-btn" onClick={onDown} disabled={!onDown} aria-label={t('Move {name} down', { name })}>
             <ArrowDown size={14} />
           </button>
-          <button type="button" className="icon-btn" onClick={() => onChange({ ...b, hidden: !b.hidden } as Block)} aria-label={b.hidden ? `Show ${info.label}` : `Hide ${info.label}`} title={b.hidden ? 'Show' : 'Hide without deleting'}>
+          <button type="button" className="icon-btn" onClick={() => onChange({ ...b, hidden: !b.hidden } as Block)} aria-label={b.hidden ? t('Show {name}', { name }) : t('Hide {name}', { name })} title={b.hidden ? t('Show') : t('Hide without deleting')}>
             {b.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
           </button>
-          <button type="button" className="icon-btn danger" onClick={onRemove} aria-label={`Remove ${info.label}`}>
+          <button type="button" className="icon-btn danger" onClick={onRemove} aria-label={t('Remove {name}', { name })}>
             <Trash2 size={14} />
           </button>
-          <button type="button" className="icon-btn" onClick={onToggle} aria-label={expanded ? 'Close settings' : 'Open settings'}>
+          <button type="button" className="icon-btn" onClick={onToggle} aria-label={expanded ? t('Close settings') : t('Open settings')}>
             <ChevronDown size={16} style={{ transform: expanded ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }} />
           </button>
         </div>
@@ -388,61 +391,61 @@ function BlockSettings({ block: b, doc, colors, onChange }: { block: Block; doc:
   return (
     <div className="stack">
       <p className="xs muted">
-        {info.hint}
-        {info.source === 'Person' && '. Left out for people who don’t have it.'}
-        {info.source === 'Brand' && '. Left out when it’s empty.'}
+        {t(info.hint)}
+        {info.source === 'Person' && `. ${t('Left out for people who don’t have it.')}`}
+        {info.source === 'Brand' && `. ${t('Left out when it’s empty.')}`}
       </p>
       {b.type === 'jobTitleEn' && language && language !== 'bilingual' && (
         <p className="callout warn xs" role="note">
           {language === 'lv'
-            ? 'Not shown for Latvian colleagues: this design uses Latvian job titles only (Estonian and Lithuanian colleagues still get it). Change it under Wording and job titles.'
-            : 'Stays empty: this design uses English job titles, shown in the Job title line. Change it under Wording and job titles.'}
+            ? t('Not shown for Latvian colleagues: this design uses Latvian job titles only (Estonian and Lithuanian colleagues still get it). Change it under Wording and job titles.')
+            : t('Stays empty: this design uses English job titles, shown in the Job title line. Change it under Wording and job titles.')}
         </p>
       )}
 
       {b.type === 'text' && (
-        <Ctl label="Text">
+        <Ctl label={t('Text')}>
           <textarea rows={2} style={{ fontFamily: 'var(--font)', fontSize: 'var(--t-sm)' }} value={b.text} onChange={(e) => onChange({ ...b, text: e.target.value })} />
         </Ctl>
       )}
       {'label' in b && (
-        <Ctl label="Label before the value">
-          <input type="text" value={b.label} maxLength={40} onChange={(e) => onChange({ ...b, label: e.target.value } as Block)} placeholder="None" />
+        <Ctl label={t('Label before the value')}>
+          <input type="text" value={b.label} maxLength={40} onChange={(e) => onChange({ ...b, label: e.target.value } as Block)} placeholder={t('None')} />
         </Ctl>
       )}
       {b.type === 'websites' && (
         <div className="ctl-grid">
-          <Ctl label="Arrangement">
+          <Ctl label={t('Arrangement')}>
             <div className="segmented" role="group">
               <button type="button" aria-pressed={b.arrangement === 'stack'} onClick={() => onChange({ ...b, arrangement: 'stack' })}>
-                One per line
+                {t('One per line')}
               </button>
               <button type="button" aria-pressed={b.arrangement === 'inline'} onClick={() => onChange({ ...b, arrangement: 'inline' })}>
-                In one line
+                {t('In one line')}
               </button>
             </div>
           </Ctl>
           {b.arrangement === 'inline' && (
-            <Ctl label="Separator">
+            <Ctl label={t('Separator')}>
               <input type="text" value={b.separator} maxLength={10} onChange={(e) => onChange({ ...b, separator: e.target.value })} />
             </Ctl>
           )}
         </div>
       )}
       {b.type === 'spacer' && (
-        <Ctl label="Height">
+        <Ctl label={t('Height')}>
           <Stepper value={b.height} min={1} max={60} unit="px" onChange={(v) => onChange({ ...b, height: v ?? 8 })} />
         </Ctl>
       )}
       {b.type === 'divider' && (
         <div className="ctl-grid">
-          <Ctl label="Thickness">
+          <Ctl label={t('Thickness')}>
             <Stepper value={b.thickness} min={1} max={6} unit="px" onChange={(v) => onChange({ ...b, thickness: v ?? 1 })} />
           </Ctl>
-          <Ctl label="Space after">
+          <Ctl label={t('Space after')}>
             <Stepper value={b.spaceAfter} min={0} max={48} unit="px" onChange={(v) => onChange({ ...b, spaceAfter: v ?? 0 })} />
           </Ctl>
-          <Ctl label="Colour" wide>
+          <Ctl label={t('Colour')} wide>
             <ColorField value={b.color} colors={colors} onChange={(c) => onChange({ ...b, color: c ?? 'rule' })} />
           </Ctl>
         </div>
@@ -450,7 +453,7 @@ function BlockSettings({ block: b, doc, colors, onChange }: { block: Block; doc:
       {b.type === 'banner' && (
         <>
           <BannerPicker block={b} onChange={onChange} />
-          <Ctl label="Space after">
+          <Ctl label={t('Space after')}>
             <Stepper value={b.spaceAfter} min={0} max={48} unit="px" onChange={(v) => onChange({ ...b, spaceAfter: v ?? 0 })} />
           </Ctl>
         </>
@@ -459,27 +462,27 @@ function BlockSettings({ block: b, doc, colors, onChange }: { block: Block; doc:
       {hasStyle(b) && (
         <>
           <div className="ctl-grid">
-            <Ctl label="Size">
+            <Ctl label={t('Size')}>
               <Stepper value={b.style.size} placeholder={eff.size} min={6} max={36} step={0.5} unit="pt" onChange={(v) => setStyle({ size: v })} />
             </Ctl>
-            <Ctl label="Style">
-              <div className="segmented toggles" role="group" aria-label="Text style">
-                <button type="button" aria-pressed={!!eff.bold} onClick={() => setStyle({ bold: !eff.bold })} title="Bold">
+            <Ctl label={t('Style')}>
+              <div className="segmented toggles" role="group" aria-label={t('Text style')}>
+                <button type="button" aria-pressed={!!eff.bold} onClick={() => setStyle({ bold: !eff.bold })} title={t('Bold')}>
                   <Bold size={14} />
                 </button>
-                <button type="button" aria-pressed={!!eff.italic} onClick={() => setStyle({ italic: !eff.italic })} title="Italic">
+                <button type="button" aria-pressed={!!eff.italic} onClick={() => setStyle({ italic: !eff.italic })} title={t('Italic')}>
                   <Italic size={14} />
                 </button>
-                <button type="button" aria-pressed={!!eff.uppercase} onClick={() => setStyle({ uppercase: !eff.uppercase })} title="Capitals">
+                <button type="button" aria-pressed={!!eff.uppercase} onClick={() => setStyle({ uppercase: !eff.uppercase })} title={t('Capitals')}>
                   <CaseUpper size={14} />
                 </button>
               </div>
             </Ctl>
-            <Ctl label="Space after">
+            <Ctl label={t('Space after')}>
               <Stepper value={b.style.spaceAfter} placeholder={eff.spaceAfter ?? 0} min={0} max={48} unit="px" onChange={(v) => setStyle({ spaceAfter: v })} />
             </Ctl>
           </div>
-          <Ctl label="Colour">
+          <Ctl label={t('Colour')}>
             <ColorField value={b.style.color} inherit={eff.color ?? doc.base.color} colors={colors} onChange={(c) => setStyle({ color: c })} />
           </Ctl>
         </>
@@ -512,9 +515,13 @@ function BannerPicker({ block: b, onChange }: { block: Extract<Block, { type: 'b
   const thumb = banners.find((x) => x.name === (b.image?.file ?? defaultBanner))?.localUrl;
   return (
     <div className="stack tight">
-      <Ctl label="Banner image" wide>
+      <Ctl label={t('Banner image')} wide>
         <select value={b.image?.file ?? ''} onChange={(e) => pick(e.target.value)}>
-          <option value="">{`Each person’s language banner${defaultBanner ? ` (in the preview: ${label(defaultBanner)})` : ' (none in the preview)'}`}</option>
+          <option value="">
+            {defaultBanner
+              ? t('Each person’s language banner (in the preview: {banner})', { banner: label(defaultBanner) })
+              : t('Each person’s language banner (none in the preview)')}
+          </option>
           {banners.map((x) => (
             <option key={x.name} value={x.name}>
               {label(x.name)}
@@ -525,18 +532,18 @@ function BannerPicker({ block: b, onChange }: { block: Extract<Block, { type: 'b
       {thumb && <img src={thumb} alt="" style={{ maxWidth: '100%', maxHeight: 90, objectFit: 'contain', alignSelf: 'flex-start', border: '1px solid var(--line)', borderRadius: 4 }} />}
       {b.image && (
         <div className="ctl-grid">
-          <Ctl label="Link when clicked">
+          <Ctl label={t('Link when clicked')}>
             <input type="url" placeholder="https://…" value={b.image.link ?? ''} maxLength={500} onChange={(e) => onChange({ ...b, image: { ...b.image!, link: e.target.value } })} />
           </Ctl>
-          <Ctl label="Text if images are blocked">
+          <Ctl label={t('Text if images are blocked')}>
             <input type="text" value={b.image.alt ?? ''} maxLength={200} onChange={(e) => onChange({ ...b, image: { ...b.image!, alt: e.target.value } })} />
           </Ctl>
         </div>
       )}
       <p className="xs muted">
-        Usually leave this on the language banner: everyone gets the banner set for their signature language under Languages
-        and banners. A banner picked here replaces the Latvian one; Estonian and Lithuanian colleagues still get their own
-        language’s banner where one is set.
+        {t(
+          'Usually leave this on the language banner: everyone gets the banner set for their signature language under Languages and banners. A banner picked here replaces the Latvian one; Estonian and Lithuanian colleagues still get their own language’s banner where one is set.',
+        )}
       </p>
     </div>
   );
@@ -561,25 +568,25 @@ function AddBlock({ zone, used, onAdd }: { zone: Zone; used: Set<BlockType>; onA
   return (
     <div className="add-block" ref={ref}>
       <button type="button" className="btn sm" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <Plus size={14} /> Add block
+        <Plus size={14} /> {t('Add block')}
       </button>
       {open && (
         <div className="add-menu" role="menu">
-          {types.map((t) => {
-            const taken = used.has(t) && !BLOCK_INFO[t].repeatable;
+          {types.map((type) => {
+            const taken = used.has(type) && !BLOCK_INFO[type].repeatable;
             return (
               <button
-                key={t}
+                key={type}
                 type="button"
                 role="menuitem"
                 disabled={taken}
                 onClick={() => {
-                  onAdd(t);
+                  onAdd(type);
                   setOpen(false);
                 }}
               >
-                <strong>{BLOCK_INFO[t].label}</strong>
-                <span>{taken ? 'Already in this design' : BLOCK_INFO[t].hint}</span>
+                <strong>{t(BLOCK_INFO[type].label)}</strong>
+                <span>{taken ? t('Already in this design') : t(BLOCK_INFO[type].hint)}</span>
               </button>
             );
           })}
@@ -606,7 +613,7 @@ function Stepper({ value, onChange, min, max, step = 1, unit, placeholder }: { v
   const clamp = (n: number) => Math.min(max, Math.max(min, Math.round(n / step) * step));
   return (
     <div className="stepper">
-      <button type="button" onClick={() => onChange(clamp(shown - step))} disabled={shown <= min} aria-label="Decrease">
+      <button type="button" onClick={() => onChange(clamp(shown - step))} disabled={shown <= min} aria-label={t('Decrease')}>
         <Minus size={13} />
       </button>
       <input
@@ -619,7 +626,7 @@ function Stepper({ value, onChange, min, max, step = 1, unit, placeholder }: { v
         onChange={(e) => onChange(e.target.value === '' ? undefined : clamp(Number(e.target.value)))}
       />
       <span className="unit">{unit}</span>
-      <button type="button" onClick={() => onChange(clamp(shown + step))} disabled={shown >= max} aria-label="Increase">
+      <button type="button" onClick={() => onChange(clamp(shown + step))} disabled={shown >= max} aria-label={t('Increase')}>
         <Plus size={13} />
       </button>
     </div>
@@ -636,20 +643,20 @@ function ColorField({ value, onChange, colors, inherit }: { value: BlockColor | 
   return (
     <div className="color-chips" role="radiogroup">
       {inherit !== undefined && (
-        <button type="button" role="radio" aria-checked={value === undefined} onClick={() => onChange(undefined)} title="Use the default for this block">
+        <button type="button" role="radio" aria-checked={value === undefined} onClick={() => onChange(undefined)} title={t('Use the default for this block')}>
           <span className="chip-swatch" style={{ background: resolveColor(inherit, colors) }} />
-          Default
+          {t('Default')}
         </button>
       )}
-      {(Object.keys(TOKEN_LABELS) as ColorToken[]).map((t) => (
-        <button key={t} type="button" role="radio" aria-checked={value === t} onClick={() => onChange(t)} title={`${TOKEN_LABELS[t]} colour from Brand and footer (${colors[t] ?? 'not set'})`}>
-          <span className="chip-swatch" style={{ background: colors[t] ?? '#ccc' }} />
-          {TOKEN_LABELS[t]}
+      {(Object.keys(TOKEN_LABELS) as ColorToken[]).map((k) => (
+        <button key={k} type="button" role="radio" aria-checked={value === k} onClick={() => onChange(k)} title={t('{token} colour from Brand and footer ({value})', { token: t(TOKEN_LABELS[k]), value: colors[k] ?? t('not set') })}>
+          <span className="chip-swatch" style={{ background: colors[k] ?? '#ccc' }} />
+          {t(TOKEN_LABELS[k])}
         </button>
       ))}
-      <label className={`chip-custom ${custom ? 'active' : ''}`} title="Custom colour">
+      <label className={`chip-custom ${custom ? 'active' : ''}`} title={t('Custom colour')}>
         <input type="color" value={custom ?? '#000000'} onChange={(e) => onChange(e.target.value.toUpperCase())} />
-        {custom ?? 'Custom'}
+        {custom ?? t('Custom')}
       </label>
     </div>
   );

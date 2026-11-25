@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react';
+import { LangSwitch } from '../components/LangSwitch';
 import { ApiError, api, setMockUser } from '../lib/api';
 import { signInWithMicrosoft } from '../lib/auth';
 import { useApp } from '../lib/hooks';
+import { t } from '../lib/i18n';
 import { Mark } from '../components/Layout';
 import { Field } from '../components/ui';
 
@@ -22,10 +24,10 @@ export function SampleSheet() {
     <div className="mail" aria-hidden>
       <div className="mail-head">
         <div>
-          <b>From</b>&nbsp; Līga Paraudziņa &lt;liga.paraudzina@tenaxgrupa.lv&gt;
+          <b>{t('From')}</b>&nbsp; Līga Paraudziņa &lt;liga.paraudzina@tenaxgrupa.lv&gt;
         </div>
         <div>
-          <b>Subject</b>&nbsp; Piedāvājums: siltumizolācijas paneļi
+          <b>{t('Subject')}</b>&nbsp; Piedāvājums: siltumizolācijas paneļi
         </div>
       </div>
       <div className="mail-body">
@@ -64,7 +66,7 @@ export function Login() {
       await api.post('/api/auth/login', { username, password });
       await refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Sign-in failed');
+      setError(err instanceof ApiError ? err.message : t('Sign-in failed'));
     } finally {
       setBusy(false);
     }
@@ -72,15 +74,15 @@ export function Login() {
 
   const localForm = (
     <form className="stack" onSubmit={submit}>
-      <Field label="Username">
+      <Field label={t('Username')}>
         <input type="text" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus={!config.entra} />
       </Field>
-      <Field label="Password">
+      <Field label={t('Password')}>
         <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
       </Field>
       {error && <div className="callout danger" role="alert">{error}</div>}
       <button className={`btn lg ${config.entra ? '' : 'primary'}`} disabled={busy}>
-        {busy ? 'Signing in…' : 'Sign in as administrator'}
+        {busy ? t('Signing in…') : t('Sign in as administrator')}
       </button>
     </form>
   );
@@ -91,40 +93,40 @@ export function Login() {
         <div className="brand">
           <Mark />
           <div>
-            Signatures
+            {t('Signatures')}
             <small>Tenax Grupa</small>
           </div>
         </div>
         <SampleSheet />
         <p className="small muted" style={{ maxWidth: '46ch' }}>
-          One signature per company, filled in from the company directory. Outlook adds it automatically on every device.
+          {t('One signature per company, filled in from the company directory. Outlook adds it automatically on every device.')}
         </p>
       </section>
       <section className="auth-form">
+        <LangSwitch className="auth-lang" />
         <div className="inner">
           <div>
-            <h1>Email signature</h1>
+            <h1>{t('Email signature')}</h1>
             <p className="muted" style={{ marginTop: 6 }}>
-              Sign in with your work account to see and adjust your signature.
+              {t('Sign in with your work account to see and adjust your signature.')}
             </p>
           </div>
 
           {config.entra ? (
             <>
               <button className="btn primary lg" onClick={() => signInWithMicrosoft().catch((e) => setError(e.message))}>
-                <MicrosoftLogo /> Sign in with Microsoft
+                <MicrosoftLogo /> {t('Sign in with Microsoft')}
               </button>
               {error && !username && <div className="callout danger" role="alert">{error}</div>}
               <details className="admin-login">
-                <summary>Administrator sign-in with a local account</summary>
+                <summary>{t('Administrator sign-in with a local account')}</summary>
                 <div style={{ paddingTop: 16 }}>{localForm}</div>
               </details>
             </>
           ) : (
             <>
               <div className="callout warn">
-                Microsoft sign-in isn't connected yet, so employees can't sign in. An administrator can connect it in
-                Settings › Entra ID connection.
+                {t("Microsoft sign-in isn't connected yet, so employees can't sign in. An administrator can connect it in Settings › Entra ID connection.")}
               </div>
               {localForm}
             </>
@@ -133,10 +135,10 @@ export function Login() {
           {config.mockAuth && (
             <details className="panel">
               <summary className="panel-body" style={{ cursor: 'pointer', fontWeight: 600 }}>
-                Development: sign in as a fixture user
+                {t('Development: sign in as a fixture user')}
               </summary>
               <div className="panel-body stack" style={{ paddingTop: 0 }}>
-                <Field label="Fixture UPN" hint="test.tenax@tenaxgrupa.lv is an admin; the others see only their own signature">
+                <Field label={t('Fixture UPN')} hint={t('test.tenax@tenaxgrupa.lv is an admin; the others see only their own signature')}>
                   <input type="text" value={mockUpn} onChange={(e) => setMockUpn(e.target.value)} />
                 </Field>
                 <button
@@ -146,7 +148,7 @@ export function Login() {
                     await refresh();
                   }}
                 >
-                  Continue as fixture user
+                  {t('Continue as fixture user')}
                 </button>
               </div>
             </details>

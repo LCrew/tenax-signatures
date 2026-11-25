@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CheckCircle2, Database, KeyRound, Upload } from 'lucide-react';
 import { api, ApiError } from '../lib/api';
 import { useToast } from '../lib/hooks';
+import { dateLocale, t, tx } from '../lib/i18n';
 import type { Settings } from '../lib/types';
 import { CodeBlock, Field } from './ui';
 import { isGuid } from './GroupPicker';
@@ -75,7 +76,7 @@ export function DirectoryForm({ settings, onSaved, compact = false }: { settings
     if (out.clientId) setClientId(out.clientId);
     if (out.appIdUri) setAppIdUri(out.appIdUri);
     setScript(out);
-    toast('Filled in the IDs from the script output');
+    toast(t('Filled in the IDs from the script output'));
   }
 
   async function runTest() {
@@ -94,7 +95,7 @@ export function DirectoryForm({ settings, onSaved, compact = false }: { settings
     setBusy('save');
     try {
       const s = await api.put<Settings>('/api/admin/settings/directory', body());
-      toast('Directory connection saved');
+      toast(t('Directory connection saved'));
       setPem('');
       setSecret('');
       onSaved(s, script);
@@ -109,27 +110,25 @@ export function DirectoryForm({ settings, onSaved, compact = false }: { settings
     <div className="stack loose">
       {settings.mockForcedByEnv && (
         <div className="callout warn">
-          The container runs with <code>MOCK_GRAPH=true</code>, so demo data is used whatever you pick here. Remove it
-          from the environment to use Entra ID.
+          {tx('The container runs with {flag}, so demo data is used whatever you pick here. Remove it from the environment to use Entra ID.', {
+            flag: <code>MOCK_GRAPH=true</code>,
+          })}
         </div>
       )}
-      <div className="grid-2" role="radiogroup" aria-label="Where people come from">
-        <ModeCard active={mode === 'graph'} onClick={() => setMode('graph')} icon={<KeyRound size={18} />} title="Microsoft Entra ID" text="Read real users and groups from your tenant through Microsoft Graph (read-only)." />
-        <ModeCard active={mode === 'mock'} onClick={() => setMode('mock')} icon={<Database size={18} />} title="Demo data" text="Eight sample people from fixtures/users.json. Good for trying designs before connecting the tenant." />
+      <div className="grid-2" role="radiogroup" aria-label={t('Where people come from')}>
+        <ModeCard active={mode === 'graph'} onClick={() => setMode('graph')} icon={<KeyRound size={18} />} title="Microsoft Entra ID" text={t('Read real users and groups from your tenant through Microsoft Graph (read-only).')} />
+        <ModeCard active={mode === 'mock'} onClick={() => setMode('mock')} icon={<Database size={18} />} title={t('Demo data')} text={t('Eight sample people from fixtures/users.json. Good for trying designs before connecting the tenant.')} />
       </div>
 
       {mode === 'graph' && (
         <>
           {!compact && (
             <section className="stack">
-              <h3>Register the app in Entra ID</h3>
+              <h3>{t('Register the app in Entra ID')}</h3>
               <ol className="instructions">
                 <li>
                   <div className="stack tight">
-                    <span>
-                      Create a certificate on your admin machine. The private key stays with you until you upload it
-                      below.
-                    </span>
+                    <span>{t('Create a certificate on your admin machine. The private key stays with you until you upload it below.')}</span>
                     <CodeBlock>{`openssl req -x509 -newkey rsa:2048 -sha256 -days 730 -nodes \\
   -subj "/CN=Tenax Signature API" \\
   -keyout tenax-signature-api.key.pem -out tenax-signature-api.crt.pem
@@ -139,21 +138,19 @@ openssl x509 -in tenax-signature-api.crt.pem -outform der -out tenax-signature-a
                 <li>
                   <div className="stack tight">
                     <span>
-                      As a Global Administrator, run the setup script from the repository in PowerShell 7. It creates the
-                      "Tenax Signature API" registration, grants read-only Graph permissions and prints the IDs. It never
-                      touches users or mailboxes.
+                      {t(
+                        'As a Global Administrator, run the setup script from the repository in PowerShell 7. It creates the "Tenax Signature API" registration, grants read-only Graph permissions and prints the IDs. It never touches users or mailboxes.',
+                      )}
                     </span>
                     <CodeBlock>{`Install-Module Microsoft.Graph -Scope CurrentUser
 ./scripts/entra-setup.ps1 -TenantId TenaxMID.onmicrosoft.com -PublicHost ${host} -CertPath ./tenax-signature-api.cer`}</CodeBlock>
-                    <span className="xs muted">
-                      Prefer clicking through the portal? Follow docs/entra-setup.md; it covers the same steps by hand.
-                    </span>
+                    <span className="xs muted">{t('Prefer clicking through the portal? Follow docs/entra-setup.md; it covers the same steps by hand.')}</span>
                   </div>
                 </li>
                 <li>
                   <div className="stack tight" style={{ width: '100%' }}>
-                    <span>Paste everything the script printed. The IDs below fill in automatically.</span>
-                    <textarea rows={4} value={paste} onChange={(e) => applyPaste(e.target.value)} placeholder='{ "tenantId": "…", "clientId": "…", … }' aria-label="Script output" />
+                    <span>{t('Paste everything the script printed. The IDs below fill in automatically.')}</span>
+                    <textarea rows={4} value={paste} onChange={(e) => applyPaste(e.target.value)} placeholder='{ "tenantId": "…", "clientId": "…", … }' aria-label={t('Script output')} />
                   </div>
                 </li>
               </ol>
@@ -162,31 +159,31 @@ openssl x509 -in tenax-signature-api.crt.pem -outform der -out tenax-signature-a
 
           <section className="stack">
             <div className="grid-2">
-              <Field label="Directory (tenant) ID" error={tenantId && !isGuid(tenantId) ? 'Use the GUID, not the domain name' : null}>
+              <Field label={t('Directory (tenant) ID')} error={tenantId && !isGuid(tenantId) ? t('Use the GUID, not the domain name') : null}>
                 <input type="text" className="mono" value={tenantId} onChange={(e) => setTenantId(e.target.value.trim())} />
               </Field>
-              <Field label="Application (client) ID" error={clientId && !isGuid(clientId) ? 'Should be a GUID' : null}>
+              <Field label={t('Application (client) ID')} error={clientId && !isGuid(clientId) ? t('Should be a GUID') : null}>
                 <input type="text" className="mono" value={clientId} onChange={(e) => setClientId(e.target.value.trim())} />
               </Field>
             </div>
-            <Field label="Application ID URI" hint={`Leave empty to use ${clientId ? `api://${host}/${clientId}` : `api://${host}/<client ID>`}`}>
+            <Field label={t('Application ID URI')} hint={t('Leave empty to use {uri}', { uri: clientId ? `api://${host}/${clientId}` : `api://${host}/<client ID>` })}>
               <input type="text" className="mono" value={appIdUri} onChange={(e) => setAppIdUri(e.target.value.trim())} placeholder={clientId ? `api://${host}/${clientId}` : ''} />
             </Field>
           </section>
 
           <section className="stack">
-            <h3>App credential</h3>
+            <h3>{t('App credential')}</h3>
             <div className="row">
               <label className="check">
                 <input type="radio" name="cred" checked={credType === 'certificate'} onChange={() => setCredType('certificate')} />
                 <span>
-                  <strong>Certificate</strong> <span className="muted">(recommended for production)</span>
+                  <strong>{t('Certificate')}</strong> <span className="muted">{t('(recommended for production)')}</span>
                 </span>
               </label>
               <label className="check">
                 <input type="radio" name="cred" checked={credType === 'secret'} onChange={() => setCredType('secret')} />
                 <span>
-                  <strong>Client secret</strong> <span className="muted">(testing only)</span>
+                  <strong>{t('Client secret')}</strong> <span className="muted">{t('(testing only)')}</span>
                 </span>
               </label>
             </div>
@@ -194,15 +191,17 @@ openssl x509 -in tenax-signature-api.crt.pem -outform der -out tenax-signature-a
               <div className="stack tight">
                 {settings.hasCertificate && !pem && (
                   <div className="callout ok row">
-                    <CheckCircle2 size={16} /> A certificate is stored
-                    {settings.certificateExpires && <> (expires {new Date(settings.certificateExpires).toLocaleDateString('lv-LV')})</>}. Upload a new one only to rotate it.
+                    <CheckCircle2 size={16} />{' '}
+                    {settings.certificateExpires
+                      ? t('A certificate is stored (expires {date}). Upload a new one only to rotate it.', { date: new Date(settings.certificateExpires).toLocaleDateString(dateLocale()) })
+                      : t('A certificate is stored. Upload a new one only to rotate it.')}
                   </div>
                 )}
-                <Field label="Certificate and private key (PEM)" hint="Select both .crt.pem and .key.pem, or paste them together. Stored encrypted on the server.">
+                <Field label={t('Certificate and private key (PEM)')} hint={t('Select both .crt.pem and .key.pem, or paste them together. Stored encrypted on the server.')}>
                   <textarea rows={5} value={pem} onChange={(e) => setPem(e.target.value)} placeholder={'-----BEGIN CERTIFICATE-----\n…\n-----BEGIN PRIVATE KEY-----\n…'} />
                 </Field>
                 <label className="btn" style={{ alignSelf: 'flex-start' }}>
-                  <Upload size={14} /> Choose PEM files
+                  <Upload size={14} /> {t('Choose PEM files')}
                   <input
                     type="file"
                     accept=".pem,.crt,.key,.txt"
@@ -217,7 +216,7 @@ openssl x509 -in tenax-signature-api.crt.pem -outform der -out tenax-signature-a
                 </label>
               </div>
             ) : (
-              <Field label="Client secret value" hint={settings.hasClientSecret ? 'A secret is stored. Enter a new one only to replace it.' : 'Secrets expire and are easy to leak. Switch to a certificate before going live.'}>
+              <Field label={t('Client secret value')} hint={settings.hasClientSecret ? t('A secret is stored. Enter a new one only to replace it.') : t('Secrets expire and are easy to leak. Switch to a certificate before going live.')}>
                 <input type="password" autoComplete="off" value={secret} onChange={(e) => setSecret(e.target.value)} />
               </Field>
             )}
@@ -227,7 +226,7 @@ openssl x509 -in tenax-signature-api.crt.pem -outform der -out tenax-signature-a
 
       {test && (
         <div className={`callout ${test.ok ? 'ok' : 'danger'}`} role="status">
-          {test.ok ? 'Connection works. ' : "Couldn't connect. "}
+          {test.ok ? t('Connection works.') : t("Couldn't connect.")}{' '}
           {test.detail}
         </div>
       )}
@@ -235,11 +234,11 @@ openssl x509 -in tenax-signature-api.crt.pem -outform der -out tenax-signature-a
       <div className="row">
         {mode === 'graph' && (
           <button type="button" className="btn" onClick={runTest} disabled={!canSubmit || busy !== null}>
-            {busy === 'test' ? 'Testing…' : 'Test connection'}
+            {busy === 'test' ? t('Testing…') : t('Test connection')}
           </button>
         )}
         <button type="button" className="btn primary" onClick={save} disabled={!canSubmit || busy !== null}>
-          {busy === 'save' ? 'Saving…' : 'Save connection'}
+          {busy === 'save' ? t('Saving…') : t('Save connection')}
         </button>
       </div>
     </div>

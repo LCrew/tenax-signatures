@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Banner, LanguageMeta, PersonLanguage, SignatureLocale, UserSummary } from '../../lib/types';
 import { LOCALE_NAMES, STANDARD_GREETINGS } from '../../lib/types';
+import { msg, t, tn } from '../../lib/i18n';
 import { Field, Segmented } from '../ui';
 import { type Asset, BannerPicker, bannerName } from './BannerPicker';
 
@@ -28,17 +29,17 @@ export function localeSummary(meta: any, locale: SignatureLocale) {
 }
 
 const WHO: Record<SignatureLocale, string> = {
-  lv: 'Everyone, unless their person page says otherwise',
-  en: 'Everyone on a design set to English only',
-  et: 'People set to Estonian on their person page',
-  lt: 'People set to Lithuanian on their person page',
+  lv: msg('Everyone, unless their person page says otherwise'),
+  en: msg('Everyone on a design set to English only'),
+  et: msg('People set to Estonian on their person page'),
+  lt: msg('People set to Lithuanian on their person page'),
 };
 
 const WHAT: Record<SignatureLocale, string> = {
-  lv: 'The company language. Job titles follow each design’s setting (Latvian, English or both).',
-  en: 'English job title only. Company line, address and the rest stay as set in Brand and footer.',
-  et: 'Estonian job title with the English one under it, on every design except English-only ones. Company details are the same as in Latvia.',
-  lt: 'Lithuanian job title with the English one under it, on every design except English-only ones. Company details are the same as in Latvia.',
+  lv: msg('The company language. Job titles follow each design’s setting (Latvian, English or both).'),
+  en: msg('English job title only. Company line, address and the rest stay as set in Brand and footer.'),
+  et: msg('Estonian job title with the English one under it, on every design except English-only ones. Company details are the same as in Latvia.'),
+  lt: msg('Lithuanian job title with the English one under it, on every design except English-only ones. Company details are the same as in Latvia.'),
 };
 
 /**
@@ -91,12 +92,10 @@ export function LanguagesForm({
   return (
     <div className="stack loose">
       <p className="small muted">
-        Each person’s signature language decides the closing line, the promo banner and which job titles are shown. Set
-        Estonian or Lithuanian on the person’s page under People; everyone else is Latvian. Designs only decide whether a
-        banner appears (Wording tab), not which one.
+        {t('Each person’s signature language decides the closing line, the promo banner and which job titles are shown. Set Estonian or Lithuanian on the person’s page under People; everyone else is Latvian. Designs only decide whether a banner appears (Wording tab), not which one.')}
       </p>
 
-      <div className="lang-cards" role="tablist" aria-label="Signature language">
+      <div className="lang-cards" role="tablist" aria-label={t('Signature language')}>
         {LOCALES.map((l) => {
           const s = localeSummary(meta, l);
           const n = count(l);
@@ -104,47 +103,49 @@ export function LanguagesForm({
             <button key={l} type="button" role="tab" aria-selected={selected === l} className="lang-card" onClick={() => onSelect(l)}>
               <span className="lang-card-head">
                 <span className="lang-code">{l.toUpperCase()}</span>
-                <strong>{LOCALE_NAMES[l]}</strong>
-                {n !== null && <span className="xs muted">{n === 1 ? '1 person' : `${n} people`}</span>}
+                <strong>{t(LOCALE_NAMES[l])}</strong>
+                {n !== null && <span className="xs muted">{tn(n, '{n} person', '{n} people')}</span>}
               </span>
-              <span className="lang-card-greeting">{s.greeting ? `“${s.greeting}”` : <span className="muted">No closing line</span>}</span>
+              <span className="lang-card-greeting">{s.greeting ? t('“{text}”', { text: s.greeting }) : <span className="muted">{t('No closing line')}</span>}</span>
               <span className="lang-card-banner">
-                {s.banner && thumb(s.banner.file) ? <img src={thumb(s.banner.file)} alt="" /> : <span className="muted">No banner</span>}
+                {s.banner && thumb(s.banner.file) ? <img src={thumb(s.banner.file)} alt="" /> : <span className="muted">{t('No banner')}</span>}
               </span>
-              {l !== 'lv' && s.state === 'same' && <span className="xs muted">Banner: same as Latvian</span>}
+              {l !== 'lv' && s.state === 'same' && <span className="xs muted">{t('Banner: same as Latvian')}</span>}
             </button>
           );
         })}
       </div>
 
-      <section className="panel-inset stack" role="tabpanel" aria-label={`${LOCALE_NAMES[selected]} signature`}>
+      <section className="panel-inset stack" role="tabpanel" aria-label={t('{language} signature', { language: t(LOCALE_NAMES[selected]) })}>
         <div className="stack tight">
-          <h3>{LOCALE_NAMES[selected]} signature</h3>
+          <h3>{t('{language} signature', { language: t(LOCALE_NAMES[selected]) })}</h3>
           <p className="small muted">
-            <strong>Who:</strong> {WHO[selected]}. {WHAT[selected]}
+            <strong>{t('Who:')}</strong> {t(WHO[selected])}. {t(WHAT[selected])}
           </p>
         </div>
 
         {selected === 'lv' ? (
-          <Field label="Closing line" hint='Shown above the signature, e.g. "Ar cieņu,". Leave empty to leave it out.'>
+          <Field label={t('Closing line')} hint={t('Shown above the signature, e.g. "Ar cieņu,". Leave empty to leave it out.')}>
             <input type="text" value={meta?.greeting ?? ''} maxLength={200} onChange={(e) => patch((m) => (m.greeting = e.target.value))} />
           </Field>
         ) : (
           <Field
-            label="Closing line"
+            label={t('Closing line')}
             hint={
               selected === 'en'
-                ? `Empty = the Latvian one${meta?.greeting ? ` (“${meta.greeting}”)` : ''}.`
+                ? meta?.greeting
+                  ? t('Empty = the Latvian one (“{greeting}”).', { greeting: meta.greeting })
+                  : t('Empty = the Latvian one.')
                 : meta?.greeting
-                  ? `Empty = the standard “${STANDARD_GREETINGS[selected]}”.`
-                  : 'Empty = none, like the Latvian signature.'
+                  ? t('Empty = the standard “{greeting}”.', { greeting: STANDARD_GREETINGS[selected] })
+                  : t('Empty = none, like the Latvian signature.')
             }
           >
             <input
               type="text"
               value={own?.greeting ?? ''}
               maxLength={200}
-              placeholder={selected === 'en' ? 'e.g. Best regards,' : STANDARD_GREETINGS[selected]}
+              placeholder={selected === 'en' ? t('e.g. Best regards,') : STANDARD_GREETINGS[selected]}
               onChange={(e) =>
                 setLang(selected, (o) => {
                   if (e.target.value) o.greeting = e.target.value;
@@ -157,15 +158,15 @@ export function LanguagesForm({
 
         <div className="stack">
           <div className="row" style={{ justifyContent: 'space-between' }}>
-            <strong className="small">Promo banner</strong>
+            <strong className="small">{t('Promo banner')}</strong>
             {selected !== 'lv' && (
               <Segmented<BannerState>
-                label={`${LOCALE_NAMES[selected]} banner`}
+                label={t('{language} banner', { language: t(LOCALE_NAMES[selected]) })}
                 value={bannerState}
                 options={[
-                  { value: 'same', label: 'Same as Latvian' },
-                  { value: 'own', label: `Own ${LOCALE_NAMES[selected]} banner` },
-                  { value: 'none', label: 'No banner' },
+                  { value: 'same', label: t('Same as Latvian') },
+                  { value: 'own', label: t('Own {language} banner', { language: t(LOCALE_NAMES[selected]) }) },
+                  { value: 'none', label: t('No banner') },
                 ]}
                 onChange={(v) => {
                   const l = selected as 'en' | PersonLanguage;
@@ -178,8 +179,7 @@ export function LanguagesForm({
             )}
           </div>
           <p className="xs muted">
-            Under new-message signatures only, never in replies. Bigger images are scaled down to 1200px wide (shown at up to
-            600px) and kept under 1 MB.
+            {t('Under new-message signatures only, never in replies. Bigger images are scaled down to 1200px wide (shown at up to 600px) and kept under 1 MB.')}
           </p>
           {selected === 'lv' ? (
             <BannerPicker company={company} assets={assets} onUploaded={onUploaded} value={meta?.banner ?? null} onChange={(b) => patch((m) => (m.banner = b))} />
@@ -194,10 +194,10 @@ export function LanguagesForm({
             />
           ) : bannerState === 'same' ? (
             <p className="small">
-              {meta?.banner ? <>Uses the Latvian banner, {bannerName(meta.banner.file)}.</> : <>The Latvian signature has no banner, so neither does this one.</>}
+              {meta?.banner ? t('Uses the Latvian banner, {name}.', { name: bannerName(meta.banner.file) }) : t('The Latvian signature has no banner, so neither does this one.')}
             </p>
           ) : (
-            <p className="small">No banner for {LOCALE_NAMES[selected]} signatures at {companyName}.</p>
+            <p className="small">{t('No banner for {language} signatures at {company}.', { language: t(LOCALE_NAMES[selected]), company: companyName })}</p>
           )}
         </div>
       </section>

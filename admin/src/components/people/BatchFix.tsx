@@ -3,6 +3,7 @@ import { api } from '../../lib/api';
 import { useToast } from '../../lib/hooks';
 import { FIELD_LABELS, type UserSummary } from '../../lib/types';
 import { Modal } from '../ui';
+import { t, tn } from '../../lib/i18n';
 
 /** Missing fields an admin can fill in here (email always comes from Entra). */
 export const FIXABLE = ['displayName', 'jobTitleLv', 'jobTitleEn', 'mobilePhone'] as const;
@@ -10,10 +11,11 @@ type Fixable = (typeof FIXABLE)[number];
 
 export const fixableMissing = (u: UserSummary): Fixable[] => (u.excluded ? [] : FIXABLE.filter((f) => u.missing.includes(f)));
 
+/** Sample values; job titles are shown as "e.g. …" (translated at render). */
 const PLACEHOLDER: Record<Fixable, string> = {
   displayName: 'Vārds Uzvārds',
-  jobTitleLv: 'e.g. Pārdošanas projektu vadītājs',
-  jobTitleEn: 'e.g. Sales Project Manager',
+  jobTitleLv: 'Pārdošanas projektu vadītājs',
+  jobTitleEn: 'Sales Project Manager',
   mobilePhone: '+371 2x xxx xxx',
 };
 
@@ -65,7 +67,7 @@ export function BatchFix({ queue, onClose }: { queue: UserSummary[]; onClose: (c
       setSaved(n);
       if (index + 1 < queue.length) setIndex(index + 1);
       else {
-        toast(`Done: ${n} ${n === 1 ? 'person' : 'people'} updated`);
+        toast(tn(n, 'Done: {n} person updated', 'Done: {n} people updated'));
         finish(n);
       }
     } catch (err) {
@@ -77,11 +79,11 @@ export function BatchFix({ queue, onClose }: { queue: UserSummary[]; onClose: (c
 
   if (!person) return null;
   return (
-    <Modal open onClose={() => finish(saved)} title="Fill in missing details">
+    <Modal open onClose={() => finish(saved)} title={t('Fill in missing details')}>
       <div className="row" style={{ justifyContent: 'space-between', marginTop: -6 }}>
         <span className="small muted">
-          {index + 1} of {queue.length}
-          {saved > 0 && ` · ${saved} saved`}
+          {t('{n} of {total}', { n: index + 1, total: queue.length })}
+          {saved > 0 && ` · ${t('{n} saved', { n: saved })}`}
         </span>
         <div className="batch-progress" aria-hidden="true">
           <span style={{ width: `${(index / queue.length) * 100}%` }} />
@@ -98,7 +100,7 @@ export function BatchFix({ queue, onClose }: { queue: UserSummary[]; onClose: (c
       <form ref={formRef} onSubmit={submit} className="stack" key={person.upn}>
         {fields.map((f) => (
           <div key={f} className="field">
-            <label htmlFor={`bf-${f}`}>{FIELD_LABELS[f]}</label>
+            <label htmlFor={`bf-${f}`}>{t(FIELD_LABELS[f])}</label>
             <input
               id={`bf-${f}`}
               name={f}
@@ -106,31 +108,31 @@ export function BatchFix({ queue, onClose }: { queue: UserSummary[]; onClose: (c
               autoComplete="off"
               value={values[f] ?? ''}
               disabled={f === 'mobilePhone' && noMobile}
-              placeholder={PLACEHOLDER[f]}
+              placeholder={f === 'jobTitleLv' || f === 'jobTitleEn' ? t('e.g. {example}', { example: PLACEHOLDER[f] }) : PLACEHOLDER[f]}
               maxLength={f === 'mobilePhone' ? 40 : 160}
               onChange={(e) => setValues({ ...values, [f]: e.target.value })}
             />
             {f === 'mobilePhone' && (
               <label className="check" style={{ marginTop: 4 }}>
                 <input type="checkbox" checked={noMobile} onChange={(e) => setNoMobile(e.target.checked)} />
-                <span className="small">No mobile phone (leave the line out)</span>
+                <span className="small">{t('No mobile phone (leave the line out)')}</span>
               </label>
             )}
           </div>
         ))}
         <p className="xs muted">
-          Tab moves to the next field. Enter saves and opens the next person. Saved as corrections; Entra isn’t changed.
+          {t('Tab moves to the next field. Enter saves and opens the next person. Saved as corrections; Entra isn’t changed.')}
         </p>
         <div className="row end">
           <button type="button" className="btn ghost" onClick={() => finish(saved)}>
-            Stop
+            {t('Stop')}
           </button>
           <button type="button" className="btn" onClick={next} disabled={busy}>
-            Skip
+            {t('Skip')}
           </button>
           {/* Not disabled when incomplete: Enter must still reach submit() to jump to the empty field. */}
           <button type="submit" className="btn primary" disabled={busy} aria-disabled={!complete} style={complete ? undefined : { opacity: 0.55 }}>
-            {index + 1 < queue.length ? 'Save and next' : 'Save and finish'}
+            {index + 1 < queue.length ? t('Save and next') : t('Save and finish')}
           </button>
         </div>
       </form>

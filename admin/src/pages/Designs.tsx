@@ -8,6 +8,7 @@ import { api } from '../lib/api';
 import { useApp, useAsync, useDebounced, useToast } from '../lib/hooks';
 import type { Company, ComposeType, Design, MetaOverrides, SignatureLocale, TemplateKind, TemplateVersion, UserSummary } from '../lib/types';
 import { LOCALE_NAMES } from '../lib/types';
+import { dateLocale, msg, t, tn, tx } from '../lib/i18n';
 import { DesignBar, type TitleLanguage, WordingForm } from '../components/designs/DesignBar';
 import { type Asset, useCompanyAssets } from '../components/designs/BannerPicker';
 import { LanguagesForm, LOCALES, localeSummary } from '../components/designs/LanguagesForm';
@@ -34,59 +35,67 @@ type EditorTab = 'new' | 'reply' | 'wording' | 'brand' | 'languages';
 /** The editor's sections: three belong to the open design, two to the whole company. */
 const TABS: Record<EditorTab, { label: string; sub: string; lead: string; scope: 'design' | 'company' }> = {
   new: {
-    label: 'New message',
-    sub: 'Full signature layout',
-    lead: 'The signature under new messages: name, job titles, phones, logo, websites and the promo banner.',
+    label: msg('New message'),
+    sub: msg('Full signature layout'),
+    lead: msg('The signature under new messages: name, job titles, phones, logo, websites and the promo banner.'),
     scope: 'design',
   },
   reply: {
-    label: 'Reply and forward',
-    sub: 'Short signature layout',
-    lead: 'The shorter signature under replies and forwards. Banners are never shown here.',
+    label: msg('Reply and forward'),
+    sub: msg('Short signature layout'),
+    lead: msg('The shorter signature under replies and forwards. Banners are never shown here.'),
     scope: 'design',
   },
   wording: {
-    label: 'Wording and job titles',
-    sub: 'Titles, texts, banner on or off',
-    lead: 'Which job titles this design shows and any wording that differs from the company’s.',
+    label: msg('Wording and job titles'),
+    sub: msg('Titles, texts, banner on or off'),
+    lead: msg('Which job titles this design shows and any wording that differs from the company’s.'),
     scope: 'design',
   },
   brand: {
-    label: 'Brand and footer',
-    sub: 'Logo, colours, address, websites',
-    lead: 'The company’s look and details, the same in every language.',
+    label: msg('Brand and footer'),
+    sub: msg('Logo, colours, address, websites'),
+    lead: msg('The company’s look and details, the same in every language.'),
     scope: 'company',
   },
   languages: {
-    label: 'Languages and banners',
+    label: msg('Languages and banners'),
     sub: 'LV · EN · ET · LT',
-    lead: 'Closing line and promo banner for each signature language.',
+    lead: msg('Closing line and promo banner for each signature language.'),
     scope: 'company',
   },
 };
 type Presets = Record<'side' | 'stacked' | 'textOnly' | 'reply', BlockDoc>;
 
 const VARIABLES: [string, string][] = [
-  ['{{user.displayName}}', 'Name'],
-  ['{{user.jobTitleLv}}', 'First job title: Latvian, or Estonian / Lithuanian for those colleagues'],
-  ['{{user.jobTitleEn}}', 'English job title (empty on English-only designs)'],
-  ['{{user.mobilePhone}}', 'Mobile, formatted'],
-  ['{{tel user.mobilePhone}}', 'Mobile for tel: links'],
-  ['{{user.officePhone}}', 'Office phone'],
-  ['{{user.email}}', 'Email'],
-  ['{{user.department}}', 'Department'],
-  ['{{company.displayName}}', 'Company short name'],
-  ['{{company.legalName}}', 'Legal name'],
-  ['{{meta.logoUrl}}', 'Logo URL (absolute)'],
-  ['{{meta.colors.primary}}', 'Brand colour'],
-  ['{{meta.footer.companyLine}}', 'Company line'],
-  ['{{meta.footer.address}}', 'Address'],
-  ['{{meta.greeting}}', 'Closing line in the person’s language'],
-  ['{{#each meta.websites}}{{label}}{{/each}}', 'Websites (url, label)'],
-  ['{{meta.bannerUrl}}', 'Promo banner URL for the person’s language (empty when none)'],
-  ['{{meta.footer.confidential}}', 'Confidentiality notice'],
-  ['{{#if user.mobilePhone}}…{{/if}}', 'Leave a line out when empty'],
+  ['{{user.displayName}}', msg('Name')],
+  ['{{user.jobTitleLv}}', msg('First job title: Latvian, or Estonian / Lithuanian for those colleagues')],
+  ['{{user.jobTitleEn}}', msg('English job title (empty on English-only designs)')],
+  ['{{user.mobilePhone}}', msg('Mobile, formatted')],
+  ['{{tel user.mobilePhone}}', msg('Mobile for tel: links')],
+  ['{{user.officePhone}}', msg('Office phone')],
+  ['{{user.email}}', msg('Email')],
+  ['{{user.department}}', msg('Department')],
+  ['{{company.displayName}}', msg('Company short name')],
+  ['{{company.legalName}}', msg('Legal name')],
+  ['{{meta.logoUrl}}', msg('Logo URL (absolute)')],
+  ['{{meta.colors.primary}}', msg('Brand colour')],
+  ['{{meta.footer.companyLine}}', msg('Company line')],
+  ['{{meta.footer.address}}', msg('Address')],
+  ['{{meta.greeting}}', msg('Closing line in the person’s language')],
+  ['{{#each meta.websites}}{{label}}{{/each}}', msg('Websites (url, label)')],
+  ['{{meta.bannerUrl}}', msg('Promo banner URL for the person’s language (empty when none)')],
+  ['{{meta.footer.confidential}}', msg('Confidentiality notice')],
+  ['{{#if user.mobilePhone}}…{{/if}}', msg('Leave a line out when empty')],
 ];
+
+/** Caption under "Preview as" for each sample colleague. */
+const SAMPLE_NOTE: Record<SignatureLocale, string> = {
+  lv: msg('A sample Latvian colleague with every field filled in.'),
+  en: msg('This design as if set to English only: English job title, English closing line and banner.'),
+  et: msg('A sample Estonian colleague with every field filled in.'),
+  lt: msg('A sample Lithuanian colleague with every field filled in.'),
+};
 
 const safeParse = (s: string) => {
   try {
@@ -210,8 +219,8 @@ export function Designs() {
       setNote('');
       toast(
         dirtyKinds.includes('meta')
-          ? `Saved. Every ${active.company.displayName} design uses it from the next message.`
-          : `Saved. ${active.company.displayName} › ${activeDesign?.name ?? 'this design'} is used from the next message.`,
+          ? t('Saved. Every {company} design uses it from the next message.', { company: active.company.displayName })
+          : t('Saved. {company} › {design} is used from the next message.', { company: active.company.displayName, design: activeDesign?.name ?? t('this design') }),
       );
       await rows.reload();
     } catch (e) {
@@ -255,48 +264,48 @@ export function Designs() {
     brand: metaDirty && (!meta || !same(brandPart(meta), brandPart(savedMeta))),
     languages: metaDirty && !!meta && !same(languagePart(meta), languagePart(savedMeta)),
   };
-  const unsaved = (Object.keys(TABS) as EditorTab[]).filter((t) => tabDirty[t]).map((t) => TABS[t].label);
+  const unsaved = (Object.keys(TABS) as EditorTab[]).filter((k) => tabDirty[k]).map((k) => t(TABS[k].label));
   const companyPeople = (users.data ?? []).filter((u) => u.company === active.company.key);
   const asPerson = (users.data ?? []).find((u) => u.upn === as);
-  const scope = TABS[tab].scope === 'design' ? `${active.company.displayName} › ${activeDesign?.name ?? ''}` : `Every ${active.company.displayName} design`;
+  const scope = TABS[tab].scope === 'design' ? `${active.company.displayName} › ${activeDesign?.name ?? ''}` : t('Every {company} design', { company: active.company.displayName });
 
-  const navItem = (t: EditorTab) => (
-    <button key={t} type="button" role="tab" aria-selected={tab === t} className="designer-nav-item" onClick={() => setTab(t)}>
+  const navItem = (k: EditorTab) => (
+    <button key={k} type="button" role="tab" aria-selected={tab === k} className="designer-nav-item" onClick={() => setTab(k)}>
       <span className="designer-nav-text">
-        <strong>{TABS[t].label}</strong>
-        <span>{TABS[t].sub}</span>
+        <strong>{t(TABS[k].label)}</strong>
+        <span>{t(TABS[k].sub)}</span>
       </span>
-      {tabDirty[t] && <span className="dirty-dot" aria-label="unsaved changes" />}
+      {tabDirty[k] && <span className="dirty-dot" aria-label={t('Unsaved changes')} />}
     </button>
   );
 
   return (
     <>
       <PageHead
-        title="Designs"
-        lead="Pick a company and one of its designs. A design has its own layouts and wording; the brand, languages and banners are shared by all of a company’s designs. Every save is kept as a version."
+        title={t('Designs')}
+        lead={t('Pick a company and one of its designs. A design has its own layouts and wording; the brand, languages and banners are shared by all of a company’s designs. Every save is kept as a version.')}
         actions={
           <>
             <button className="btn" onClick={() => setHistoryOpen(true)}>
-              <History size={14} /> Versions
+              <History size={14} /> {t('Versions')}
             </button>
             {session?.isAdmin && <button
               className="btn"
-              title="Import templates/<company>/* from the server's disk as new versions"
+              title={t("Import templates/<company>/* from the server's disk as new versions")}
               onClick={async () => {
                 const r = await api.post<{ imported: number }>('/api/admin/templates/reload');
-                toast(r.imported ? `Imported ${r.imported} changed file(s) from disk` : 'Files on disk match the current versions');
+                toast(r.imported ? tn(r.imported, 'Imported {n} changed file from disk', 'Imported {n} changed files from disk') : t('Files on disk match the current versions'));
                 await rows.reload();
               }}
             >
-              <FolderSync size={14} /> Reload from disk
+              <FolderSync size={14} /> {t('Reload from disk')}
             </button>}
           </>
         }
       />
 
       <div className="designer-picker">
-        <div className="tabs" role="tablist" aria-label="Company">
+        <div className="tabs" role="tablist" aria-label={t('Company')}>
           {rows.data.map((r) => {
             const color = safeParse(r.meta?.content ?? '{}')?.colors?.primary;
             return (
@@ -337,35 +346,35 @@ export function Designs() {
         />
       ) : (
       <div className="designer">
-        <nav className="designer-nav" role="tablist" aria-label="What to edit">
+        <nav className="designer-nav" role="tablist" aria-label={t('What to edit')}>
           <div className="designer-nav-group">
-            <span className="designer-nav-label">This design · {activeDesign?.name}</span>
+            <span className="designer-nav-label">{t('This design')} · {activeDesign?.name}</span>
             {navItem('new')}
             {navItem('reply')}
             {navItem('wording')}
           </div>
           <div className="designer-nav-group">
-            <span className="designer-nav-label">{active.company.displayName} · all designs</span>
+            <span className="designer-nav-label">{t('{company} · all designs', { company: active.company.displayName })}</span>
             {navItem('brand')}
             {navItem('languages')}
           </div>
         </nav>
 
-        <section className="panel designer-pane" role="tabpanel" aria-label={TABS[tab].label}>
+        <section className="panel designer-pane" role="tabpanel" aria-label={t(TABS[tab].label)}>
           <div className="designer-pane-head">
             <div>
-              <span className={`scope-tag ${TABS[tab].scope}`}>{TABS[tab].scope === 'design' ? 'This design' : 'Whole company'}</span>
-              <h2>{TABS[tab].label}</h2>
+              <span className={`scope-tag ${TABS[tab].scope}`}>{TABS[tab].scope === 'design' ? t('This design') : t('Whole company')}</span>
+              <h2>{t(TABS[tab].label)}</h2>
               <p className="small muted">
-                {TABS[tab].lead} <span className="nowrap">Applies to: {scope}.</span>
+                {t(TABS[tab].lead)} <span className="nowrap">{t('Applies to: {scope}.', { scope })}</span>
               </p>
             </div>
             {(tab === 'new' || tab === 'reply') && session?.isAdmin && (
               <Segmented<'visual' | 'html'>
-                label="Editor"
+                label={t('Editor')}
                 value={blockDrafts[tab] ? 'visual' : 'html'}
                 options={[
-                  { value: 'visual', label: 'Visual' },
+                  { value: 'visual', label: t('Visual') },
                   { value: 'html', label: 'HTML' },
                 ]}
                 onChange={(m) => {
@@ -399,7 +408,7 @@ export function Designs() {
                   people={companyPeople}
                 />
               ) : (
-                <div className="callout danger">The company settings aren’t valid JSON. Fix them under Brand and footer › Edit as JSON, or discard your changes.</div>
+                <div className="callout danger">{t('The company settings aren’t valid JSON. Fix them under Brand and footer › Edit as JSON, or discard your changes.')}</div>
               )
             ) : tab === 'wording' ? (
               <WordingForm
@@ -419,11 +428,10 @@ export function Designs() {
                 {!session?.isAdmin && !blockDrafts[tab] && (
                   <div className="callout row">
                     <span style={{ flex: '1 1 240px' }}>
-                      This design is hand-written HTML maintained by IT. You can replace it with a visual layout; the
-                      current version stays in Versions.
+                      {t('This design is hand-written HTML maintained by IT. You can replace it with a visual layout; the current version stays in Versions.')}
                     </span>
                     <button className="btn sm" onClick={() => setToVisual(tab)}>
-                      Start a visual layout
+                      {t('Start a visual layout')}
                     </button>
                   </div>
                 )}
@@ -440,7 +448,7 @@ export function Designs() {
                   />
                 ) : !session?.isAdmin ? null : (
                   <>
-                    <p className="xs muted">Email HTML: tables and inline styles, max 600px wide.</p>
+                    <p className="xs muted">{t('Email HTML: tables and inline styles, max 600px wide.')}</p>
                     <div className="editor">
                       <CodeMirror
                         value={drafts[tab]}
@@ -448,25 +456,25 @@ export function Designs() {
                         extensions={[htmlLang()]}
                         onChange={(v) => setDrafts((d) => ({ ...d, [tab]: v }))}
                         basicSetup={{ foldGutter: false, highlightActiveLine: false }}
-                        aria-label={`${TABS[tab].label} template`}
+                        aria-label={t('{section} template', { section: t(TABS[tab].label) })}
                       />
                     </div>
                     <details>
                       <summary className="small" style={{ cursor: 'pointer', fontWeight: 600 }}>
-                        Fields you can use
+                        {t('Fields you can use')}
                       </summary>
                       <table className="data" style={{ marginTop: 8 }}>
                         <tbody>
                           {VARIABLES.map(([v, label]) => (
                             <tr key={v}>
                               <td className="mono xs">{v}</td>
-                              <td className="xs muted">{label}</td>
+                              <td className="xs muted">{t(label)}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                       <p className="xs muted" style={{ marginTop: 8 }}>
-                        Values are always HTML-escaped. Triple braces and scripts are rejected on save.
+                        {t('Values are always HTML-escaped. Triple braces and scripts are rejected on save.')}
                       </p>
                     </details>
                   </>
@@ -479,34 +487,34 @@ export function Designs() {
             <p className="small save-dock-status" aria-live="polite">
               {anyDirty ? (
                 <>
-                  <span className="dirty-dot" aria-hidden /> Not saved yet: {unsaved.join(', ') || 'changes'}
+                  <span className="dirty-dot" aria-hidden /> {t('Not saved yet: {what}', { what: unsaved.join(', ') || t('changes') })}
                 </>
               ) : (
-                <span className="muted">All changes saved</span>
+                <span className="muted">{t('All changes saved')}</span>
               )}
             </p>
             {anyDirty && (
               <>
-                <input type="text" placeholder="What changed? (optional)" value={note} onChange={(e) => setNote(e.target.value)} aria-label="Version note" />
+                <input type="text" placeholder={t('What changed? (optional)')} value={note} onChange={(e) => setNote(e.target.value)} aria-label={t('Version note')} />
                 <button className="btn ghost" disabled={saving} onClick={discard}>
-                  Discard
+                  {t('Discard')}
                 </button>
               </>
             )}
-            <button className="btn primary" disabled={!anyDirty || saving || !!preview.error} onClick={save} title={preview.error ? 'Fix the error shown in the preview first' : undefined}>
-              {saving ? 'Saving…' : 'Save version'}
+            <button className="btn primary" disabled={!anyDirty || saving || !!preview.error} onClick={save} title={preview.error ? t('Fix the error shown in the preview first') : undefined}>
+              {saving ? t('Saving…') : t('Save version')}
             </button>
           </div>
         </section>
 
-        <aside className="designer-preview" aria-label="Preview">
+        <aside className="designer-preview" aria-label={t('Preview')}>
           <div className="stack">
             <div className="stack tight">
-              <span className="designer-nav-label">Preview as</span>
+              <span className="designer-nav-label">{t('Preview as')}</span>
               <Segmented<SignatureLocale | ''>
-                label="Sample colleague"
+                label={t('Sample colleague')}
                 value={as ? '' : sample}
-                options={LOCALES.map((l) => ({ value: l, label: LOCALE_NAMES[l] }))}
+                options={LOCALES.map((l) => ({ value: l, label: t(LOCALE_NAMES[l]) }))}
                 onChange={(l) => {
                   if (!l) return;
                   setSample(l);
@@ -514,27 +522,28 @@ export function Designs() {
                 }}
               />
               <p className="xs muted">
-                {as
-                  ? `${asPerson?.displayName ?? as}, with their own details and language.`
-                  : sample === 'en'
-                    ? 'This design as if set to English only: English job title, English closing line and banner.'
-                    : `A sample ${LOCALE_NAMES[sample]} colleague with every field filled in.`}
+                {as ? t('{name}, with their own details and language.', { name: asPerson?.displayName ?? as }) : t(SAMPLE_NOTE[sample])}
               </p>
             </div>
-            <select value={as} onChange={(e) => setAs(e.target.value)} aria-label="Or a real person">
-              <option value="">…or pick a real person</option>
+            <select value={as} onChange={(e) => setAs(e.target.value)} aria-label={t('Or a real person')}>
+              <option value="">{t('…or pick a real person')}</option>
               {(users.data ?? []).map((u) => (
                 <option key={u.upn} value={u.upn}>
                   {u.displayName ?? u.upn}
-                  {u.language ? ` (${LOCALE_NAMES[u.language]})` : ''}
-                  {u.company !== active.company.key ? ` (normally ${u.companyName})` : ''}
+                  {u.language ? ` (${t(LOCALE_NAMES[u.language])})` : ''}
+                  {u.company !== active.company.key ? ` (${t('normally {company}', { company: u.companyName })})` : ''}
                 </option>
               ))}
             </select>
             <LetterPreview html={preview.data ?? null} error={preview.error?.message} loading={preview.loading} type={previewType} onTypeChange={setPreviewType} />
             <p className="xs muted">
-              {activeDesign?.name}: new v{activeDesign?.new?.version ?? '–'}, reply v{activeDesign?.reply?.version ?? '–'} · company v{active.meta?.version ?? '–'}
-              {activeDesign?.new && <> · last saved {timeAgo([activeDesign.new, activeDesign.reply, active.meta].filter(Boolean).map((t) => t!.createdAt).sort().pop())}</>}
+              {t('{design}: new v{new}, reply v{reply} · company v{company}', {
+                design: activeDesign?.name ?? '',
+                new: activeDesign?.new?.version ?? '–',
+                reply: activeDesign?.reply?.version ?? '–',
+                company: active.meta?.version ?? '–',
+              })}
+              {activeDesign?.new && <> · {t('last saved {when}', { when: timeAgo([activeDesign.new, activeDesign.reply, active.meta].filter(Boolean).map((v) => v!.createdAt).sort().pop()) })}</>}
             </p>
           </div>
         </aside>
@@ -545,11 +554,11 @@ export function Designs() {
         setRestoreTick((t) => t + 1);
         void rows.reload();
       }} />
-      <Modal open={!!confirmLeave} onClose={() => setConfirmLeave(null)} title="Discard unsaved changes?">
-        <p>You changed {active.company.displayName} › {activeDesign?.name} without saving. Switching throws those changes away.</p>
+      <Modal open={!!confirmLeave} onClose={() => setConfirmLeave(null)} title={t('Discard unsaved changes?')}>
+        <p>{t('You changed {company} › {design} without saving. Switching throws those changes away.', { company: active.company.displayName, design: activeDesign?.name ?? '' })}</p>
         <div className="row end">
           <button className="btn ghost" onClick={() => setConfirmLeave(null)}>
-            Keep editing
+            {t('Keep editing')}
           </button>
           <button
             className="btn danger"
@@ -562,18 +571,17 @@ export function Designs() {
               } else nav(`/designs/${k}`);
             }}
           >
-            Discard changes
+            {t('Discard changes')}
           </button>
         </div>
       </Modal>
-      <Modal open={!!toHtml} onClose={() => setToHtml(null)} title="Edit this design as HTML?">
+      <Modal open={!!toHtml} onClose={() => setToHtml(null)} title={t('Edit this design as HTML?')}>
         <p>
-          You'll get the HTML the visual editor produces and can change anything. Once saved as HTML, the visual editor
-          can't read it back; to return, restore an earlier version or start a new visual layout.
+          {t("You'll get the HTML the visual editor produces and can change anything. Once saved as HTML, the visual editor can't read it back; to return, restore an earlier version or start a new visual layout.")}
         </p>
         <div className="row end">
           <button className="btn ghost" onClick={() => setToHtml(null)}>
-            Stay in Visual
+            {t('Stay in Visual')}
           </button>
           <button
             className="btn primary"
@@ -583,19 +591,19 @@ export function Designs() {
               await convertToHtml(k);
             }}
           >
-            Edit as HTML
+            {t('Edit as HTML')}
           </button>
         </div>
       </Modal>
-      <Modal open={!!toVisual} onClose={() => setToVisual(null)} title="Start a visual layout">
-        <p>This design is hand-written HTML. Pick a starting layout; it replaces the HTML when you save (the current version stays in Versions).</p>
+      <Modal open={!!toVisual} onClose={() => setToVisual(null)} title={t('Start a visual layout')}>
+        <p>{t('This design is hand-written HTML. Pick a starting layout; it replaces the HTML when you save (the current version stays in Versions).')}</p>
         <div className="preset-cards">
           {(
             [
-              ['side', 'Logo beside text'],
-              ['stacked', 'Logo above text'],
-              ['textOnly', 'Text only'],
-              ['reply', 'Compact (for replies)'],
+              ['side', msg('Logo beside text')],
+              ['stacked', msg('Logo above text')],
+              ['textOnly', msg('Text only')],
+              ['reply', msg('Compact (for replies)')],
             ] as const
           ).map(([k, label]) => (
             <button
@@ -609,13 +617,13 @@ export function Designs() {
                 setToVisual(null);
               }}
             >
-              <strong style={{ fontSize: 'var(--t-sm)', color: 'var(--ink)' }}>{label}</strong>
+              <strong style={{ fontSize: 'var(--t-sm)', color: 'var(--ink)' }}>{t(label)}</strong>
             </button>
           ))}
         </div>
         <div className="row end">
           <button className="btn ghost" onClick={() => setToVisual(null)}>
-            Keep HTML
+            {t('Keep HTML')}
           </button>
         </div>
       </Modal>
@@ -645,13 +653,13 @@ function BrandForm({
   if (raw || !meta) {
     return (
       <div className="stack">
-        {!meta && <div className="callout danger">This isn't valid JSON yet. Fix it here or discard your changes.</div>}
+        {!meta && <div className="callout danger">{t("This isn't valid JSON yet. Fix it here or discard your changes.")}</div>}
         <div className="editor">
           <CodeMirror value={metaText} height="360px" extensions={[jsonLang()]} onChange={onChange} basicSetup={{ foldGutter: false }} />
         </div>
         {meta && (
           <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => setRaw(false)}>
-            Back to the form
+            {t('Back to the form')}
           </button>
         )}
       </div>
@@ -671,7 +679,7 @@ function BrandForm({
 
   /** Uploads a logo (a 2× export is assumed: it's shown at half its pixel size). */
   async function upload(file: File) {
-    if (file.size > 650_000) return toast('Keep logos under 650 KB. Export them at 2× size as PNG.', 'error');
+    if (file.size > 650_000) return toast(t('Keep logos under 650 KB. Export them at 2× size as PNG.'), 'error');
     const name = file.name.toLowerCase().replace(/[^a-z0-9._-]/g, '-').replace(/^-+/, '').replace(/^banner-/, 'logo-');
     const dataBase64 = await new Promise<string>((res) => {
       const r = new FileReader();
@@ -684,7 +692,7 @@ function BrandForm({
       img.onload = () => patch((m) => (m.logo = { ...logo, file: name, width: Math.round(img.naturalWidth / 2), height: Math.round(img.naturalHeight / 2) }));
       img.src = URL.createObjectURL(file);
       onUploaded();
-      toast('Logo uploaded');
+      toast(t('Logo uploaded'));
     } catch (e) {
       toast((e as Error).message, 'error');
     }
@@ -693,7 +701,7 @@ function BrandForm({
   return (
     <div className="stack loose">
       <section className="stack">
-        <h3>Logo</h3>
+        <h3>{t('Logo')}</h3>
         <div className="logo-pick">
           {logos.map((a) => (
             <button key={a.name} type="button" aria-pressed={logo.file === a.name} onClick={() => patch((m) => (m.logo = { ...logo, file: a.name }))}>
@@ -702,36 +710,36 @@ function BrandForm({
             </button>
           ))}
           <label className="btn" style={{ height: 'auto', minHeight: 72, flexDirection: 'column' }}>
-            <Upload size={16} /> Upload
+            <Upload size={16} /> {t('Upload')}
             <input type="file" accept="image/png,image/jpeg,image/gif" className="visually-hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
           </label>
         </div>
         <div className="grid-2">
-          <Field label="Shown width (px)" hint="Upload the image at twice this size so it stays sharp">
+          <Field label={t('Shown width (px)')} hint={t('Upload the image at twice this size so it stays sharp')}>
             <input type="number" min={10} max={600} value={logo.width} onChange={(e) => patch((m) => (m.logo = { ...logo, width: Number(e.target.value) }))} />
           </Field>
-          <Field label="Shown height (px)">
+          <Field label={t('Shown height (px)')}>
             <input type="number" min={10} max={300} value={logo.height} onChange={(e) => patch((m) => (m.logo = { ...logo, height: Number(e.target.value) }))} />
           </Field>
         </div>
-        <p className="xs muted">Use a logo on a solid background. Transparent logos with dark text disappear in dark mode.</p>
+        <p className="xs muted">{t('Use a logo on a solid background. Transparent logos with dark text disappear in dark mode.')}</p>
       </section>
 
       <section className="stack">
-        <h3>Colours</h3>
+        <h3>{t('Colours')}</h3>
         <div className="grid-2">
           {(
             [
-              ['primary', 'Brand colour', 'Links and the divider line'],
-              ['text', 'Text', 'Phone numbers, company and address'],
-              ['name', 'Name', 'Your name, in bold'],
-              ['title', 'Job title', 'The first job title (Latvian, Estonian or Lithuanian)'],
-              ['muted', 'Secondary text', 'The English title under it and the confidentiality notice'],
+              ['primary', msg('Brand colour'), msg('Links and the divider line')],
+              ['text', msg('Text'), msg('Phone numbers, company and address')],
+              ['name', msg('Name'), msg('Your name, in bold')],
+              ['title', msg('Job title'), msg('The first job title (Latvian, Estonian or Lithuanian)')],
+              ['muted', msg('Secondary text'), msg('The English title under it and the confidentiality notice')],
             ] as const
           ).map(([k, label, hint]) => (
-            <Field key={k} label={label} hint={hint}>
+            <Field key={k} label={t(label)} hint={t(hint)}>
               <div className="color-input">
-                <input type="color" value={/^#[0-9a-f]{6}$/i.test(colors[k] ?? '') ? colors[k] : '#000000'} onChange={(e) => patch((m) => (m.colors = { ...colors, [k]: e.target.value.toUpperCase() }))} aria-label={`${label} picker`} />
+                <input type="color" value={/^#[0-9a-f]{6}$/i.test(colors[k] ?? '') ? colors[k] : '#000000'} onChange={(e) => patch((m) => (m.colors = { ...colors, [k]: e.target.value.toUpperCase() }))} aria-label={t('{label} picker', { label: t(label) })} />
                 <input type="text" className="mono" value={colors[k] ?? ''} onChange={(e) => patch((m) => (m.colors = { ...colors, [k]: e.target.value }))} />
               </div>
             </Field>
@@ -740,42 +748,42 @@ function BrandForm({
       </section>
 
       <section className="stack">
-        <h3>Company details</h3>
-        <p className="xs muted">The same in every language, also for Estonian and Lithuanian colleagues. Closing lines and promo banners are under Languages and banners.</p>
-        <Field label="Company line" hint={`e.g. SIA “TENAPORS”. The legal name set under Companies is ${company.legalName}.`}>
+        <h3>{t('Company details')}</h3>
+        <p className="xs muted">{t('The same in every language, also for Estonian and Lithuanian colleagues. Closing lines and promo banners are under Languages and banners.')}</p>
+        <Field label={t('Company line')} hint={t('e.g. SIA “TENAPORS”. The legal name set under Companies is {legalName}.', { legalName: company.legalName })}>
           <input type="text" value={footer.companyLine ?? ''} onChange={(e) => patch((m) => (m.footer = { ...footer, companyLine: e.target.value }))} />
         </Field>
         <div className="grid-2">
-          <Field label="Address">
+          <Field label={t('Address')}>
             <input type="text" value={footer.address ?? ''} onChange={(e) => patch((m) => (m.footer = { ...footer, address: e.target.value }))} />
           </Field>
-          <Field label="Registration number" hint="Optional">
+          <Field label={t('Registration number')} hint={t('Optional')}>
             <input type="text" value={footer.registrationNumber ?? ''} onChange={(e) => patch((m) => (m.footer = { ...footer, registrationNumber: e.target.value }))} />
           </Field>
         </div>
-        <Field label="Confidentiality notice" hint="Small italic text under the signature. Leave empty to leave it out.">
+        <Field label={t('Confidentiality notice')} hint={t('Small italic text under the signature. Leave empty to leave it out.')}>
           <textarea rows={3} style={{ fontFamily: 'var(--font)', fontSize: 'var(--t-sm)' }} value={footer.confidential ?? ''} onChange={(e) => patch((m) => (m.footer = { ...footer, confidential: e.target.value }))} />
         </Field>
       </section>
 
       <section className="stack">
-        <h3>Websites</h3>
+        <h3>{t('Websites')}</h3>
         {websites.map((w, i) => (
           <div className="row" key={i} style={{ flexWrap: 'nowrap' }}>
-            <input type="text" aria-label="Shown as" placeholder="www.tenapors.lv" value={w.label} onChange={(e) => patch((m) => (m.websites = websites.map((x, j) => (j === i ? { ...x, label: e.target.value } : x))))} />
-            <input type="url" aria-label="Link" placeholder="https://www.tenapors.lv" value={w.url ?? ''} onChange={(e) => patch((m) => (m.websites = websites.map((x, j) => (j === i ? { ...x, url: e.target.value } : x))))} />
-            <button type="button" className="btn ghost sm" aria-label={`Remove ${w.label}`} onClick={() => patch((m) => (m.websites = websites.filter((_, j) => j !== i)))}>
+            <input type="text" aria-label={t('Shown as')} placeholder="www.tenapors.lv" value={w.label} onChange={(e) => patch((m) => (m.websites = websites.map((x, j) => (j === i ? { ...x, label: e.target.value } : x))))} />
+            <input type="url" aria-label={t('Link')} placeholder="https://www.tenapors.lv" value={w.url ?? ''} onChange={(e) => patch((m) => (m.websites = websites.map((x, j) => (j === i ? { ...x, url: e.target.value } : x))))} />
+            <button type="button" className="btn ghost sm" aria-label={t('Remove {name}', { name: w.label })} onClick={() => patch((m) => (m.websites = websites.filter((_, j) => j !== i)))}>
               <Trash2 size={14} />
             </button>
           </div>
         ))}
         <button type="button" className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => patch((m) => (m.websites = [...websites, { label: '', url: '' }]))}>
-          <Plus size={14} /> Add website
+          <Plus size={14} /> {t('Add website')}
         </button>
       </section>
 
       <button className="btn ghost sm" style={{ alignSelf: 'flex-start' }} onClick={() => setRaw(true)}>
-        Edit as JSON
+        {t('Edit as JSON')}
       </button>
     </div>
   );
@@ -788,17 +796,17 @@ function VersionsModal({ open, onClose, company, design, onRestored }: { open: b
     () => (open ? api.get<Omit<TemplateVersion, 'content'>[]>(`/api/admin/templates/${company.key}/history${design ? `?design=${encodeURIComponent(design.id)}` : ''}`) : Promise.resolve([])),
     [open, company.key, design?.id],
   );
-  const label: Record<TemplateKind, string> = { new: 'New message', reply: 'Reply', meta: 'Company brand and languages', image: 'Image (SVG)', wording: 'Wording and job titles' };
+  const label: Record<TemplateKind, string> = { new: t('New message'), reply: t('Reply'), meta: t('Company brand and languages'), image: t('Image (SVG)'), wording: t('Wording and job titles') };
   const latest = new Map<string, number>();
   for (const v of list.data ?? []) latest.set(v.kind, Math.max(latest.get(v.kind) ?? 0, v.version));
   // Newest first, as a timeline of saves across all parts of the design.
   const rows = [...(list.data ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id - a.id);
-  const when = (iso: string) => new Date(iso).toLocaleString('lv-LV', { dateStyle: 'short', timeStyle: 'medium' });
+  const when = (iso: string) => new Date(iso).toLocaleString(dateLocale(), { dateStyle: 'short', timeStyle: 'medium' });
 
   const restoreOne = async (v: Omit<TemplateVersion, 'content'>) => {
     try {
       await api.post(`/api/admin/templates/restore/${v.id}`);
-      toast(`${label[v.kind]} restored to v${v.version}`);
+      toast(t('{part} restored to v{version}', { part: label[v.kind], version: v.version }));
       onRestored();
       await list.reload();
     } catch (e) {
@@ -809,7 +817,7 @@ function VersionsModal({ open, onClose, company, design, onRestored }: { open: b
     if (!design) return;
     try {
       const r = await api.post<{ restored: string[] }>(`/api/admin/designs/${encodeURIComponent(design.id)}/restore-to`, { at: v.createdAt });
-      toast(r.restored.length ? `Restored ${r.restored.map((k) => label[k as TemplateKind]).join(', ')} to ${when(v.createdAt)}` : 'Everything already matches that point');
+      toast(r.restored.length ? t('Restored {parts} to {when}', { parts: r.restored.map((k) => label[k as TemplateKind]).join(', '), when: when(v.createdAt) }) : t('Everything already matches that point'));
       onRestored();
       await list.reload();
     } catch (e) {
@@ -818,11 +826,12 @@ function VersionsModal({ open, onClose, company, design, onRestored }: { open: b
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={`${company.displayName}${design ? ` › ${design.name}` : ''} versions`}>
+    <Modal open={open} onClose={onClose} title={t('{name} versions', { name: `${company.displayName}${design ? ` › ${design.name}` : ''}` })}>
       <p className="xs muted">
-        <strong>Restore</strong> brings back one part. <strong>Restore all to here</strong> brings the whole design (layouts,
-        wording and the company brand) back to how it was right after that save. Restores are saved as new versions, so you
-        can always go forward again.
+        {tx('{restore} brings back one part. {restoreAll} brings the whole design (layouts, wording and the company brand) back to how it was right after that save. Restores are saved as new versions, so you can always go forward again.', {
+          restore: <strong>{t('Restore')}</strong>,
+          restoreAll: <strong>{t('Restore all to here')}</strong>,
+        })}
       </p>
       {!list.data ? (
         <Loading />
@@ -837,15 +846,15 @@ function VersionsModal({ open, onClose, company, design, onRestored }: { open: b
               </span>
               <span className="row" style={{ gap: 4, flexWrap: 'nowrap' }}>
                 {latest.get(v.kind) === v.version ? (
-                  <span className="xs muted">Current</span>
+                  <span className="xs muted">{t('Current')}</span>
                 ) : (
-                  <button className="btn sm" onClick={() => restoreOne(v)} title={`Restore only the ${label[v.kind]?.toLowerCase()}`}>
-                    <RotateCcw size={13} /> Restore
+                  <button className="btn sm" onClick={() => restoreOne(v)} title={t('Restore only the {part}', { part: (label[v.kind] ?? v.kind).toLowerCase() })}>
+                    <RotateCcw size={13} /> {t('Restore')}
                   </button>
                 )}
                 {design && (
-                  <button className="btn ghost sm" onClick={() => restoreAll(v)} title="Restore layouts, wording and brand to right after this save">
-                    Restore all to here
+                  <button className="btn ghost sm" onClick={() => restoreAll(v)} title={t('Restore layouts, wording and brand to right after this save')}>
+                    {t('Restore all to here')}
                   </button>
                 )}
               </span>
@@ -855,7 +864,7 @@ function VersionsModal({ open, onClose, company, design, onRestored }: { open: b
       )}
       <div className="row end">
         <button className="btn" onClick={onClose}>
-          Close
+          {t('Close')}
         </button>
       </div>
     </Modal>

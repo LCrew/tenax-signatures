@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
+import { t } from '../lib/i18n';
 import { Segmented } from './ui';
 import type { ComposeType } from '../lib/types';
 
@@ -66,28 +67,28 @@ export function LetterPreview({ html, error, loading, from, type, onTypeChange, 
       <div className="desk-controls">
         {onTypeChange ? (
           <Segmented<ComposeType>
-            label="Message type"
+            label={t('Message type')}
             value={type}
             onChange={onTypeChange}
             options={[
-              { value: 'newMail', label: 'New message' },
-              { value: 'reply', label: 'Reply / forward' },
+              { value: 'newMail', label: t('New message') },
+              { value: 'reply', label: t('Reply / forward') },
             ]}
           />
         ) : (
           <span className="small muted">{caption}</span>
         )}
-        <button type="button" className="btn ghost sm" onClick={() => setDark((d) => !d)} aria-pressed={dark} title="Approximates how Outlook's dark mode recolours the signature">
-          {dark ? <Sun size={14} /> : <Moon size={14} />} {dark ? 'Light mode' : 'Dark mode check'}
+        <button type="button" className="btn ghost sm" onClick={() => setDark((d) => !d)} aria-pressed={dark} title={t("Approximates how Outlook's dark mode recolours the signature")}>
+          {dark ? <Sun size={14} /> : <Moon size={14} />} {dark ? t('Light mode') : t('Dark mode check')}
         </button>
       </div>
       <div key={pulse} ref={mailRef} className={`mail enter${dark ? ' dark' : ''}`}>
         <div className="mail-head">
           <div>
-            <b>From</b>&nbsp; {from ? `${from.name} <${from.email}>` : 'Sample person'}
+            <b>{t('From')}</b>&nbsp; {from ? `${from.name} <${from.email}>` : t('Sample person')}
           </div>
           <div>
-            <b>Subject</b>&nbsp; {isReply ? 'RE: Piegādes grafiks nākamajai nedēļai' : 'Piedāvājums: siltumizolācijas paneļi'}
+            <b>{t('Subject')}</b>&nbsp; {isReply ? 'RE: Piegādes grafiks nākamajai nedēļai' : 'Piedāvājums: siltumizolācijas paneļi'}
           </div>
         </div>
         <div className="mail-body" aria-hidden>
@@ -104,7 +105,7 @@ export function LetterPreview({ html, error, loading, from, type, onTypeChange, 
           <div className="mail-frame" style={{ height: Math.ceil(height * scale) }}>
             <iframe
               ref={frame}
-              title="Signature preview"
+              title={t('Signature preview')}
               sandbox="allow-same-origin"
               srcDoc={doc}
               onLoad={measure}
@@ -116,7 +117,7 @@ export function LetterPreview({ html, error, loading, from, type, onTypeChange, 
             />
           </div>
         )}
-        {!error && scale < 1 && <div className="mail-scale">Shown at {Math.round(scale * 100)}% to fit. Widen the window for full size.</div>}
+        {!error && scale < 1 && <div className="mail-scale">{t('Shown at {pct}% to fit. Widen the window for full size.', { pct: Math.round(scale * 100) })}</div>}
       </div>
     </div>
   );
